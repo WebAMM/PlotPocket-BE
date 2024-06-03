@@ -87,7 +87,7 @@ const sendOTPPasswordEmail = async function (email, otp) {
                 <p class="expiration-message">Note: This OTP is valid for 15 minutes.</p>
                 <p>If you did not request this password reset, please ignore this email.</p>
                 <div class="footer">
-                    <p>Best regards,<br>Cosmo - Event App</p>
+                    <p>Best regards,<br>
                 </div>
             </div>
         </body>
