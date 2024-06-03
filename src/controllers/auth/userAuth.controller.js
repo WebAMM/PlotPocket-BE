@@ -30,7 +30,7 @@ const registerUser = async (req, res) => {
       await User.create({
         ...req.body,
       });
-      success(res, "200", "Success", user);
+      success(res, "200", "Success" , null);
     }
   } catch (err) {
     error500(res, err);
