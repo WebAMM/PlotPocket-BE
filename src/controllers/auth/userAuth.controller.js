@@ -19,19 +19,37 @@ const config = require("../../config");
 //Register User
 const registerUser = async (req, res) => {
   try {
-    let existUser = await User.findOne({
-      email: req.body.email,
-    });
+    const { email, password, userName } = req.body;
 
-    //checking for user exists or not
+    // Check if user already exists
+    const existUser = await User.findOne({ email });
     if (existUser) {
-      error409(res, "User Already Exists");
-    } else {
-      await User.create({
-        ...req.body,
-      });
-      success(res, "200", "Success" , null);
+      return error409(res, "User Already Exists");
     }
+
+    // Initialize user data
+    const userData = { userName, email, password };
+
+    // Handle file upload if present
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "image",
+        folder: "cosmo/event-thumbnails",
+      });
+
+      userData.profileImage = {
+        publicUrl: result.url,
+        secureUrl: result.secure_url,
+        publicId: result.public_id,
+        format: result.format,
+      };
+    }
+
+    // Create new user
+    const newUser = new User(userData);
+    await newUser.save();
+
+    success(res, "200", "Success", null);
   } catch (err) {
     error500(res, err);
   }
@@ -60,6 +78,23 @@ const loginUser = async (req, res) => {
     } else {
       customError(res, 401, "Wrong Password");
     }
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+//Get User
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+
+    if (!user) {
+      return error404(res, "User not found!");
+    }
+
+    success(res, "200", "Login Success", {
+      user,
+    });
   } catch (err) {
     error500(res, err);
   }
@@ -247,4 +282,5 @@ module.exports = {
   updateUserPassword,
   loginWithFacebook,
   loginWithInstagram,
+  getUserProfile,
 };

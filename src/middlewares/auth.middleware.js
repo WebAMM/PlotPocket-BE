@@ -42,19 +42,14 @@ const verifyToken = (req, res, next) => {
       const bearer = token.split(" ");
       const bearerToken = bearer[1];
 
-      const decode = jwt.verify(
-        bearerToken,
-        config.jwtPrivateKey,
-        (err, authData) => {
-          if (err) {
-            error404(res, "Invalid token, try login again");
-          } else {
-            req.decodeData = authData;
-
-            return next();
-          }
+      jwt.verify(bearerToken, config.jwtPrivateKey, (err, authData) => {
+        if (err) {
+          error404(res, "Invalid token, try login again");
+        } else {
+          req.user = authData;
+          return next();
         }
-      );
+      });
     }
   } catch (err) {
     error500(res, err);

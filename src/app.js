@@ -16,6 +16,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/plotpocket/api/v1", AppRoutes);
+
 console.log("");
 app.use((req, res) => {
   res.status(404).json({

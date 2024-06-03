@@ -8,6 +8,7 @@ const {
   updateUserPassword,
   loginWithFacebook,
   loginWithInstagram,
+  getUserProfile,
 } = require("../../controllers/auth/userAuth.controller");
 //middlewares
 const {
@@ -19,7 +20,12 @@ const { bodyChecker } = require("../../middlewares/bodyCheck.middleware");
 const { upload } = require("../../services/helpers/fileHelper");
 
 //Register user
-router.post("/register", validateEmailAndPassword, registerUser);
+router.post(
+  "/register",
+  upload.single("profilePic"),
+  validateEmailAndPassword,
+  registerUser
+);
 
 //Login User
 router.post("/login", bodyChecker, loginUser);
@@ -29,6 +35,9 @@ router.post("/login/facebook", bodyChecker, loginWithFacebook);
 
 //Login with instagram
 router.post("/login/instagram", bodyChecker, loginWithInstagram);
+
+//Get User Profile
+router.get("/profile", verifyToken, getUserProfile);
 
 //test
 router.post("/test", verifyToken, (req, res) => {

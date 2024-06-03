@@ -4,22 +4,14 @@ const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: {
-      type: String,
-      default: "",
-    },
-    lastName: {
-      type: String,
-      default: "",
-    },
     userName: {
       type: String,
       default: "",
     },
-    phoneNumber: {
-      type: String,
-      default: "",
-    },
+    // phoneNumber: {
+    //   type: String,
+    //   default: "",
+    // },
     email: {
       type: String,
       required: [true, "Please enter your email"],
@@ -29,9 +21,24 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please enter your password"],
     },
+    //Cloudinary images
     profileImage: {
-      type: String,
-      default: "",
+      publicUrl: {
+        type: String,
+        default: "",
+      },
+      secureUrl: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
+      format: {
+        type: String,
+        default: "",
+      },
     },
   },
   {
