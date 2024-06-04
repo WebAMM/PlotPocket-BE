@@ -58,7 +58,7 @@ const registerUser = async (req, res) => {
 //Login User
 const loginUser = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email }).select("-__v");
+    const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
       return error404(res, "User not found!");
@@ -88,7 +88,7 @@ const loginUser = async (req, res) => {
 //Get User
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password -__v");
+    const user = await User.findById(req.user._id).select("-password");
     user.profileImage = user.profileImage.publicUrl;
 
     if (!user) {
