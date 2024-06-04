@@ -65,17 +65,22 @@ const loginUser = async (req, res) => {
     }
 
     if (user && bcryptjs.compareSync(req.body.password, user.password)) {
-      user.password = "";
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: user._id }, secret, {
         expiresIn: "8h",
       });
+      const responseUser = {
+        _id: user._id,
+        userName: user.userName,
+        email: user.email,
+        profileImage: user.profileImage.publicUrl,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
 
-      user.profileImage = user.profileImage.publicUrl;
-
-      success(res, "200", "Login Success", {
+      return success(res, "200", "Login Success", {
         token,
-        user,
+        user: responseUser,
       });
     } else {
       customError(res, 401, "Wrong Password");
@@ -95,8 +100,17 @@ const getUserProfile = async (req, res) => {
       return error404(res, "User not found!");
     }
 
-    success(res, "200", "Login Success", {
-      user,
+    const responseUser = {
+      _id: user._id,
+      userName: user.userName,
+      email: user.email,
+      profileImage: user.profileImage.publicUrl,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    success(res, "200", "User profile", {
+      user: responseUser,
     });
   } catch (err) {
     error500(res, err);
