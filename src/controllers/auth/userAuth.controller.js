@@ -58,7 +58,7 @@ const registerUser = async (req, res) => {
 //Login User
 const loginUser = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email }).select("-__v");
 
     if (!user) {
       return error404(res, "User not found!");
@@ -70,6 +70,8 @@ const loginUser = async (req, res) => {
       const token = jwt.sign({ _id: user._id }, secret, {
         expiresIn: "8h",
       });
+
+      user.profileImage = user.profileImage.publicUrl;
 
       success(res, "200", "Login Success", {
         token,
@@ -86,7 +88,8 @@ const loginUser = async (req, res) => {
 //Get User
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
+    const user = await User.findById(req.user._id).select("-password -__v");
+    user.profileImage = user.profileImage.publicUrl;
 
     if (!user) {
       return error404(res, "User not found!");
