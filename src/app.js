@@ -9,7 +9,7 @@ const app = express();
 //loaders
 require("dotenv").config();
 appMiddlewares(app);
-console.log("The ");
+
 //initial route
 app.get("/", (req, res) => {
   res.send("Initial route running...");
