@@ -6,7 +6,10 @@ const seriesSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please enter title"],
     },
-    bannerImg: {
+    description: {
+      type: String,
+    },
+    thumbnailImg: {
       type: String,
       required: true,
     },
@@ -15,19 +18,27 @@ const seriesSchema = new mongoose.Schema(
       ref: "Category",
       required: true,
     },
-    // rating: {
-    //   type: mongoose.Schema.ObjectId,
-    //   ref: "Category",
-    //   required: true,
-    // },
+    publishDate: {
+      type: Date,
+    },
+    visibility: {
+      type: String,
+      enum: ["public", "private"],
+    },
     isSeries: {
       type: Boolean,
       required: [true, "Is series field is required"],
     },
-    totalViews: {
+    views: {
       type: Number,
       default: 0,
     },
+    episodes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Episode",
+      },
+    ],
   },
   {
     timestamps: true,

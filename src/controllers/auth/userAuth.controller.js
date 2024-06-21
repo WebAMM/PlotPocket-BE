@@ -64,6 +64,10 @@ const loginUser = async (req, res) => {
       return error404(res, "User not found!");
     }
 
+    if (user.status === "inactive") {
+      return error404(res, "User blocked");
+    }
+
     if (user && bcryptjs.compareSync(req.body.password, user.password)) {
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: user._id }, secret, {
@@ -271,21 +275,57 @@ const verifyResetPasswordOTP = async (req, res) => {
 //Update User Password
 const updateUserPassword = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, oldPassword, newPassword } = req.body;
+
+    const userExist = await User.findOne({ email });
+    if (!userExist) {
+      return res.status(403).send("User not found");
+    }
+
+    const comparedPassword = await bcrypt.compare(
+      oldPassword,
+      userExist.password
+    );
+    if (!comparedPassword) {
+      return res.status(403).send("Invalid current password");
+    }
 
     //updating password
     await User.findOneAndUpdate(
       { email: email },
       {
-        password: bcryptjs.hashSync(password, 10),
+        password: bcryptjs.hashSync(newPassword, 10),
       },
       { new: true }
-    )
-      .then((updateUser) => {
-        updateUser.password = "";
-        success(res, "200", "Password Updated Successfully!", updateUser);
-      })
-      .catch((error) => error500(res, error));
+    );
+
+    success(res, "200", "Password updated successfully", true);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    success(res, "200", "Success", users);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+const changeUserStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const user = await User.findByIdAndUpdate(id, { status }, { new: true });
+
+    if (!user) {
+      return error404(res, "User not found");
+    }
+
+    success(res, "200", "User status updated successfully", user);
   } catch (err) {
     error500(res, err);
   }
@@ -300,4 +340,6 @@ module.exports = {
   loginWithFacebook,
   loginWithInstagram,
   getUserProfile,
+  getAllUsers,
+  changeUserStatus,
 };
