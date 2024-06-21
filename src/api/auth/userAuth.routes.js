@@ -58,6 +58,6 @@ router.post(
 router.post("/reset-password/otp/verify", bodyChecker, verifyResetPasswordOTP);
 
 //User update password
-router.post("/update/password", bodyChecker, updateUserPassword);
+router.post("/update-password", bodyChecker, updateUserPassword);
 
 module.exports = router;
