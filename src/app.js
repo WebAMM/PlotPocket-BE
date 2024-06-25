@@ -9,7 +9,7 @@ const app = express();
 //loaders
 require("dotenv").config();
 appMiddlewares(app);
-
+require("express-async-errors");
 //initial route
 app.get("/", (req, res) => {
   res.send("Initial route running...");
@@ -17,7 +17,6 @@ app.get("/", (req, res) => {
 
 app.use("/plotpocket/api/v1", AppRoutes);
 
-console.log("");
 app.use((req, res) => {
   res.status(404).json({
     status: "404",

@@ -22,6 +22,25 @@ const chapterSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    //Cloudinary images
+    chapterPdf: {
+      publicUrl: {
+        type: String,
+        default: "",
+      },
+      secureUrl: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
+      format: {
+        type: String,
+        default: "",
+      },
+    },
   },
   {
     timestamps: true,

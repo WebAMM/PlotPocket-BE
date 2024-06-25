@@ -12,23 +12,29 @@ const {
 } = require("../controllers/chapter.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
+const { upload } = require("../services/helpers/fileHelper");
 
 //Add novel
-router.post("/add", verifyToken, addNovel);
+router.post("/admin/add", verifyToken, upload.single("thumbnail"), addNovel);
 
 //Edit novel
-router.put("/edit/:id", verifyToken, editNovel);
+router.put("/admin/edit/:id", verifyToken, editNovel);
 
 //Delete novel
-router.delete("/delete/:id", verifyToken, deleteNovel);
+router.delete("/admin/delete/:id", verifyToken, deleteNovel);
 
-//Get all novels
-router.get("/all", verifyToken, getAllNovels);
+//Get novels
+router.get("/admin/all", verifyToken, getAllNovels);
 
 //Add chapters to novel
-router.post("/add-chapter/:id", verifyToken, addChapter);
+router.post(
+  "admin/add-chapter/:id",
+  upload.single("chapter"),
+  verifyToken,
+  addChapter
+);
 
 //Get chapters based on novel
-router.get("/get-chapters", verifyToken, getAllChaptersByNovel);
+router.get("/admin/get-chapters", verifyToken, getAllChaptersByNovel);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const {
   loginWithFacebook,
   loginWithInstagram,
   getUserProfile,
+  updateAdminProfile,
 } = require("../../controllers/auth/userAuth.controller");
 //middlewares
 const {
@@ -28,7 +29,7 @@ router.post(
 );
 
 //Login User
-router.post("/login", bodyChecker, loginUser);
+router.post("/login", validateEmailAndPassword, loginUser);
 
 //Login with facebook
 router.post("/login/facebook", bodyChecker, loginWithFacebook);
@@ -38,14 +39,6 @@ router.post("/login/instagram", bodyChecker, loginWithInstagram);
 
 //Get User Profile
 router.get("/profile", verifyToken, getUserProfile);
-
-//test
-router.post("/test", verifyToken, (req, res) => {
-  res.status(200).json({
-    message: "test",
-    data: req.decodeData,
-  });
-});
 
 //generate reset password email and OTP
 router.post(
@@ -57,7 +50,10 @@ router.post(
 //Verify otp of reset password email
 router.post("/reset-password/otp/verify", bodyChecker, verifyResetPasswordOTP);
 
-//User update password
-router.post("/update-password", bodyChecker, updateUserPassword);
+//Admin updates password
+router.put("/admin/update-password/:id", bodyChecker, updateUserPassword);
+
+//Admin updates profile
+router.put("/admin/update-profile/:id", bodyChecker, updateAdminProfile);
 
 module.exports = router;
