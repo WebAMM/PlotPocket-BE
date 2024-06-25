@@ -22,9 +22,4 @@ const upload = multer({
   },
 });
 
-const storage = multer.memoryStorage();
-const uploadStream = multer({
-  storage,
-});
-
-module.exports = { upload, uploadStream };
+module.exports = { upload };
