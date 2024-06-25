@@ -15,7 +15,7 @@ const addCategory = async (req, res) => {
   try {
     const categoriesToSave = [];
     for (const title of titles) {
-      const existCategory = await Category.findOne({ title });
+      const existCategory = await Category.findOne({ title, type });
       if (existCategory) {
         return error409(res, `Category ${title} Already Exists`);
       }
@@ -79,7 +79,7 @@ const deleteCategory = async (req, res) => {
     if (!category) {
       return error404(res, "Category not found");
     }
-    return status200(res,"Category deleted successfully");
+    return status200(res, "Category deleted successfully");
   } catch (err) {
     return error500(res, err);
   }
