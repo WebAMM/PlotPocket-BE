@@ -9,9 +9,24 @@ const seriesSchema = new mongoose.Schema(
     description: {
       type: String,
     },
-    thumbnailImg: {
-      type: String,
-      required: true,
+    //Cloudinary images
+    thumbnail: {
+      publicUrl: {
+        type: String,
+        default: "",
+      },
+      secureUrl: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
+      format: {
+        type: String,
+        default: "",
+      },
     },
     category: {
       type: mongoose.Schema.ObjectId,
@@ -28,10 +43,6 @@ const seriesSchema = new mongoose.Schema(
     isSeries: {
       type: Boolean,
       required: [true, "Is series field is required"],
-    },
-    views: {
-      type: Number,
-      default: 0,
     },
     episodes: [
       {

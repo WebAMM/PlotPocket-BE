@@ -1,8 +1,12 @@
 //Models
 const User = require("../models/User.model");
 //Responses and errors
-const { error500, error404, customError } = require("../services/helpers/errors");
-const { status200, success } = require("../services/helpers/response");
+const {
+  error500,
+  error404,
+  customError,
+} = require("../services/helpers/errors");
+const { success } = require("../services/helpers/response");
 
 const getAllUsers = async (req, res) => {
   try {
@@ -16,18 +20,14 @@ const getAllUsers = async (req, res) => {
 const changeUserStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-
   if (!status) {
     return customError(res, 400, "Status is required");
   }
-
   try {
     const user = await User.findByIdAndUpdate(id, { status }, { new: true });
-
     if (!user) {
       return error404(res, "User not found");
     }
-
     success(res, "200", "User status updated successfully", user);
   } catch (err) {
     error500(res, err);
