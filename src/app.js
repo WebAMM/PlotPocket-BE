@@ -3,12 +3,14 @@ const AppRoutes = require("./api");
 const colors = require("./loaders/colors");
 const config = require("./config");
 const { appMiddlewares } = require("./loaders");
-
 const app = express();
 
 //loaders
 require("dotenv").config();
+
+//Middlewares
 appMiddlewares(app);
+require("express-async-errors");
 
 //initial route
 app.get("/", (req, res) => {
@@ -17,7 +19,6 @@ app.get("/", (req, res) => {
 
 app.use("/plotpocket/api/v1", AppRoutes);
 
-console.log("");
 app.use((req, res) => {
   res.status(404).json({
     status: "404",

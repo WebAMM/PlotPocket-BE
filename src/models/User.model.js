@@ -6,20 +6,21 @@ const userSchema = new mongoose.Schema(
   {
     userName: {
       type: String,
-      default: "",
     },
-    // phoneNumber: {
-    //   type: String,
-    //   default: "",
-    // },
     email: {
       type: String,
       required: [true, "Please enter your email"],
+      unique: true,
       validate: [validator.isEmail, "Please enter a valid email"],
     },
     password: {
       type: String,
       required: [true, "Please enter your password"],
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
     },
     //Cloudinary images
     profileImage: {
@@ -39,6 +40,34 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
+    },
+    //For admin:
+    firstName: {
+      type: String,
+    },
+    lastName: {
+      type: String,
+    },
+    phoneNo: {
+      type: String,
+    },
+    dateOfBirth: {
+      type: Date,
+    },
+    emergencyContact: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
+    city: {
+      type: String,
+    },
+    state: {
+      type: String,
+    },
+    zipCode: {
+      type: String,
     },
   },
   {
