@@ -9,13 +9,11 @@ const {
   loginWithFacebook,
   loginWithInstagram,
   getUserProfile,
+  updateAdminProfile,
 } = require("../../controllers/auth/userAuth.controller");
 //middlewares
-const {
-  validateEmailAndPassword,
-  verifyToken,
-} = require("../../middlewares/auth.middleware");
-const { bodyChecker } = require("../../middlewares/bodyCheck.middleware");
+const { verifyToken } = require("../../middlewares/auth.middleware");
+const payloadValidator = require("../../middlewares/payloadValidator");
 //multer
 const { upload } = require("../../services/helpers/fileHelper");
 
@@ -23,41 +21,37 @@ const { upload } = require("../../services/helpers/fileHelper");
 router.post(
   "/register",
   upload.single("profilePic"),
-  validateEmailAndPassword,
+  payloadValidator.validateLogin,
   registerUser
 );
 
 //Login User
-router.post("/login", bodyChecker, loginUser);
+router.post("/login", payloadValidator.validateLogin, loginUser);
+
+//Admin updates password
+router.put(
+  "/admin/update-password/:id",
+  verifyToken,
+  payloadValidator.validateUpdatePassword,
+  updateUserPassword
+);
+
+//Admin updates profile
+router.put("/admin/update-profile/:id", updateAdminProfile);
 
 //Login with facebook
-router.post("/login/facebook", bodyChecker, loginWithFacebook);
+router.post("/login/facebook", loginWithFacebook);
 
 //Login with instagram
-router.post("/login/instagram", bodyChecker, loginWithInstagram);
+router.post("/login/instagram", loginWithInstagram);
 
 //Get User Profile
 router.get("/profile", verifyToken, getUserProfile);
 
-//test
-router.post("/test", verifyToken, (req, res) => {
-  res.status(200).json({
-    message: "test",
-    data: req.decodeData,
-  });
-});
-
 //generate reset password email and OTP
-router.post(
-  "/reset-password/email",
-  bodyChecker,
-  generateResetPasswordEmailWithOTP
-);
+router.post("/reset-password/email", generateResetPasswordEmailWithOTP);
 
 //Verify otp of reset password email
-router.post("/reset-password/otp/verify", bodyChecker, verifyResetPasswordOTP);
-
-//User update password
-router.post("/update/password", bodyChecker, updateUserPassword);
+router.post("/reset-password/otp/verify", verifyResetPasswordOTP);
 
 module.exports = router;
