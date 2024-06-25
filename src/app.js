@@ -3,13 +3,15 @@ const AppRoutes = require("./api");
 const colors = require("./loaders/colors");
 const config = require("./config");
 const { appMiddlewares } = require("./loaders");
-
 const app = express();
 
 //loaders
 require("dotenv").config();
+
+//Middlewares
 appMiddlewares(app);
 require("express-async-errors");
+
 //initial route
 app.get("/", (req, res) => {
   res.send("Initial route running...");

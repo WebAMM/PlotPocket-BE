@@ -16,11 +16,11 @@ const { status200, success } = require("../services/helpers/response");
 // Admin dashboard
 const adminDashboard = async (req, res) => {
   try {
-    const chapters = await Novel.countDocuments();
+    const novels = await Novel.countDocuments();
     const series = await Series.countDocuments();
     const users = await User.countDocuments();
     const dashboardData = {
-      chapters,
+      novels,
       series,
       users,
     };

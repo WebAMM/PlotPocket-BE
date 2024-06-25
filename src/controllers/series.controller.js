@@ -47,7 +47,9 @@ const addSeries = async (req, res) => {
 // Get All Series
 const getAllSeries = async (req, res) => {
   try {
-    const chapters = await Series.find().populate("episodes");
+    const chapters = await Series.find()
+      .populate("episodes")
+      .populate("category");
     success(res, "200", "Success", chapters);
   } catch (err) {
     error500(res, err);

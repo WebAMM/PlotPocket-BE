@@ -8,13 +8,13 @@ const categorySchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["novels", "series"],
+      enum: ["Novels", "Series"],
       required: [true, "Type of category is required"],
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
-      default: "active",
+      enum: ["Active", "Inactive"],
+      default: "Active",
     },
     views: {
       type: Number,

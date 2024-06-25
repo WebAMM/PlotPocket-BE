@@ -12,7 +12,7 @@ const chapterSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      enum: ["paid", "free"],
+      enum: ["Paid", "Free"],
     },
     views: {
       type: Number,

@@ -39,7 +39,7 @@ const registerUser = async (req, res) => {
     }
     const newUser = new User(userData);
     await newUser.save();
-    success(res, "200", "Success", null);
+    status200(res, "User registered successfully");
   } catch (err) {
     error500(res, err);
   }
@@ -52,7 +52,7 @@ const loginUser = async (req, res) => {
     if (!user) {
       return error404(res, "User not found!");
     }
-    if (user.status === "inactive") {
+    if (user.status === "Inactive") {
       return error404(res, "User blocked");
     }
     if (user && bcryptjs.compareSync(req.body.password, user.password)) {
@@ -263,7 +263,7 @@ const updateUserPassword = async (req, res) => {
       },
       { new: true }
     );
-    success(res, "200", "Password updated successfully", true);
+    status200(res,"Password updated successfully");
   } catch (err) {
     error500(res, err);
   }

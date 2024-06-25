@@ -10,9 +10,15 @@ const {
 } = require("../controllers/category.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
+const payloadValidator = require("../middlewares/payloadValidator");
 
 //Add category
-router.post("/admin/add", verifyToken, addCategory);
+router.post(
+  "/admin/add",
+  verifyToken,
+  payloadValidator.validateAddCategory,
+  addCategory
+);
 
 //Get all categories
 router.get("/admin/all", verifyToken, getAllCategories);
