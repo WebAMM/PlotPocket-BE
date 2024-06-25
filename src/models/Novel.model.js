@@ -22,7 +22,7 @@ const novelSchema = new mongoose.Schema(
     },
     visibility: {
       type: String,
-      enum: ["public", "private"],
+      enum: ["Public", "Private"],
     },
     isNovel: {
       type: Boolean,

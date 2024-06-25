@@ -2,8 +2,24 @@ const mongoose = require("mongoose");
 
 const episodeSchema = new mongoose.Schema(
   {
-    thumbnail: {
-      type: String,
+    //Cloudinary images
+    video: {
+      publicUrl: {
+        type: String,
+        default: "",
+      },
+      secureUrl: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
+      format: {
+        type: String,
+        default: "",
+      },
     },
     title: {
       type: String,
@@ -14,15 +30,11 @@ const episodeSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      enum: ["paid", "free"],
+      enum: ["Paid", "Free"],
     },
-    views: {
-      type: Number,
-      default: 0,
-    },
-    publishedDate: {
-      type: Date,
-      default: Date.now,
+    visibility: {
+      type: String,
+      enum: ["Public", "Private"],
     },
   },
   {

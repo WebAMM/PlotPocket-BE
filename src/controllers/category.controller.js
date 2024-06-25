@@ -8,38 +8,33 @@ const {
   customError,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
-//helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
 
 //Add Category
 const addCategory = async (req, res) => {
   const { titles, type } = req.body;
-  if (!titles || !type || !Array.isArray(titles)) {
-    return customError(res, 400, "Invalid format");
-  }
   try {
     const categoriesToSave = [];
     for (const title of titles) {
       const existCategory = await Category.findOne({ title });
       if (existCategory) {
-        return error409(res, `Category "${title}" Already Exists`);
+        return error409(res, `Category ${title} Already Exists`);
       }
       categoriesToSave.push({ title, type });
     }
     await Category.insertMany(categoriesToSave);
-    status200(res, "Category created successfully");
+    return status200(res, "Category created successfully");
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
 // Get All Categories
 const getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find();
-    success(res, "200", "Success", categories);
+    const categories = await Category.find().select("-__v");
+    return success(res, "200", "Success", categories);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -50,10 +45,10 @@ const getCategoriesByType = async (req, res) => {
     return customError(res, 400, "Type is required");
   }
   try {
-    const categories = await Category.find({ type });
-    success(res, "200", "Success", categories);
+    const categories = await Category.find({ type }).select("-__v");
+    return success(res, "200", "Success", categories);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -62,7 +57,7 @@ const editCategory = async (req, res) => {
   const { id } = req.params;
   const { title, type, status } = req.body;
   try {
-    const category = await Category.findById(id);
+    const category = await Category.findById(id).select("-__v");
     if (!category) {
       return error404(res, "Category not found");
     }
@@ -70,9 +65,9 @@ const editCategory = async (req, res) => {
     if (type) category.type = type;
     if (status) category.status = status;
     await category.save();
-    success(res, "200", "Category updated successfully", category);
+    return success(res, "200", "Category updated successfully", category);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -84,9 +79,9 @@ const deleteCategory = async (req, res) => {
     if (!category) {
       return error404(res, "Category not found");
     }
-    success(res, "200", "Category deleted successfully", null);
+    return status200(res,"Category deleted successfully");
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -94,19 +89,24 @@ const deleteCategory = async (req, res) => {
 const changeCategoryStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  if (!status || !["active", "inactive"].includes(status)) {
+  if (!status || !["Active", "Inactive"].includes(status)) {
     return customError(res, 400, "Invalid status");
   }
   try {
-    const category = await Category.findById(id);
+    const category = await Category.findById(id).select("-__v");
     if (!category) {
       return error404(res, "Category not found");
     }
     category.status = status;
     await category.save();
-    success(res, "200", "Category status updated successfully", category);
+    return success(
+      res,
+      "200",
+      "Category status updated successfully",
+      category
+    );
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 

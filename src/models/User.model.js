@@ -19,7 +19,8 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "block"],
+      enum: ["Active", "Inactive"],
+      default: "Active",
     },
     //Cloudinary images
     profileImage: {

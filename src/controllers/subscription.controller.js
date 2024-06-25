@@ -17,7 +17,7 @@ const addSubscriptionPlan = async (req, res) => {
 // Get All Subscriptions
 const getAllSubscriptions = async (req, res) => {
   try {
-    const subscriptions = await Subscription.find();
+    const subscriptions = await Subscription.find().select("-__v");
     return success(res, "200", "Success", subscriptions);
   } catch (err) {
     error500(res, err);
@@ -31,7 +31,7 @@ const getSubscriptionByPlan = async (req, res) => {
     return customError(res, 400, "Plan is required");
   }
   try {
-    const subscriptionByPlan = await Subscription.find({ plan });
+    const subscriptionByPlan = await Subscription.find({ plan }).select("-__v");
     success(res, "200", "Success", subscriptionByPlan);
   } catch (err) {
     error500(res, err);

@@ -7,9 +7,15 @@ const {
 } = require("../controllers/subscription.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
+const payloadValidator = require("../middlewares/payloadValidator");
 
 //Add subscription
-router.post("/admin/add", verifyToken, addSubscriptionPlan);
+router.post(
+  "/admin/add",
+  verifyToken,
+  payloadValidator.validateAddSubscription,
+  addSubscriptionPlan
+);
 
 //All subscriptions
 router.get("/admin/all", verifyToken, getAllSubscriptions);
