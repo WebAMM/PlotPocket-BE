@@ -15,6 +15,7 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 //config
 const config = require("../../config");
+const { v4: uuidv4 } = require("uuid");
 
 //Register User
 const registerUser = async (req, res) => {
@@ -36,6 +37,7 @@ const registerUser = async (req, res) => {
         publicId: result.public_id,
         format: result.format,
       };
+      userData.role = "User";
     }
     const newUser = new User(userData);
     await newUser.save();
@@ -62,12 +64,13 @@ const loginUser = async (req, res) => {
           _id: user._id,
           name: user.userName,
           email: user.email,
+          role: user.role,
           profileImage: user.profileImage.publicUrl,
           createdAt: user.createdAt,
         },
         secret,
         {
-          expiresIn: "8h",
+          expiresIn: "24h",
         }
       );
       const responseUser = {
@@ -93,6 +96,32 @@ const loginUser = async (req, res) => {
 //Guest Login
 const guestLogin = async (req, res) => {
   try {
+    const guestId = uuidv4();
+    const guestName = `Guest_${guestId.slice(0, 8)}`;
+
+    const secret = config.jwtPrivateKey;
+    const token = jwt.sign(
+      {
+        _id: guestId,
+        name: guestName,
+        role: "Guest",
+      },
+      secret,
+      {
+        expiresIn: "24h",
+      }
+    );
+
+    const responseUser = {
+      _id: guestId,
+      userName: guestName,
+      role: "Guest",
+    };
+
+    return success(res, "200", "Guest Login Success", {
+      token,
+      user: responseUser,
+    });
   } catch (err) {
     error500(res, err);
   }
@@ -124,7 +153,7 @@ const loginWithFacebook = async (req, res) => {
       checkUser.password = "";
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: checkUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -138,7 +167,7 @@ const loginWithFacebook = async (req, res) => {
       newUser.save();
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: newUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -161,7 +190,7 @@ const loginWithInstagram = async (req, res) => {
       checkUser.password = "";
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: checkUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -176,7 +205,7 @@ const loginWithInstagram = async (req, res) => {
       newUser.save();
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: newUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,

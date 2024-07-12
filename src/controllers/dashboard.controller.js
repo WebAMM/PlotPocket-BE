@@ -86,46 +86,50 @@ const appDashboard = async (req, res) => {
         options: { sort: { createdAt: 1 }, limit: 1 },
       });
     //Series + novels history based on logged in user
-    const watchedSeriesNovels = await History.find({
-      user: req.user._id,
-    })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate({
-        path: "series",
-        select: "thumbnail.publicUrl type views",
-        populate: [
-          {
-            path: "category",
-            select: "title",
-          },
-          {
-            path: "episodes",
-            select:
-              "episodeVideo.publicUrl title content visibility description",
-            options: { sort: { createdAt: 1 }, limit: 1 },
-          },
-        ],
+    let watchedSeriesNovels;
+    if (req.user.role === "User") {
+      watchedSeriesNovels = await History.find({
+        user: req.user._id,
       })
-      .populate({
-        path: "novel",
-        select: "thumbnail.publicUrl title type view",
-        populate: [
-          {
-            path: "category",
-            select: "title",
-          },
-          {
-            path: "chapters",
-            select: "chapterPdf.publicUrl name chapterNo content views",
-            options: { sort: { createdAt: 1 }, limit: 1 },
-          },
-          {
-            path: "author",
-            select: "name",
-          },
-        ],
-      });
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate({
+          path: "series",
+          select: "thumbnail.publicUrl type views",
+          populate: [
+            {
+              path: "category",
+              select: "title",
+            },
+            {
+              path: "episodes",
+              select:
+                "episodeVideo.publicUrl title content visibility description",
+              options: { sort: { createdAt: 1 }, limit: 1 },
+            },
+          ],
+        })
+        .populate({
+          path: "novel",
+          select: "thumbnail.publicUrl title type view",
+          populate: [
+            {
+              path: "category",
+              select: "title",
+            },
+            {
+              path: "chapters",
+              select: "chapterPdf.publicUrl name chapterNo content views",
+              options: { sort: { createdAt: 1 }, limit: 1 },
+            },
+            {
+              path: "author",
+              select: "name",
+            },
+          ],
+        });
+    }
+
     //New released novel and series [Based on latest created]
     const newSeries = await Series.find(query)
       .select("thumbnail.publicUrl title type views")
