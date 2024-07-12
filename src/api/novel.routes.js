@@ -1,15 +1,7 @@
 const router = require("express").Router();
 //controllers
-const {
-  addNovel,
-  getAllNovels,
-  editNovel,
-  deleteNovel,
-} = require("../controllers/novel.controller");
-const {
-  addChapter,
-  getAllChaptersByNovel,
-} = require("../controllers/chapter.controller");
+const novelController = require("../controllers/novel.controller");
+const chapterController = require("../controllers/chapter.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
@@ -21,7 +13,7 @@ router.post(
   verifyToken,
   upload.single("thumbnail"),
   payloadValidator.validateAddNovel,
-  addNovel
+  novelController.addNovel
 );
 
 //Add chapters to novel
@@ -30,19 +22,51 @@ router.post(
   verifyToken,
   upload.single("chapter"),
   payloadValidator.validateAddChapter,
-  addChapter
+  chapterController.addChapter
 );
 
 //Edit novel
-router.put("/admin/edit/:id", verifyToken, editNovel);
+router.put("/admin/edit/:id", verifyToken, novelController.editNovel);
 
 //Delete novel
-router.delete("/admin/delete/:id", verifyToken, deleteNovel);
+router.delete("/admin/delete/:id", verifyToken, novelController.deleteNovel);
 
 //Get novels
-router.get("/admin/all", verifyToken, getAllNovels);
+router.get("/admin/all", verifyToken, novelController.getAllNovels);
 
 //Get chapters based on novel
-router.get("/admin/get-chapters", verifyToken, getAllChaptersByNovel);
+router.get(
+  "/admin/get-chapters",
+  verifyToken,
+  chapterController.getAllChaptersByNovel
+);
+
+//Get novels of author
+router.get(
+  "/admin/author-novels/:id",
+  verifyToken,
+  novelController.getAuthorNovels
+);
+
+//Rate the novel
+router.post(
+  "/app/rate/:id",
+  verifyToken,
+  payloadValidator.validateRateNovel,
+  novelController.rateNovel
+);
+
+//Like the user comment on novel
+router.post("/app/like", verifyToken, novelController.likeCommentOnNovel);
+
+//Get all top rated novels
+router.get(
+  "/app/all-top-rated",
+  verifyToken,
+  novelController.getTopRatedNovels
+);
+
+//Detailed novel
+router.get("/app/single/:id", verifyToken, novelController.singleNovel);
 
 module.exports = router;

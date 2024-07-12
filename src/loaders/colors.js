@@ -6,7 +6,6 @@ const colors = {
     blink: "\x1b[5m",
     reverse: "\x1b[7m",
     hidden: "\x1b[8m",
-  
     fg: {
       black: "\x1b[30m",
       red: "\x1b[31m",

@@ -6,8 +6,28 @@ const authorSchema = new mongoose.Schema(
       type: String,
       required: [true, "Author name is required"],
     },
-    profilePic: {
+    gender: {
       type: String,
+      required: true,
+      enum: ["Male", "Female"],
+    },
+    authorPic: {
+      publicUrl: {
+        type: String,
+        default: "",
+      },
+      secureUrl: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
+      format: {
+        type: String,
+        default: "",
+      },
     },
     followers: [
       {

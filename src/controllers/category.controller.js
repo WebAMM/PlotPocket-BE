@@ -31,7 +31,9 @@ const addCategory = async (req, res) => {
 // Get All Categories
 const getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find().select("-__v");
+    const categories = await Category.find().select(
+      "_id title type status createdAt view"
+    );
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);
@@ -45,7 +47,7 @@ const getCategoriesByType = async (req, res) => {
     return customError(res, 400, "Type is required");
   }
   try {
-    const categories = await Category.find({ type }).select("-__v");
+    const categories = await Category.find({ type });
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);
@@ -57,7 +59,7 @@ const editCategory = async (req, res) => {
   const { id } = req.params;
   const { title, type, status } = req.body;
   try {
-    const category = await Category.findById(id).select("-__v");
+    const category = await Category.findById(id);
     if (!category) {
       return error404(res, "Category not found");
     }
@@ -93,7 +95,7 @@ const changeCategoryStatus = async (req, res) => {
     return customError(res, 400, "Invalid status");
   }
   try {
-    const category = await Category.findById(id).select("-__v");
+    const category = await Category.findById(id);
     if (!category) {
       return error404(res, "Category not found");
     }

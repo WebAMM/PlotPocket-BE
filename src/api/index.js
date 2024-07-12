@@ -1,24 +1,32 @@
 const router = require("express").Router();
-const authRouter = require("./auth/userAuth.routes");
+const authRouter = require("./auth/auth.routes");
 const novelRouter = require("./novel.routes");
 const categoryRouter = require("./category.routes");
 const userRouter = require("./user.routes");
 const dashboardRouter = require("./dashboard.routes");
 const subscriptionRouter = require("./subscription.routes");
 const seriesRouter = require("./series.routes");
+const authorRouter = require("./author.routes");
+const rewardRouter = require("./reward.routes");
+const episodeRouter = require("./episode.routes");
+const chapterRouter = require("./chapter.routes");
+const myListRouter = require("./myList.routes");
+const historyRouter = require("./history.routes");
+const mightLikeRouter = require("./mightLike.routes");
+//Routes
 
 router.use("/auth", authRouter);
-
-router.use("/novel", novelRouter);
-
-router.use("/category", categoryRouter);
-
 router.use("/user", userRouter);
-
 router.use("/dashboard", dashboardRouter);
-
-router.use("/subscription", subscriptionRouter);
-
+router.use("/category", categoryRouter);
 router.use("/series", seriesRouter);
-
+router.use("/novel", novelRouter);
+router.use("/episode", episodeRouter);
+router.use("/chapter", chapterRouter);
+router.use("/author", authorRouter);
+router.use("/subscription", subscriptionRouter);
+router.use("/reward", rewardRouter);
+router.use("/my-list", myListRouter);
+router.use("/history", historyRouter);
+router.use("/might-like", mightLikeRouter);
 module.exports = router;

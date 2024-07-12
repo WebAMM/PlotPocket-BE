@@ -47,12 +47,34 @@ const addSeries = async (req, res) => {
 // Get All Series
 const getAllSeries = async (req, res) => {
   try {
-    const chapters = await Series.find()
-      .populate("episodes")
-      .populate("category");
-    success(res, "200", "Success", chapters);
+    const series = await Series.find()
+      .select(
+        "_id title description visibility publishDate thumbnail.publicUrl"
+      )
+      .populate({
+        path: "category",
+        select: "_id title",
+      })
+      .populate("episodes");
+
+    const allSeries = series.map((series) => ({
+      _id: series._id,
+      thumbnail: series.thumbnail,
+      title: series.title,
+      description: series.description,
+      publishDate: series.publishDate,
+      views: series.views,
+      visibility: series.visibility,
+      language: series.language,
+      category: series.category,
+      author: series.author,
+      reviews: series.reviews,
+      totalEpisode: series.episodes.length,
+    }));
+
+    return success(res, "200", "Success", allSeries);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
