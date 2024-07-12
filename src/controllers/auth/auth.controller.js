@@ -53,7 +53,7 @@ const loginUser = async (req, res) => {
       return error404(res, "User not found!");
     }
     if (user.status === "Inactive") {
-      return error404(res, "User blocked");
+      return error404(res, "User is inactive");
     }
     if (user && bcryptjs.compareSync(req.body.password, user.password)) {
       const secret = config.jwtPrivateKey;
@@ -90,25 +90,24 @@ const loginUser = async (req, res) => {
   }
 };
 
+//Guest Login
+const guestLogin = async (req, res) => {
+  try {
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
 //Get User
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
-    user.profileImage = user.profileImage.publicUrl;
+    const user = await User.findById(req.user._id).select(
+      "_id userName email profileImage.publicUrl status createdAt"
+    );
     if (!user) {
       return error404(res, "User not found!");
     }
-    const responseUser = {
-      _id: user._id,
-      userName: user.userName,
-      email: user.email,
-      profileImage: user.profileImage.publicUrl,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-    success(res, "200", "User profile", {
-      user: responseUser,
-    });
+    success(res, "200", "User profile", user);
   } catch (err) {
     error500(res, err);
   }
@@ -263,7 +262,7 @@ const updateUserPassword = async (req, res) => {
       },
       { new: true }
     );
-    status200(res,"Password updated successfully");
+    status200(res, "Password updated successfully");
   } catch (err) {
     error500(res, err);
   }
@@ -309,6 +308,7 @@ const updateAdminProfile = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  guestLogin,
   generateResetPasswordEmailWithOTP,
   verifyResetPasswordOTP,
   updateUserPassword,

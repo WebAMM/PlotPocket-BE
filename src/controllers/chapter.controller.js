@@ -21,10 +21,10 @@ const addChapter = async (req, res) => {
     if (!novelExist) {
       return error404(res, "Novel not found");
     }
-    const existChapter = await Chapter.findOne({ name });
-    if (existChapter) {
-      return error409(res, "Chapter Already Exists");
-    }
+    // const existChapter = await Chapter.findOne({ name });
+    // if (existChapter) {
+    //   return error409(res, "Chapter Already Exists");
+    // }
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "raw",
@@ -32,6 +32,7 @@ const addChapter = async (req, res) => {
       });
       const newChapter = await Chapter.create({
         ...req.body,
+        novel: novelExist._id,
         chapterPdf: {
           publicUrl: result.url,
           secureUrl: result.secure_url,
@@ -55,8 +56,21 @@ const addChapter = async (req, res) => {
 
 // Get All Novels
 const getAllChaptersByNovel = async (req, res) => {
+  const { id } = req.params;
   try {
-    const chapters = await Chapter.find();
+    const novelExist = await Novel.findById(id);
+
+    if (!novelExist) {
+      return error404(res, "Novel not found");
+    }
+    const chapters = await Chapter.find({
+      novel: id,
+    })
+      .select("chapterPdf.publicUrl views publishedDate content")
+      .populate({
+        path: "novel",
+        select: "thumbnail.publicUrl",
+      });
     success(res, "200", "Success", chapters);
   } catch (err) {
     error500(res, err);

@@ -69,6 +69,10 @@ const userSchema = new mongoose.Schema(
     zipCode: {
       type: String,
     },
+    role: {
+      type: String,
+      enum: ["Admin", "User", "Guest"],
+    },
   },
   {
     timestamps: true,

@@ -1,5 +1,5 @@
 //imports from packages
-const { body, validationResult } = require("express-validator");
+const { body, check, validationResult } = require("express-validator");
 
 const validateLogin = [
   body("email").isEmail().withMessage("Please enter a valid email"),
@@ -117,6 +117,52 @@ const validateUpdatePassword = [
   },
 ];
 
+const validateAddReward = [
+  body("status").isIn(["Active", "Inactive"]).withMessage("Invalid status"),
+  body("weeklyRewards")
+    .isArray()
+    .withMessage("Weekly rewards must be an array")
+    .custom((value) => {
+      if (value.length !== 7) {
+        throw new Error("Weekly rewards must contain 7 days reward");
+      }
+      return true;
+    }),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  },
+];
+
+const validateRateNovel = [
+  check("comment").custom((value, { req }) => {
+    if (!value && !req.body.rating) {
+      throw new Error("Either comment or rating must be provided");
+    }
+    return true;
+  }),
+  body("rating")
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage("Rating must be an integer between 1 and 5"),
+  body("comment")
+    .optional()
+    .isLength({ min: 2 })
+    .withMessage("Comment must be at least 2 characters long"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  },
+];
+
 module.exports = {
   validateLogin,
   validateAddCategory,
@@ -126,4 +172,6 @@ module.exports = {
   validateAddEpisode,
   validateAddSubscription,
   validateUpdatePassword,
+  validateAddReward,
+  validateRateNovel,
 };

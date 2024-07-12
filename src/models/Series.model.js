@@ -40,9 +40,17 @@ const seriesSchema = new mongoose.Schema(
       type: String,
       enum: ["Public", "Private"],
     },
-    isSeries: {
-      type: Boolean,
-      required: [true, "Is series field is required"],
+    type: {
+      type: String,
+      default: "Series",
+    },
+    views: {
+      type: Number,
+      default: 0,
+    },
+    episodesRating: {
+      type: Number,
+      default: 0,
     },
     episodes: [
       {
