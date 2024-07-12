@@ -289,7 +289,7 @@ const singleNovel = async (req, res) => {
           select: "title",
         },
         {
-          path: "chapters",  
+          path: "chapters",
           select:
             "chapterPdf.publicUrl chapterNo content views publishedDate createdAt",
         },
