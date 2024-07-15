@@ -258,7 +258,7 @@ const appDashboard = async (req, res) => {
       watchedSeriesNovels,
       newNovels,
       newSeries,
-      populatedNovels,
+      topRatedNovels: populatedNovels,
       topRatedSeries,
     };
     success(res, "200", "Success", data);
