@@ -48,7 +48,7 @@ const seriesSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    episodesRating: {
+    seriesRating: {
       type: Number,
       default: 0,
     },
@@ -63,6 +63,8 @@ const seriesSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+seriesSchema.index({ title: 1 });
 
 const Series = mongoose.model("Series", seriesSchema);
 module.exports = Series;
