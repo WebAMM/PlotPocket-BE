@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const chapterSchema = new mongoose.Schema(
   {
+    novel: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Novel",
+    },
     name: {
       type: String,
       required: [true, "Name is required"],

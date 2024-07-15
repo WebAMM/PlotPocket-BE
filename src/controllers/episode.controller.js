@@ -1,6 +1,7 @@
 //Models
 const Episode = require("../models/Episode.model");
 const Series = require("../models/Series.model");
+const History = require("../models/History.model");
 //Responses and errors
 const {
   error500,
@@ -12,7 +13,7 @@ const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
-//Add Chapter
+//Add Episode
 const addEpisode = async (req, res) => {
   const { title } = req.body;
   const { id } = req.params;
@@ -22,19 +23,20 @@ const addEpisode = async (req, res) => {
     if (!seriesExist) {
       return error404(res, "Series not found");
     }
-    const existEpisode = await Episode.findOne({ title });
-    if (existEpisode) {
-      return error409(res, "Episode Already Exists");
-    }
+    // const existEpisode = await Episode.findOne({ title });
+    // if (existEpisode) {
+    //   return error409(res, "Episode Already Exists");
+    // }
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "video", 
+        resource_type: "video",
         folder: "episode",
-        eager: [{ format: "mp4" }] 
+        eager: [{ format: "mp4" }],
       });
       const newEpisode = await Episode.create({
         ...req.body,
-        video: {
+        series: seriesExist._id,
+        episodeVideo: {
           publicUrl: result.url,
           secureUrl: result.secure_url,
           publicId: result.public_id,
@@ -42,13 +44,12 @@ const addEpisode = async (req, res) => {
           format: "mp4",
         },
       });
-
       await Series.findByIdAndUpdate(
         id,
         { $push: { episodes: newEpisode._id } },
         { new: true }
       );
-      return status200(res, "Episodes added successfully in series");
+      return status200(res, "Episode added successfully in series");
     } else {
       return error400(res, "Episode video is required");
     }
@@ -57,6 +58,121 @@ const addEpisode = async (req, res) => {
   }
 };
 
+//Rate Episode
+const rateTheEpisode = async (req, res) => {
+  const { id } = req.params;
+  let responseMessage = "";
+  try {
+    const existEpisode = await Episode.findById(id);
+    if (!existEpisode) {
+      return error409(res, "Episode doesn't exist");
+    }
+    const userHasRated = existEpisode.ratings.some(
+      (rating) => rating.user.toString() === req.user._id.toString()
+    );
+
+    if (userHasRated) {
+      await Episode.updateOne(
+        { _id: id },
+        { $pull: { ratings: { user: req.user._id } } }
+      );
+      await Series.updateOne(
+        {
+          _id: existEpisode.series,
+        },
+        {
+          $inc: {
+            episodesRating: -1,
+          },
+        }
+      );
+      responseMessage = "Rating removed from episode";
+    } else {
+      await Episode.updateOne(
+        { _id: id },
+        { $push: { ratings: { user: req.user._id, rating: 1 } } }
+      );
+      await Series.updateOne(
+        {
+          _id: existEpisode.series,
+        },
+        {
+          $inc: {
+            episodesRating: 1,
+          },
+        }
+      );
+      responseMessage = "Rated on episode";
+    }
+    return status200(res, responseMessage);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+// All Episode in app to view
+const allEpisodeOfSeries = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const seriesExist = await Series.findById(id);
+    if (!seriesExist) {
+      return error409(res, "Series not found");
+    }
+    const allEpisodesOfSeries = await Episode.find({
+      series: id,
+    });
+    //Increase series views
+    await Series.findOneAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        $inc: { views: 1 },
+      },
+      { new: true }
+    );
+    //Add series in history
+    const existHistory = await History.findOne({
+      user: req.user._id,
+      series: id,
+    });
+    if (!existHistory) {
+      await History.create({
+        user: req.user._id,
+        series: id,
+      });
+    }
+    success(res, "200", "Success", allEpisodesOfSeries);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+// All episodes of series in admin panel
+const episodesOfSeries = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const seriesExist = await Series.findById(id);
+    if (!seriesExist) {
+      return error409(res, "Series not found");
+    }
+    const allEpisodesOfSeries = await Episode.find({
+      series: id,
+    })
+      .select("episodeVideo.publicUrl views publishDate content visibility")
+      .populate({
+        path: "series",
+        select: "thumbnail.publicUrl",
+      });
+    success(res, "200", "Success", allEpisodesOfSeries);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
 module.exports = {
   addEpisode,
+  rateTheEpisode,
+  allEpisodeOfSeries,
+  episodesOfSeries,
 };

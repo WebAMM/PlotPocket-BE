@@ -15,6 +15,7 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 //config
 const config = require("../../config");
+const { v4: uuidv4 } = require("uuid");
 
 //Register User
 const registerUser = async (req, res) => {
@@ -36,6 +37,7 @@ const registerUser = async (req, res) => {
         publicId: result.public_id,
         format: result.format,
       };
+      userData.role = "User";
     }
     const newUser = new User(userData);
     await newUser.save();
@@ -53,7 +55,7 @@ const loginUser = async (req, res) => {
       return error404(res, "User not found!");
     }
     if (user.status === "Inactive") {
-      return error404(res, "User blocked");
+      return error404(res, "User is inactive");
     }
     if (user && bcryptjs.compareSync(req.body.password, user.password)) {
       const secret = config.jwtPrivateKey;
@@ -62,12 +64,13 @@ const loginUser = async (req, res) => {
           _id: user._id,
           name: user.userName,
           email: user.email,
+          role: user.role,
           profileImage: user.profileImage.publicUrl,
           createdAt: user.createdAt,
         },
         secret,
         {
-          expiresIn: "8h",
+          expiresIn: "24h",
         }
       );
       const responseUser = {
@@ -90,25 +93,47 @@ const loginUser = async (req, res) => {
   }
 };
 
+//Guest Login
+const guestLogin = async (req, res) => {
+  try {
+    const guestId = uuidv4();
+    const guestName = `Guest_${guestId.slice(0, 8)}`;
+
+    const secret = config.jwtPrivateKey;
+    const token = jwt.sign(
+      {
+        _id: guestId,
+        name: guestName,
+        role: "Guest",
+      },
+      secret
+    );
+
+    const responseUser = {
+      _id: guestId,
+      userName: guestName,
+      role: "Guest",
+    };
+
+    return success(res, "200", "Guest Login Success", {
+      token,
+      user: responseUser,
+    });
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
 //Get User
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
-    user.profileImage = user.profileImage.publicUrl;
+    const user = await User.findById(req.user._id).select(
+      "_id userName email profileImage.publicUrl status createdAt"
+    );
     if (!user) {
       return error404(res, "User not found!");
     }
-    const responseUser = {
-      _id: user._id,
-      userName: user.userName,
-      email: user.email,
-      profileImage: user.profileImage.publicUrl,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-    success(res, "200", "User profile", {
-      user: responseUser,
-    });
+    success(res, "200", "User profile", user);
   } catch (err) {
     error500(res, err);
   }
@@ -125,7 +150,7 @@ const loginWithFacebook = async (req, res) => {
       checkUser.password = "";
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: checkUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -139,7 +164,7 @@ const loginWithFacebook = async (req, res) => {
       newUser.save();
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: newUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -162,7 +187,7 @@ const loginWithInstagram = async (req, res) => {
       checkUser.password = "";
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: checkUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -177,7 +202,7 @@ const loginWithInstagram = async (req, res) => {
       newUser.save();
       const secret = config.jwtPrivateKey;
       const token = jwt.sign({ _id: newUser._id }, secret, {
-        expiresIn: "8h",
+        expiresIn: "24h",
       });
       success(res, "200", "Login Success", {
         token,
@@ -263,7 +288,7 @@ const updateUserPassword = async (req, res) => {
       },
       { new: true }
     );
-    status200(res,"Password updated successfully");
+    status200(res, "Password updated successfully");
   } catch (err) {
     error500(res, err);
   }
@@ -309,6 +334,7 @@ const updateAdminProfile = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  guestLogin,
   generateResetPasswordEmailWithOTP,
   verifyResetPasswordOTP,
   updateUserPassword,

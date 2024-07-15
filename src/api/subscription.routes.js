@@ -1,10 +1,6 @@
 const router = require("express").Router();
 //controllers
-const {
-  addSubscriptionPlan,
-  getAllSubscriptions,
-  getSubscriptionByPlan,
-} = require("../controllers/subscription.controller");
+const subscriptionController = require("../controllers/subscription.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
@@ -14,13 +10,13 @@ router.post(
   "/admin/add",
   verifyToken,
   payloadValidator.validateAddSubscription,
-  addSubscriptionPlan
+  subscriptionController.addSubscriptionPlan
 );
 
 //All subscriptions
-router.get("/admin/all", verifyToken, getAllSubscriptions);
+router.get("/admin/all", verifyToken, subscriptionController.getAllSubscriptions);
 
 //Get subscription by plan
-router.get("/admin/by-plan", verifyToken, getSubscriptionByPlan);
+router.get("/admin/by-plan", verifyToken, subscriptionController.getSubscriptionByPlan);
 
 module.exports = router;
