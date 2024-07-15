@@ -13,8 +13,8 @@ const chapterRouter = require("./chapter.routes");
 const myListRouter = require("./myList.routes");
 const historyRouter = require("./history.routes");
 const mightLikeRouter = require("./mightLike.routes");
-//Routes
 
+//Routes
 router.use("/auth", authRouter);
 router.use("/user", userRouter);
 router.use("/dashboard", dashboardRouter);
