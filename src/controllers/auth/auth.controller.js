@@ -106,10 +106,7 @@ const guestLogin = async (req, res) => {
         name: guestName,
         role: "Guest",
       },
-      secret,
-      {
-        expiresIn: "24h",
-      }
+      secret
     );
 
     const responseUser = {
