@@ -11,10 +11,10 @@ const { success } = require("../services/helpers/response");
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({
-      email: {
-        $ne: "admin@gmail.com",
+      role: {
+        $ne: "Admin",
       },
-    }).select("profilePic.publicUrl _id userName email createdAt status");
+    }).select("profilePic.publicUrl _id userName email phoneNo createdAt status");
     success(res, "200", "Success", users);
   } catch (err) {
     error500(res, err);

@@ -40,8 +40,10 @@ const addChapter = async (req, res) => {
           format: "pdf",
         },
       });
-      await Novel.findByIdAndUpdate(
-        id,
+      await Novel.updateOne(
+        {
+          _id: id,
+        },
         { $push: { chapters: newChapter._id } },
         { new: true }
       );
@@ -59,7 +61,6 @@ const getAllChaptersByNovel = async (req, res) => {
   const { id } = req.params;
   try {
     const novelExist = await Novel.findById(id);
-
     if (!novelExist) {
       return error404(res, "Novel not found");
     }

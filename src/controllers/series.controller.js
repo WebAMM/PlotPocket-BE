@@ -57,6 +57,9 @@ const getAllSeries = async (req, res) => {
       })
       .populate("episodes");
 
+    if (series.length === 0) {
+      return success(res, "200", "Success", series);
+    }
     const allSeries = series.map((series) => ({
       _id: series._id,
       thumbnail: series.thumbnail,
