@@ -2,8 +2,19 @@ const mongoose = require("mongoose");
 
 const episodeSchema = new mongoose.Schema(
   {
-    //Cloudinary images
-    video: {
+    series: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Series",
+    },
+    title: {
+      type: String,
+      required: [true, "Title is required"],
+    },
+    description: {
+      type: String,
+    },
+    //Cloudinary video links.
+    episodeVideo: {
       publicUrl: {
         type: String,
         default: "",
@@ -21,13 +32,6 @@ const episodeSchema = new mongoose.Schema(
         default: "",
       },
     },
-    title: {
-      type: String,
-      required: [true, "Title is required"],
-    },
-    description: {
-      type: String,
-    },
     content: {
       type: String,
       enum: ["Paid", "Free"],
@@ -36,11 +40,31 @@ const episodeSchema = new mongoose.Schema(
       type: String,
       enum: ["Public", "Private"],
     },
+    views: {
+      type: Number,
+      default: 0,
+    },
+    ratings: {
+      type: [
+        { 
+          rating: {
+            type: Number,
+            required: true,
+          },
+          user: {
+            type: mongoose.Schema.ObjectId,
+            ref: "User",
+            required: true,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,
   }
 );
 
-const Chapter = mongoose.model("Episode", episodeSchema);
-module.exports = Chapter;
+const Episode = mongoose.model("Episode", episodeSchema);
+module.exports = Episode;

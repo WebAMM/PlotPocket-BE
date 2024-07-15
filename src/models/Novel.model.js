@@ -1,5 +1,39 @@
 const mongoose = require("mongoose");
 
+const reviewSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "User is required"],
+    },
+    rating: {
+      type: Number,
+      max: 5,
+      min: 1,
+      default: 0,
+    },
+    comment: {
+      type: String,
+      default: "",
+    },
+    likes: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    totalLikes: {
+      type: Number,
+      default: 0,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
 const novelSchema = new mongoose.Schema(
   {
     title: {
@@ -24,16 +58,21 @@ const novelSchema = new mongoose.Schema(
       type: String,
       enum: ["Public", "Private"],
     },
-    isNovel: {
-      type: Boolean,
+    type: {
+      type: String,
+      default: "Novel",
     },
     views: {
       type: Number,
       default: 0,
     },
+    isAdult: {
+      type: Boolean,
+      default: false,
+    },
     author: {
       type: mongoose.Schema.ObjectId,
-      ref: "User",
+      ref: "Author",
     },
     chapters: [
       {
@@ -60,21 +99,7 @@ const novelSchema = new mongoose.Schema(
         default: "",
       },
     },
-    reviews: [
-      {
-        user: {
-          type: mongoose.Schema.ObjectId,
-          ref: "User",
-          required: [true, "User is required"],
-        },
-        rating: {
-          type: Number,
-        },
-        comments: {
-          type: String,
-        },
-      },
-    ],
+    reviews: [reviewSchema],
   },
   {
     timestamps: true,

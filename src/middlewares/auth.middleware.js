@@ -1,8 +1,5 @@
 //Responses and errors
-const {
-  error500,
-  error404,
-} = require("../services/helpers/errors");
+const { error500, error404 } = require("../services/helpers/errors");
 //imports from packages
 const jwt = require("jsonwebtoken");
 //config
