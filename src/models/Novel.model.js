@@ -106,5 +106,7 @@ const novelSchema = new mongoose.Schema(
   }
 );
 
+novelSchema.index({ title: 1 });
+
 const Novel = mongoose.model("Novel", novelSchema);
 module.exports = Novel;

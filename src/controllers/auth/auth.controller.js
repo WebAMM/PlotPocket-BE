@@ -324,8 +324,22 @@ const updateAdminProfile = async (req, res) => {
     if (!userExist) {
       return error404(res, "User not found!");
     }
-    await User.findByIdAndUpdate(id, { ...req.body }, { new: true });
+    await User.updateOne({ _id: id }, { ...req.body }, { new: true });
     return status200(res, "Profile updated successfully");
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+const updateAdminProfilePic = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const userExist = await User.findById(id);
+    if (!userExist) {
+      return error404(res, "User not found!");
+    }
+
+    return status200(res, "Profile pic updated successfully");
   } catch (err) {
     error500(res, err);
   }

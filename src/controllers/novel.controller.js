@@ -61,6 +61,10 @@ const getAllNovels = async (req, res) => {
       })
       .populate("chapters");
 
+    if (novels.length === 0) {
+      return success(res, "200", "Success", novels);
+    }
+    
     const allNovels = novels.map((novel) => ({
       _id: novel._id,
       thumbnail: novel.thumbnail,
@@ -84,7 +88,13 @@ const getAllNovels = async (req, res) => {
 const getAuthorNovels = async (req, res) => {
   const { id } = req.params;
   try {
-    const novels = await Novel.find()
+    const authorExist = await Author.findById(id);
+    if (!authorExist) {
+      return error404(res, "Author not found");
+    }
+    const novels = await Novel.find({
+      author: id,
+    })
       .select(
         "_id thumbnail.publicUrl title description publishDate views visibility language reviews"
       )
@@ -97,6 +107,10 @@ const getAuthorNovels = async (req, res) => {
         select: "authorPic.publicUrl name gender",
       })
       .populate("chapters");
+
+    if (novels.length === 0) {
+      return success(res, "200", "Success", novels);
+    }
 
     const allNovels = novels.map((novel) => ({
       _id: novel._id,
@@ -277,7 +291,12 @@ const getTopRatedNovels = async (req, res) => {
 const singleNovel = async (req, res) => {
   const { id } = req.params;
   try {
-    const singleNovel = await Novel.findById(id)
+    const singleNovel = await Novel.findById(id);
+    if (!singleNovel) {
+      return error404(res, "Novel not found");
+    }
+
+    singleNovel
       .select("thumbnail.publicUrl title type language")
       .populate([
         {
