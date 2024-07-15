@@ -167,7 +167,49 @@ const appDashboard = async (req, res) => {
         select: "name",
       });
     //Series based on episodes total ratings
-    const allSeries = await Series.find(query)
+    // const allSeries = await Series.find(query)
+    //   .select("thumbnail.publicUrl title view type")
+    //   .populate({
+    //     path: "episodes",
+    //     select: "episodeVideo.publicUrl title content visibility description",
+    //     options: {
+    //       sort: {
+    //         createdAt: 1,
+    //       },
+    //       limit: 1,
+    //     },
+    //   })
+    //   .populate({
+    //     path: "category",
+    //     select: "title",
+    //   });
+
+    // const seriesRatings = [];
+    // for (const series of allSeries) {
+    //   let totalSeriesRating = 0;
+    //   let hasRatedEpisodes = false;
+    //   const episodes = await Episode.find({ series: series._id });
+    //   episodes.forEach((episode) => {
+    //     if (episode.ratings.length > 0) {
+    //       hasRatedEpisodes = true;
+    //       const episodeTotalRating = episode.ratings.reduce(
+    //         (acc, rating) => acc + rating.rating,
+    //         0
+    //       );
+    //       totalSeriesRating += episodeTotalRating;
+    //     }
+    //   });
+    //   if (hasRatedEpisodes) {
+    //     const seriesWithRating = series.toObject();
+    //     seriesWithRating.totalRating = totalSeriesRating;
+    //     seriesRatings.push(seriesWithRating);
+    //   }
+    // }
+    // seriesRatings.sort((a, b) => b.totalRating - a.totalRating);
+    // const topRatedSeries = seriesRatings.slice(0, 5);
+
+    //New------------
+    const topRatedSeries = await Series.find(query)
       .select("thumbnail.publicUrl title view type")
       .populate({
         path: "episodes",
@@ -182,31 +224,11 @@ const appDashboard = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
+      })
+      .sort({
+        seriesRating: -1,
       });
 
-    const seriesRatings = [];
-    for (const series of allSeries) {
-      let totalSeriesRating = 0;
-      let hasRatedEpisodes = false;
-      const episodes = await Episode.find({ series: series._id });
-      episodes.forEach((episode) => {
-        if (episode.ratings.length > 0) {
-          hasRatedEpisodes = true;
-          const episodeTotalRating = episode.ratings.reduce(
-            (acc, rating) => acc + rating.rating,
-            0
-          );
-          totalSeriesRating += episodeTotalRating;
-        }
-      });
-      if (hasRatedEpisodes) {
-        const seriesWithRating = series.toObject();
-        seriesWithRating.totalRating = totalSeriesRating;
-        seriesRatings.push(seriesWithRating);
-      }
-    }
-    seriesRatings.sort((a, b) => b.totalRating - a.totalRating);
-    const topRatedSeries = seriesRatings.slice(0, 5);
     //Novels based on top rated
     const topRatedNovelsPipeline = [
       { $unwind: "$reviews" },
@@ -258,8 +280,8 @@ const appDashboard = async (req, res) => {
       watchedSeriesNovels,
       newNovels,
       newSeries,
-      topRatedNovels: populatedNovels,
       topRatedSeries,
+      topRatedNovels: populatedNovels,
     };
     success(res, "200", "Success", data);
   } catch (err) {
@@ -320,8 +342,49 @@ const dashboardSeries = async (req, res) => {
         path: "category",
         select: "title",
       });
-    //Series based on episodes total ratings
-    const allSeries = await Series.find(query)
+    //Series based on episodes total ratings OLD
+    // const allSeries = await Series.find(query)
+    //   .select("thumbnail.publicUrl title view type")
+    //   .populate({
+    //     path: "episodes",
+    //     select: "episodeVideo.publicUrl title content visibility description",
+    //     options: {
+    //       sort: {
+    //         createdAt: 1,
+    //       },
+    //       limit: 1,
+    //     },
+    //   })
+    //   .populate({
+    //     path: "category",
+    //     select: "title",
+    //   });
+    // const seriesRatings = [];
+    // for (const series of allSeries) {
+    //   let totalSeriesRating = 0;
+    //   let hasRatedEpisodes = false;
+    //   const episodes = await Episode.find({ series: series._id });
+    //   episodes.forEach((episode) => {
+    //     if (episode.ratings.length > 0) {
+    //       hasRatedEpisodes = true;
+    //       const episodeTotalRating = episode.ratings.reduce(
+    //         (acc, rating) => acc + rating.rating,
+    //         0
+    //       );
+    //       totalSeriesRating += episodeTotalRating;
+    //     }
+    //   });
+    //   if (hasRatedEpisodes) {
+    //     const seriesWithRating = series.toObject();
+    //     seriesWithRating.totalRating = totalSeriesRating;
+    //     seriesRatings.push(seriesWithRating);
+    //   }
+    // }
+    // seriesRatings.sort((a, b) => b.totalRating - a.totalRating);
+    // const topRatedSeries = seriesRatings.slice(0, 10);
+
+    //New----------------------------------
+    const topRatedSeries = await Series.find(query)
       .select("thumbnail.publicUrl title view type")
       .populate({
         path: "episodes",
@@ -336,31 +399,10 @@ const dashboardSeries = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
+      })
+      .sort({
+        seriesRating: -1,
       });
-    const seriesRatings = [];
-    for (const series of allSeries) {
-      let totalSeriesRating = 0;
-      let hasRatedEpisodes = false;
-      const episodes = await Episode.find({ series: series._id });
-      episodes.forEach((episode) => {
-        if (episode.ratings.length > 0) {
-          hasRatedEpisodes = true;
-          const episodeTotalRating = episode.ratings.reduce(
-            (acc, rating) => acc + rating.rating,
-            0
-          );
-          totalSeriesRating += episodeTotalRating;
-        }
-      });
-      if (hasRatedEpisodes) {
-        const seriesWithRating = series.toObject();
-        seriesWithRating.totalRating = totalSeriesRating;
-        seriesRatings.push(seriesWithRating);
-      }
-    }
-    seriesRatings.sort((a, b) => b.totalRating - a.totalRating);
-    const topRatedSeries = seriesRatings.slice(0, 10);
-
     //All record in response
     const data = {
       series,

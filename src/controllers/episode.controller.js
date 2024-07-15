@@ -19,7 +19,6 @@ const addEpisode = async (req, res) => {
   const { id } = req.params;
   try {
     const seriesExist = await Series.findById(id);
-
     if (!seriesExist) {
       return error404(res, "Series not found");
     }
@@ -44,8 +43,8 @@ const addEpisode = async (req, res) => {
           format: "mp4",
         },
       });
-      await Series.findByIdAndUpdate(
-        id,
+      await Series.updateOne(
+        { _id: id },
         { $push: { episodes: newEpisode._id } },
         { new: true }
       );
@@ -82,7 +81,7 @@ const rateTheEpisode = async (req, res) => {
         },
         {
           $inc: {
-            episodesRating: -1,
+            seriesRating: -1,
           },
         }
       );
@@ -98,7 +97,7 @@ const rateTheEpisode = async (req, res) => {
         },
         {
           $inc: {
-            episodesRating: 1,
+            seriesRating: 1,
           },
         }
       );
@@ -122,7 +121,7 @@ const allEpisodeOfSeries = async (req, res) => {
       series: id,
     });
     //Increase series views
-    await Series.findOneAndUpdate(
+    await Series.updateOne(
       {
         _id: id,
       },
