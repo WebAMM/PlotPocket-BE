@@ -8,10 +8,10 @@ const { morganSetup } = require("./morgan");
 const { corsSetup } = require("./cors");
 
 const appMiddlewares = (app) => {
+  corsSetup(app);
   app.use(express.json());
   app.use(helmet());
   morganSetup(app);
-  corsSetup(app);
 };
 
 module.exports = { appMiddlewares };
