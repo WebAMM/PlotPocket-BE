@@ -27,11 +27,10 @@ router.patch(
   rewardController.editRewardStatus
 );
 
+//Rewards for app
+router.get("/app/all", verifyToken, rewardController.getRewardsForUser);
+
 //Update Reward
-router.post(
-  "/admin/claim-reward",
-  verifyToken,
-  rewardController.editRewardStatus
-);
+router.post("/app/claim", verifyToken, rewardController.claimReward);
 
 module.exports = router;

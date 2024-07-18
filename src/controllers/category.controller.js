@@ -1,5 +1,8 @@
 //Models
 const Category = require("../models/Category.model");
+const Novel = require("../models/Novel.model");
+const Series = require("../models/Series.model");
+
 //Responses and errors
 const {
   error500,
@@ -32,7 +35,7 @@ const addCategory = async (req, res) => {
 const getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find().select(
-      "_id title type status createdAt view"
+      "_id title type status createdAt views"
     );
     return success(res, "200", "Success", categories);
   } catch (err) {
@@ -47,7 +50,7 @@ const getCategoriesByType = async (req, res) => {
     return customError(res, 400, "Type is required");
   }
   try {
-    const categories = await Category.find({ type });
+    const categories = await Category.find({ type }).select("title type");
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);
@@ -57,17 +60,30 @@ const getCategoriesByType = async (req, res) => {
 // Edit Category
 const editCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, type, status } = req.body;
+  const { replaceCategoryId } = req.body;
   try {
     const category = await Category.findById(id);
+    const replaceCategory = await Category.findById(replaceCategoryId);
+
     if (!category) {
       return error404(res, "Category not found");
     }
-    if (title) category.title = title;
-    if (type) category.type = type;
-    if (status) category.status = status;
-    await category.save();
-    return success(res, "200", "Category updated successfully", category);
+    if (!replaceCategory) {
+      return error404(res, "Replace category not found");
+    }
+
+    if (replaceCategory.type === "Novels") {
+      await Novel.updateMany({
+        category: replaceCategoryId,
+      });
+    } else if (replaceCategory.type === "Series") {
+      await Series.updateMany({
+        category: replaceCategoryId,
+      });
+    }
+
+    await Category.deleteOne({ _id: id });
+    return status200(res, "Category replaced successfully");
   } catch (err) {
     return error500(res, err);
   }
