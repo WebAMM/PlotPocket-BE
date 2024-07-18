@@ -10,16 +10,24 @@ const {
   error400,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
+const Category = require("../models/Category.model");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
 //Add Chapter
 const addSeries = async (req, res) => {
   try {
-    const { title } = req.body;
+    const { title, category } = req.body;
     const existSeries = await Series.findOne({ title });
     if (existSeries) {
-      return error409(res, "Series already Exists");
+      return error409(res, "Series already exists");
+    }
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category don't exists");
+    }
+    if (existCategory.type !== "Series") {
+      return error400(res, "Category don't belong to series");
     }
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {

@@ -4,11 +4,13 @@ const authorController = require("../controllers/author.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
+const payloadValidator = require("../middlewares/payloadValidator");
 
 //Add author
 router.post(
   "/admin/add",
   verifyToken,
+  payloadValidator.validateAddAuthor,
   upload.single("authorPic"),
   authorController.addAuthor
 );
