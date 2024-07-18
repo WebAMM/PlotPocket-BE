@@ -14,7 +14,7 @@ const getAllUsers = async (req, res) => {
       role: {
         $ne: "Admin",
       },
-    }).select("profilePic.publicUrl _id userName email phoneNo createdAt status");
+    }).select("profilePic.publicUrl _id userName email createdAt status");
     success(res, "200", "Success", users);
   } catch (err) {
     error500(res, err);

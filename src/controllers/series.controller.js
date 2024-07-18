@@ -95,8 +95,53 @@ const deleteSeries = async (req, res) => {
   }
 };
 
+// Top rated series
+const getTopRatedSeries = async (req, res) => {
+  const { categoryId } = req.query;
+  const { latest } = req.body;
+
+  const query = {};
+
+  if (categoryId) {
+    query.category = categoryId;
+  }
+
+  const sortOptions = {
+    seriesRating: -1,
+  };
+
+  if (latest) {
+    sortOptions.createdAt = -1;
+  }
+
+  try {
+    const topRatedSeries = await Series.find(query)
+      .select("thumbnail.publicUrl title view type")
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: {
+          sort: {
+            createdAt: 1,
+          },
+          limit: 1,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort(sortOptions);
+
+    return success(res, "200", "Success", topRatedSeries);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addSeries,
   getAllSeries,
   deleteSeries,
+  getTopRatedSeries,
 };

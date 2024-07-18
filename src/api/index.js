@@ -1,4 +1,5 @@
 const router = require("express").Router();
+//All routes
 const authRouter = require("./auth/auth.routes");
 const userRouter = require("./user.routes");
 const dashboardRouter = require("./dashboard.routes");
@@ -13,6 +14,8 @@ const rewardRouter = require("./reward.routes");
 const myListRouter = require("./myList.routes");
 const historyRouter = require("./history.routes");
 const mightLikeRouter = require("./mightLike.routes");
+const searchHistoryRouter = require("./searchHistory.routes");
+const allRouter = require("./all.routes");
 
 //Routes
 router.use("/auth", authRouter);
@@ -29,5 +32,7 @@ router.use("/reward", rewardRouter);
 router.use("/my-list", myListRouter);
 router.use("/history", historyRouter);
 router.use("/might-like", mightLikeRouter);
+router.use("/search-history", searchHistoryRouter);
+router.use("/", allRouter);
 
 module.exports = router;

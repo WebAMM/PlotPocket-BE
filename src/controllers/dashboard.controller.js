@@ -267,7 +267,7 @@ const appDashboard = async (req, res) => {
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
-      options: { sort: { createdAt: 1 } },
+      options: { sort: { createdAt: 1 }, limit: 1 },
       select: "chapterPdf.publicUrl name chapterNo content views",
     });
 
@@ -512,7 +512,7 @@ const dashboardNovels = async (req, res) => {
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
-      options: { sort: { createdAt: 1 } },
+      options: { sort: { createdAt: 1 }, limit: 1 },
       select: "chapterPdf.publicUrl name chapterNo content views",
     });
 
@@ -558,6 +558,7 @@ const bestSeries = async (req, res) => {
     error500(res, err);
   }
 };
+
 
 // Top 10 Series to display on mobile app based on no of views
 // const allFeaturedSeries = async (req, res) => {
