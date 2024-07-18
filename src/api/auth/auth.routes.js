@@ -29,7 +29,19 @@ router.put(
 );
 
 //Admin updates profile
-router.put("/admin/update-profile/:id", authController.updateAdminProfile);
+router.put(
+  "/admin/update-profile",
+  verifyToken,
+  authController.updateAdminProfile
+);
+
+//Admin updates profile pic
+router.put(
+  "/admin/update-pic",
+  verifyToken,
+  upload.single("profilePic"),
+  authController.updateAdminProfilePic
+);
 
 //Login with facebook
 router.post("/login/facebook", authController.loginWithFacebook);

@@ -1,5 +1,7 @@
 //Models
 const Novel = require("../models/Novel.model");
+const Series = require("../models/Series.model");
+const Episode = require("../models/Episode.model");
 //Responses and errors
 const {
   error500,
@@ -64,7 +66,7 @@ const getAllNovels = async (req, res) => {
     if (novels.length === 0) {
       return success(res, "200", "Success", novels);
     }
-    
+
     const allNovels = novels.map((novel) => ({
       _id: novel._id,
       thumbnail: novel.thumbnail,
@@ -238,6 +240,16 @@ const likeCommentOnNovel = async (req, res) => {
 // Top rated novels
 const getTopRatedNovels = async (req, res) => {
   const { categoryId } = req.query;
+  const { latest } = req.body;
+
+  const sortOptions = {
+    totalRating: -1,
+  };
+
+  if (latest) {
+    sortOptions.createdAt = -1;
+  }
+
   try {
     const topRatedNovelsPipelines = [
       { $unwind: "$reviews" },
@@ -247,13 +259,13 @@ const getTopRatedNovels = async (req, res) => {
           title: { $first: "$title" },
           category: { $first: "$category" },
           type: { $first: "$type" },
-          author: { $first: "$author" },
+          // author: { $first: "$author" },
           chapters: { $first: "$chapters" },
           thumbnail: { $first: { publicUrl: "$thumbnail.publicUrl" } },
           totalRating: { $avg: "$reviews.rating" },
         },
       },
-      { $sort: { totalRating: -1 } },
+      { $sort: sortOptions },
       {
         $lookup: {
           from: "categories",
@@ -277,69 +289,14 @@ const getTopRatedNovels = async (req, res) => {
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipelines);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
-      options: { sort: { createdAt: 1 } },
+      options: { sort: { createdAt: 1 }, limit: 1 },
       select: "chapterPdf.publicUrl name chapterNo content views",
     });
 
-    return success(res, "200", "Success", populatedNovels);
-  } catch (err) {
-    return error500(res, err);
-  }
-};
-
-// Single novel detail with comments.
-const singleNovel = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const singleNovel = await Novel.findById(id);
-    if (!singleNovel) {
-      return error404(res, "Novel not found");
-    }
-
-    singleNovel
-      .select("thumbnail.publicUrl title type language")
-      .populate([
-        {
-          path: "author",
-          select: "authorPic.publicUrl name gender followers",
-        },
-        {
-          path: "category",
-          select: "title",
-        },
-        {
-          path: "chapters",
-          select:
-            "chapterPdf.publicUrl chapterNo content views publishedDate createdAt",
-        },
-        {
-          path: "reviews",
-          select: "rating comment totalLikes createdAt",
-          populate: {
-            path: "user",
-            select: "profileImage.publicUrl userName email",
-          },
-        },
-      ])
-      .lean();
-
-    singleNovel.author.followers = singleNovel.author.followers.length || 0;
-
-    if (singleNovel.reviews?.length) {
-      singleNovel.reviews = singleNovel.reviews.map((review) => ({
-        rating: review.rating,
-        comment: review.comment,
-        totalLikes: review.totalLikes,
-        createdAt: review.createdAt,
-        user: {
-          profileImage: review.user.profileImage,
-          userName: review.user.userName,
-          email: review.user.email,
-        },
-      }));
-    }
-
-    return success(res, "200", "Success", singleNovel);
+    const data = {
+      topRankedNovels: populatedNovels,
+    };
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
@@ -354,5 +311,4 @@ module.exports = {
   rateNovel,
   likeCommentOnNovel,
   getTopRatedNovels,
-  singleNovel,
 };

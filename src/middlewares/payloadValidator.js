@@ -35,6 +35,13 @@ const validateAddNovel = [
   body("publishDate").notEmpty().withMessage("Publish date is required"),
   body("visibility").notEmpty().withMessage("Visibility is required"),
   body("author").notEmpty().withMessage("Publish date is required"),
+  body("description")
+    .notEmpty()
+    .withMessage("Description is required")
+    .isLength({ min: 5 })
+    .withMessage("Description must be at least 5 characters long")
+    .isLength({ max: 400 })
+    .withMessage("Description cannot exceed 400 characters"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -64,6 +71,14 @@ const validateAddSeries = [
   body("category").notEmpty().withMessage("Category of series is required"),
   body("visibility").notEmpty().withMessage("Visibility is required"),
   body("publishDate").notEmpty().withMessage("Publish date is required"),
+  body("description")
+    .notEmpty()
+    .withMessage("Description is required")
+    .isLength({ min: 5 })
+    .withMessage("Description must be at least 5 characters long")
+    .isLength({ max: 400 })
+    .withMessage("Description cannot exceed 400 characters"),
+
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -139,18 +154,16 @@ const validateAddReward = [
 ];
 
 const validateRateNovel = [
-  check("comment").custom((value, { req }) => {
-    if (!value && !req.body.rating) {
-      throw new Error("Either comment or rating must be provided");
-    }
-    return true;
-  }),
+  // check("comment").custom((value, { req }) => {
+  //   if (!value && !req.body.rating) {
+  //     throw new Error("Either comment or rating must be provided");
+  //   }
+  //   return true;
+  // }),
   body("rating")
-    .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage("Rating must be an integer between 1 and 5"),
   body("comment")
-    .optional()
     .isLength({ min: 2 })
     .withMessage("Comment must be at least 2 characters long"),
   (req, res, next) => {
