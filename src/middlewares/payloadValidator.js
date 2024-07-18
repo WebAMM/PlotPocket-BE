@@ -132,7 +132,7 @@ const validateUpdatePassword = [
   },
 ];
 
-const validateUpdateProfile = [
+const validateAdminUpdateProfile = [
   body("firstName").notEmpty().withMessage("First name is required"),
   body("lastName").notEmpty().withMessage("Last name is required"),
   body("phoneNo").notEmpty().withMessage("Phone number is required"),
@@ -201,6 +201,7 @@ module.exports = {
   validateAddEpisode,
   validateAddSubscription,
   validateUpdatePassword,
+  validateAdminUpdateProfile,
   validateAddReward,
   validateRateNovel,
 };
