@@ -16,8 +16,13 @@ const validateLogin = [
   },
 ];
 
+const allowedTypes = ["Novels", "Series"];
 const validateAddCategory = [
-  body("type").notEmpty().withMessage("Type of category is required"),
+  body("type")
+    .notEmpty()
+    .withMessage("Type of category is required")
+    .isIn(["Novels", "Series"])
+    .withMessage(`Type must be one of: ${allowedTypes.join(", ")}`),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -56,6 +61,19 @@ const validateAddChapter = [
   body("name").notEmpty().withMessage("Name of chapter is required"),
   body("chapterNo").notEmpty().withMessage("Chapter no. is required"),
   body("content").notEmpty().withMessage("Content is required"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  },
+];
+
+const validateAddAuthor = [
+  body("name").notEmpty().withMessage("Name of author is required"),
+  body("gender").notEmpty().withMessage("Gender is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -137,7 +155,9 @@ const validateAdminUpdateProfile = [
   body("lastName").notEmpty().withMessage("Last name is required"),
   body("phoneNo").notEmpty().withMessage("Phone number is required"),
   body("dateOfBirth").notEmpty().withMessage("Date of birth is required"),
-  body("emergencyContact").notEmpty().withMessage("Emergency contact is required"),
+  body("emergencyContact")
+    .notEmpty()
+    .withMessage("Emergency contact is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -204,4 +224,5 @@ module.exports = {
   validateAdminUpdateProfile,
   validateAddReward,
   validateRateNovel,
+  validateAddAuthor,
 };
