@@ -209,7 +209,10 @@ const appDashboard = async (req, res) => {
     // const topRatedSeries = seriesRatings.slice(0, 5);
 
     //New------------
-    const topRatedSeries = await Series.find(query)
+    const topRatedSeries = await Series.find({
+      ...query,
+      seriesRating: { $gte: 1 },
+    })
       .select("thumbnail.publicUrl title view type")
       .populate({
         path: "episodes",
@@ -231,6 +234,12 @@ const appDashboard = async (req, res) => {
 
     //Novels based on top rated
     const topRatedNovelsPipeline = [
+      {
+        $match: {
+          ...query,
+          reviews: { $ne: [] },
+        },
+      },
       { $unwind: "$reviews" },
       {
         $group: {
@@ -558,7 +567,6 @@ const bestSeries = async (req, res) => {
     error500(res, err);
   }
 };
-
 
 // Top 10 Series to display on mobile app based on no of views
 // const allFeaturedSeries = async (req, res) => {

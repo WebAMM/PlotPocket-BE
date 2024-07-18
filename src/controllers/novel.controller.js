@@ -14,15 +14,31 @@ const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
+const Category = require("../models/Category.model");
+const Author = require("../models/Author.model");
 
 //Add Novel
 const addNovel = async (req, res) => {
   try {
-    const { title } = req.body;
+    const { title, category, author } = req.body;
     const existNovel = await Novel.findOne({ title });
     if (existNovel) {
-      return error409(res, "Novel Already Exists");
+      return error409(res, "Novel already exists");
     }
+    const existCategory = await Category.findById(category);
+    const existAuthor = await Author.findById(author);
+
+    if (!existCategory) {
+      return error409(res, "Category don't exists");
+    }
+    if (existCategory.type !== "Novels") {
+      return error400(res, "Category type don't belong to novels");
+    }
+
+    if (!existAuthor) {
+      return error409(res, "Author don't exists");
+    }
+
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",

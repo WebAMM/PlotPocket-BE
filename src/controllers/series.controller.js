@@ -27,7 +27,7 @@ const addSeries = async (req, res) => {
       return error409(res, "Category don't exists");
     }
     if (existCategory.type !== "Series") {
-      return error400(res, "Category don't belong to series");
+      return error400(res, "Category type don't belong to series");
     }
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {

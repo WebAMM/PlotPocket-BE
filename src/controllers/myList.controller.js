@@ -47,7 +47,7 @@ const allMyLists = async (req, res) => {
         },
       },
     });
-    return success(res, "200", "All List record", allMyLists);
+    return success(res, "200", "All list record", allMyLists);
   } catch (err) {
     return error500(res, err);
   }

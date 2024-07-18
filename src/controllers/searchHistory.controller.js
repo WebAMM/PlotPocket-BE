@@ -43,7 +43,7 @@ const getAllSearchHistory = async (req, res) => {
         },
       ]);
 
-    return success(res, "200", "All Search History", searchHistory);
+    return success(res, "200", "All search history", searchHistory);
   } catch (err) {
     return error500(res, err);
   }
