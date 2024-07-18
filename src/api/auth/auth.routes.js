@@ -32,6 +32,7 @@ router.put(
 router.put(
   "/admin/update-profile",
   verifyToken,
+  payloadValidator.validateUpdatePassword,
   authController.updateAdminProfile
 );
 

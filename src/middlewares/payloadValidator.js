@@ -132,6 +132,22 @@ const validateUpdatePassword = [
   },
 ];
 
+const validateUpdateProfile = [
+  body("firstName").notEmpty().withMessage("First name is required"),
+  body("lastName").notEmpty().withMessage("Last name is required"),
+  body("phoneNo").notEmpty().withMessage("Phone number is required"),
+  body("dateOfBirth").notEmpty().withMessage("Date of birth is required"),
+  body("emergencyContact").notEmpty().withMessage("Emergency contact is required"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  },
+];
+
 const validateAddReward = [
   body("status").isIn(["Active", "Inactive"]).withMessage("Invalid status"),
   body("weeklyRewards")
