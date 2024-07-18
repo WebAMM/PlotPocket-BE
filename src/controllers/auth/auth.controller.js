@@ -6,6 +6,7 @@ const {
   error409,
   error404,
   customError,
+  error400,
 } = require("../../services/helpers/errors");
 const { status200, success } = require("../../services/helpers/response");
 //helpers and functions
@@ -86,7 +87,7 @@ const loginUser = async (req, res) => {
         user: responseUser,
       });
     } else {
-      customError(res, 401, "Wrong credentials");
+      customError(res, 401, "Invalid credentials");
     }
   } catch (err) {
     error500(res, err);
@@ -128,7 +129,7 @@ const guestLogin = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select(
-      "_id userName email profileImage.publicUrl status createdAt"
+      "_id userName email profileImage.publicUrl status createdAt firstName lastName address city dateOfBirth emergencyContact phoneNo state zipCode"
     );
     if (!user) {
       return error404(res, "User not found!");
@@ -278,9 +279,8 @@ const updateUserPassword = async (req, res) => {
       userExist.password
     );
     if (!comparedPassword) {
-      return customError(res, 401, "Wrong credentials");
+      return customError(res, 401, "Invalid credentials");
     }
-
     await User.findByIdAndUpdate(
       id,
       {
@@ -318,13 +318,16 @@ const changeUserStatus = async (req, res) => {
 };
 
 const updateAdminProfile = async (req, res) => {
-  const { id } = req.params;
   try {
-    const userExist = await User.findById(id);
+    const userExist = await User.findById(req.user._id);
     if (!userExist) {
       return error404(res, "User not found!");
     }
-    await User.updateOne({ _id: id }, { ...req.body }, { new: true });
+    await User.updateOne(
+      { _id: req.user._id },
+      { $set: req.body },
+      { new: true }
+    );
     return status200(res, "Profile updated successfully");
   } catch (err) {
     error500(res, err);
@@ -332,14 +335,32 @@ const updateAdminProfile = async (req, res) => {
 };
 
 const updateAdminProfilePic = async (req, res) => {
-  const { id } = req.params;
   try {
-    const userExist = await User.findById(id);
+    const userExist = await User.findById(req.user._id);
     if (!userExist) {
       return error404(res, "User not found!");
     }
-
-    return status200(res, "Profile pic updated successfully");
+    if (req.file) {
+      // Remove existing profile image from Cloudinary
+      if (userExist.profileImage.publicId) {
+        await cloudinary.uploader.destroy(userExist.profileImage.publicId);
+      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "image",
+        folder: "user",
+      });
+      // Update user profile image details
+      userExist.profileImage = {
+        publicUrl: result.url,
+        secureUrl: result.secure_url,
+        publicId: result.public_id,
+        format: result.format,
+      };
+      await userExist.save();
+      return status200(res, "Profile image updated successfully");
+    } else {
+      return error400(res, "Profile image is required");
+    }
   } catch (err) {
     error500(res, err);
   }
@@ -358,4 +379,5 @@ module.exports = {
   getAllUsers,
   changeUserStatus,
   updateAdminProfile,
+  updateAdminProfilePic,
 };

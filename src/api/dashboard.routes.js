@@ -19,6 +19,20 @@ router.get("/app-novels", verifyToken, dashboardController.dashboardNovels);
 //Best Series in dashboard [APP]
 router.get("/app-best-series", verifyToken, dashboardController.bestSeries);
 
+// //Top ranked novel + series
+// router.get(
+//   "/app/single/:id",
+//   verifyToken,
+//   dashboardController.singleDetailPage
+// );
+
+// //Detailed novel + series
+// router.get(
+//   "/app/single/:id",
+//   verifyToken,
+//   dashboardController.singleDetailPage
+// );
+
 //Featured Series [APP]
 // router.get("/all-featured", verifyToken, dashboardController.allFeaturedSeries);
 

@@ -29,12 +29,12 @@ const authorSchema = new mongoose.Schema(
         default: "",
       },
     },
-    followers: [
-      {
-        type: mongoose.Schema.ObjectId,
-        ref: "User",
-      },
-    ],
+    // followers: [
+    //   {
+    //     type: mongoose.Schema.ObjectId,
+    //     ref: "User",
+    //   },
+    // ],
     reviews: [
       {
         comments: {

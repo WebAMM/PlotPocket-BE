@@ -59,14 +59,7 @@ router.post(
 //Like the user comment on novel
 router.post("/app/like", verifyToken, novelController.likeCommentOnNovel);
 
-//Get all top rated novels
-router.get(
-  "/app/all-top-rated",
-  verifyToken,
-  novelController.getTopRatedNovels
-);
-
-//Detailed novel
-router.get("/app/single/:id", verifyToken, novelController.singleNovel);
+//Get all top ranked novels
+router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
 
 module.exports = router;
