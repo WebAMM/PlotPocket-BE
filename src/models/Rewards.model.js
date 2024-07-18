@@ -10,7 +10,7 @@ const rewardSchema = new mongoose.Schema(
     weeklyRewards: [
       {
         day: {
-          type: String,
+          type: Number,
           required: true,
         },
         reward: {
