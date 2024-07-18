@@ -28,7 +28,7 @@ const mightLike = async (req, res) => {
       .select("thumbnail.publicUrl title description views category")
       .populate("category", "title");
 
-    return success(res, "200", "All Might Liked", novels);
+    return success(res, "200", "All might liked novels", novels);
   } catch (err) {
     return error500(res, err);
   }

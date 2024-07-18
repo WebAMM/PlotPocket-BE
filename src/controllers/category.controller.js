@@ -17,7 +17,7 @@ const addCategory = async (req, res) => {
     for (const title of titles) {
       const existCategory = await Category.findOne({ title, type });
       if (existCategory) {
-        return error409(res, `Category ${title} Already Exists`);
+        return error409(res, `Category ${title} already exists`);
       }
       categoriesToSave.push({ title, type });
     }
