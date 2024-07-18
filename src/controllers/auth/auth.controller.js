@@ -356,9 +356,19 @@ const updateAdminProfilePic = async (req, res) => {
         format: result.format,
       };
       await userExist.save();
-      return status200(res, "Profile image updated successfully");
+      return status200(res, "Profile pic updated successfully");
     } else {
-      return error400(res, "Profile image is required");
+      if (userExist.profileImage.publicId) {
+        await cloudinary.uploader.destroy(userExist.profileImage.publicId);
+      }
+      userExist.profileImage = {
+        publicUrl: "",
+        secureUrl: "",
+        publicId: "",
+        format: "",
+      };
+      await userExist.save();
+      return status200(res, "Profile pic removed successfully");
     }
   } catch (err) {
     error500(res, err);
