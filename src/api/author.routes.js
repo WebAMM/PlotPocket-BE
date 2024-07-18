@@ -10,8 +10,8 @@ const payloadValidator = require("../middlewares/payloadValidator");
 router.post(
   "/admin/add",
   verifyToken,
-  payloadValidator.validateAddAuthor,
   upload.single("authorPic"),
+  payloadValidator.validateAddAuthor,
   authorController.addAuthor
 );
 
