@@ -268,11 +268,11 @@ const appDashboard = async (req, res) => {
         $unwind: "$category",
       },
     ];
-    if (categoryId) {
-      topRatedNovelsPipeline.unshift({
-        $match: { category: new mongoose.Types.ObjectId(categoryId) },
-      });
-    }
+    // if (categoryId) {
+    //   topRatedNovelsPipeline.unshift({
+    //     $match: { category: new mongoose.Types.ObjectId(categoryId) },
+    //   });
+    // }
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",

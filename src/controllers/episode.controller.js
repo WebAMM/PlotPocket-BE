@@ -10,6 +10,7 @@ const {
   error400,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
+const { default: mongoose } = require("mongoose");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
@@ -117,10 +118,33 @@ const allEpisodeOfSeries = async (req, res) => {
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
-    const allEpisodesOfSeries = await Episode.find({
-      series: id,
-    });
-    //Increase series views
+    const allEpisodesOfSeries = await Episode.aggregate([
+      {
+        $match: {
+          series: new mongoose.Types.ObjectId(id),
+        },
+      },
+      {
+        $addFields: {
+          totalRating: {
+            $sum: "$ratings.rating",
+          },
+        },
+      },
+      {
+        $project: {
+          "episodeVideo.publicUrl": 1,
+          title: 1,
+          description: 1,
+          content: 1,
+          visibility: 1,
+          views: 1,
+          totalRating: 1,
+          createdAt: 1,
+        },
+      },
+    ]);
+    // Increase series views
     await Series.updateOne(
       {
         _id: id,
