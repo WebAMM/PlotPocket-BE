@@ -268,9 +268,8 @@ const verifyResetPasswordOTP = async (req, res) => {
 //Update User Password
 const updateUserPassword = async (req, res) => {
   try {
-    const { id } = req.params;
     const { oldPassword, newPassword } = req.body;
-    const userExist = await User.findById(id);
+    const userExist = await User.findById(req.user._id);
     if (!userExist) {
       return error404(res, "User not found!");
     }
@@ -282,7 +281,7 @@ const updateUserPassword = async (req, res) => {
       return customError(res, 401, "Invalid credentials");
     }
     await User.findByIdAndUpdate(
-      id,
+      req.user._id,
       {
         password: bcryptjs.hashSync(newPassword, 10),
       },

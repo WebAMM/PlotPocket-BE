@@ -22,7 +22,7 @@ router.post("/guest-login", authController.guestLogin);
 
 //Admin updates password
 router.put(
-  "/admin/update-password/:id",
+  "/admin/update-password",
   verifyToken,
   payloadValidator.validateUpdatePassword,
   authController.updateUserPassword
@@ -32,7 +32,7 @@ router.put(
 router.put(
   "/admin/update-profile",
   verifyToken,
-  payloadValidator.validateUpdatePassword,
+  payloadValidator.validateAdminUpdateProfile,
   authController.updateAdminProfile
 );
 
