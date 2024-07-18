@@ -5,6 +5,7 @@ const {
   error500,
   error409,
   error404,
+  error400,
   customError,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
@@ -34,9 +35,11 @@ const addAuthor = async (req, res) => {
         publicId: result.public_id,
         format: result.format,
       };
+      await Author.create(authorData);
+      return status200(res, "Author created successfully");
+    } else {
+      return error400(res, "Author picture is required");
     }
-    await Author.create(authorData);
-    return status200(res, "Author created successfully");
   } catch (err) {
     return error500(res, err);
   }
