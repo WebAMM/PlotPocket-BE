@@ -14,21 +14,120 @@ const Category = require("../models/Category.model");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
-//Add Chapter
+//Add Series
 const addSeries = async (req, res) => {
   try {
+    const { title, category, draftId } = req.body;
+    if (draftId) {
+      const draftedSeries = await Series.findById({
+        _id: draftId,
+        status: "Draft",
+      });
+
+      if (!draftedSeries) {
+        return error409(res, "No such draft exists");
+      }
+      const existCategory = await Category.findById(category);
+
+      if (!existCategory) {
+        return error409(res, "Category don't exists");
+      }
+      if (existCategory.type !== "Series") {
+        return error400(res, "Category type don't belong to series");
+      }
+      if (draftedSeries.thumbnail.publicUrl) {
+        await Series.updateOne(
+          {
+            _id: draftId,
+          },
+          {
+            ...req.body,
+            status: "Published",
+          }
+        );
+        return status200(res, "Series published successfully");
+      } else if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          resource_type: "image",
+          folder: "series",
+        });
+        await Series.updateOne(
+          {
+            _id: draftId,
+          },
+          {
+            ...req.body,
+            thumbnail: {
+              publicUrl: result.url,
+              secureUrl: result.secure_url,
+              publicId: result.public_id,
+              format: result.format,
+            },
+            status: "Published",
+          }
+        );
+        return status200(res, "Series published successfully");
+      } else {
+        return error400(res, "Thumbnail is required");
+      }
+    } else {
+      const existSeries = await Series.findOne({ title, status: "Published" });
+      if (existSeries) {
+        return error409(res, "Series already exists");
+      }
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exists");
+      }
+      if (existCategory.type !== "Series") {
+        return error400(res, "Category type don't belong to series");
+      }
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          resource_type: "image",
+          folder: "series",
+        });
+        await Series.create({
+          ...req.body,
+          status: "Published",
+          thumbnail: {
+            publicUrl: result.url,
+            secureUrl: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+          },
+        });
+        return status200(res, "Series published successfully");
+      } else {
+        return error400(res, "Thumbnail is required");
+      }
+    }
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+//Draft Series
+const addSeriesToDraft = async (req, res) => {
+  try {
     const { title, category } = req.body;
-    const existSeries = await Series.findOne({ title });
-    if (existSeries) {
-      return error409(res, "Series already exists");
+    if (title) {
+      const existSeries = await Series.findOne({ title });
+      if (existSeries) {
+        return error409(res, "Series already exists");
+      }
     }
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category don't exists");
+
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exists");
+      }
+      if (existCategory.type !== "Series") {
+        return error400(res, "Category type don't belong to series");
+      }
     }
-    if (existCategory.type !== "Series") {
-      return error400(res, "Category type don't belong to series");
-    }
+
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",
@@ -36,6 +135,7 @@ const addSeries = async (req, res) => {
       });
       await Series.create({
         ...req.body,
+        status: "Draft",
         thumbnail: {
           publicUrl: result.url,
           secureUrl: result.secure_url,
@@ -43,9 +143,76 @@ const addSeries = async (req, res) => {
           format: result.format,
         },
       });
-      return status200(res, "Series created successfully");
     } else {
-      return error400(res, "Thumbnail is required");
+      await Series.create({
+        status: "Draft",
+        ...req.body,
+      });
+    }
+    return status200(res, "Series drafted successfully");
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+//Edit Series
+const editSeries = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category } = req.body;
+
+    const seriesExist = await Series.findById(id);
+    if (!seriesExist) {
+      return error409(res, "Series not found");
+    }
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exists");
+      }
+      if (existCategory.type !== "Series") {
+        return error400(res, "Category type don't belong to series");
+      }
+    }
+    if (req.file) {
+      if (seriesExist.thumbnail && seriesExist.thumbnail.publicId) {
+        await cloudinary.uploader.destroy(seriesExist.thumbnail.publicId);
+      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "image",
+        folder: "series",
+      });
+      const updatedSeries = await Series.findByIdAndUpdate(
+        {
+          _id: id,
+        },
+        {
+          ...req.body,
+          thumbnail: {
+            publicUrl: result.url,
+            secureUrl: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+          },
+        },
+        {
+          new: true,
+        }
+      );
+      return success(res, "200", "Success", updatedSeries);
+    } else {
+      const updatedSeries = await Series.findByIdAndUpdate(
+        {
+          _id: id,
+        },
+        {
+          ...req.body,
+        },
+        {
+          new: true,
+        }
+      );
+      return success(res, "200", "Success", updatedSeries);
     }
   } catch (err) {
     error500(res, err);
@@ -56,9 +223,7 @@ const addSeries = async (req, res) => {
 const getAllSeries = async (req, res) => {
   try {
     const series = await Series.find()
-      .select(
-        "_id title description visibility publishDate thumbnail.publicUrl"
-      )
+      .select("_id title description visibility createdAt thumbnail.publicUrl")
       .populate({
         path: "category",
         select: "_id title",
@@ -73,7 +238,7 @@ const getAllSeries = async (req, res) => {
       thumbnail: series.thumbnail,
       title: series.title,
       description: series.description,
-      publishDate: series.publishDate,
+      publishDate: series.createdAt,
       views: series.views,
       visibility: series.visibility,
       language: series.language,
@@ -93,11 +258,25 @@ const getAllSeries = async (req, res) => {
 const deleteSeries = async (req, res) => {
   const { id } = req.params;
   try {
-    const novel = await Series.findByIdAndDelete(id);
-    if (!novel) {
+    const series = await Series.findById(id);
+    if (!series) {
       return error404(res, "Series not found");
     }
-    status200(res, "Series deleted successfully");
+
+    const seriesEpisode = await Episode.find({ series: id });
+    if (seriesEpisode.length) {
+      for (const episode of seriesEpisode) {
+        if (episode.episodeVideo && episode.episodeVideo.publicId) {
+          await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+        }
+        await Episode.deleteOne(episode._id);
+      }
+    }
+    if (series.thumbnail && series.thumbnail.publicId) {
+      await cloudinary.uploader.destroy(series.thumbnail.publicId);
+    }
+    await Series.deleteOne({ _id: id });
+    return status200(res, "Series deleted successfully with all episodes");
   } catch (err) {
     error500(res, err);
   }
@@ -149,7 +328,9 @@ const getTopRatedSeries = async (req, res) => {
 
 module.exports = {
   addSeries,
+  addSeriesToDraft,
   getAllSeries,
   deleteSeries,
   getTopRatedSeries,
+  editSeries,
 };
