@@ -11,13 +11,16 @@ const validateLogin = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const allowedTypes = ["Novels", "Series"];
 const validateAddCategory = [
+  body("title").notEmpty().withMessage("Title of category is required"),
   body("type")
     .notEmpty()
     .withMessage("Type of category is required")
@@ -28,7 +31,23 @@ const validateAddCategory = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
+    }
+  },
+];
+
+const validateEditCategory = [
+  body("title").notEmpty().withMessage("Title of category is required"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -52,7 +71,9 @@ const validateAddNovel = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -66,7 +87,9 @@ const validateAddChapter = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -79,7 +102,9 @@ const validateAddAuthor = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -102,7 +127,9 @@ const validateAddSeries = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -116,7 +143,9 @@ const validateAddEpisode = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -124,7 +153,22 @@ const validateAddEpisode = [
 const validateAddSubscription = [
   body("plan").notEmpty().withMessage("Plan is required"),
   body("price").notEmpty().withMessage("Price is required"),
-  body("coins").notEmpty().withMessage("Coins is required"),
+  body("description").notEmpty().withMessage("Description is required"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
+    }
+  },
+];
+
+const validateAddCoinSubscription = [
+  body("price").notEmpty().withMessage("Price is required"),
+  body("coins").notEmpty().withMessage("Coins are required"),
   body("discount").notEmpty().withMessage("Discount is required"),
   body("bonus").notEmpty().withMessage("Bonus is required"),
   (req, res, next) => {
@@ -132,7 +176,9 @@ const validateAddSubscription = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -145,7 +191,9 @@ const validateUpdatePassword = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -163,7 +211,9 @@ const validateAdminUpdateProfile = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -184,7 +234,9 @@ const validateAddReward = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -207,7 +259,9 @@ const validateRateNovel = [
     if (errors.isEmpty()) {
       next();
     } else {
-      return res.status(400).json({ errors: errors.array() });
+      return res
+        .status(400)
+        .json({ errors: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -215,11 +269,13 @@ const validateRateNovel = [
 module.exports = {
   validateLogin,
   validateAddCategory,
+  validateEditCategory,
   validateAddNovel,
   validateAddChapter,
   validateAddSeries,
   validateAddEpisode,
   validateAddSubscription,
+  validateAddCoinSubscription,
   validateUpdatePassword,
   validateAdminUpdateProfile,
   validateAddReward,
