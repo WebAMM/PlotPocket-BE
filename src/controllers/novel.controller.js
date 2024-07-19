@@ -175,16 +175,59 @@ const getAuthorNovels = async (req, res) => {
 
 const editNovel = async (req, res) => {
   const { id } = req.params;
+  const { category } = req.body;
   try {
-    const updatedNovel = await Novel.findOneAndUpdate(
-      { _id: id },
-      { $set: req.body },
-      { new: true }
-    );
-    if (!updatedNovel) {
-      return error404(res, "Novel not found");
+    const novelExist = await Novel.findById(id);
+    if (!novelExist) {
+      return error409(res, "Novel not found");
     }
-    success(res, "200", "Novel updated successfully", updatedNovel);
+
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exists");
+      }
+      if (existCategory.type !== "Novels") {
+        return error400(res, "Category type don't belong to novel");
+      }
+    }
+
+    if (req.file) {
+      if (novelExist.thumbnail && novelExist.thumbnail.publicId) {
+        await cloudinary.uploader.destroy(novelExist.thumbnail.publicId);
+      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "image",
+        folder: "novel",
+      });
+      const updatedNovel = await Novel.findByIdAndUpdate(
+        id,
+        {
+          ...req.body,
+          thumbnail: {
+            publicUrl: result.url,
+            secureUrl: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+          },
+        },
+        {
+          new: true,
+        }
+      );
+      return success(res, "200", "Success", updatedNovel);
+    } else {
+      const updatedNovel = await Novel.findByIdAndUpdate(
+        id,
+        {
+          ...req.body,
+        },
+        {
+          new: true,
+        }
+      );
+      return success(res, "200", "Success", updatedNovel);
+    }
   } catch (err) {
     error500(res, err);
   }

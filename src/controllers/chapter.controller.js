@@ -110,8 +110,56 @@ const deleteChapter = async (req, res) => {
   }
 };
 
+// Update Chapter
+const updateChapter = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const chapter = await Chapter.findById(id);
+    if (!chapter) {
+      return error404(res, "Chapter not found");
+    }
+    if (req.file) {
+      if (chapter.episodeVideo && chapter.episodeVideo.publicId) {
+        await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "raw",
+        folder: "chapter",
+      });
+      await Chapter.updateOne(
+        {
+          _id: id,
+        },
+        {
+          ...req.body,
+          thumbnail: {
+            publicUrl: result.url,
+            secureUrl: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+          },
+        }
+      );
+      return status200(res, "Chapter updated successfully");
+    } else {
+      await Chapter.updateOne(
+        {
+          _id: id,
+        },
+        {
+          ...req.body,
+        }
+      );
+      return status200(res, "Chapter updated successfully");
+    }
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addChapter,
   getAllChaptersByNovel,
   deleteChapter,
+  updateChapter,
 };
