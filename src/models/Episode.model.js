@@ -46,7 +46,7 @@ const episodeSchema = new mongoose.Schema(
     },
     ratings: {
       type: [
-        { 
+        {
           rating: {
             type: Number,
             required: true,

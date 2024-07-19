@@ -8,18 +8,35 @@ const payloadValidator = require("../middlewares/payloadValidator");
 
 //Add series
 router.post(
-  "/admin/add",
+  "/admin/publish",
   verifyToken,
   upload.single("thumbnail"),
   payloadValidator.validateAddSeries,
   seriesController.addSeries
 );
 
+//Add series
+router.post(
+  "/admin/draft",
+  verifyToken,
+  upload.single("thumbnail"),
+  seriesController.addSeriesToDraft
+);
+
+//Edit series
+router.put(
+  "/admin/:id",
+  verifyToken,
+  upload.single("thumbnail"),
+  // payloadValidator.validateAddSeries,
+  seriesController.editSeries
+);
+
 //Get series
 router.get("/admin/all", verifyToken, seriesController.getAllSeries);
 
 //Delete series
-router.get("/admin/:id", verifyToken, seriesController.deleteSeries);
+router.delete("/admin/:id", verifyToken, seriesController.deleteSeries);
 
 //Get all top rated series
 router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
