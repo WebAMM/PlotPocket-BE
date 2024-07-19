@@ -26,7 +26,12 @@ router.post(
 );
 
 //Edit novel
-router.put("/admin/edit/:id", verifyToken, novelController.editNovel);
+router.put(
+  "/admin/:id",
+  verifyToken,
+  upload.single("thumbnail"),
+  novelController.editNovel
+);
 
 //Delete novel
 router.delete("/admin/:id", verifyToken, novelController.deleteNovel);

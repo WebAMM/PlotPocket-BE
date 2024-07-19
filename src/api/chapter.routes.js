@@ -23,11 +23,14 @@ router.get(
 );
 
 //Delete chapters based on novel
-router.delete(
+router.delete("/admin/:id", verifyToken, chapterController.deleteChapter);
+
+//Edit chapter
+router.put(
   "/admin/:id",
   verifyToken,
-  chapterController.deleteChapter
+  upload.single("chapter"),
+  chapterController.updateChapter
 );
-
 
 module.exports = router;
