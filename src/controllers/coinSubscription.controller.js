@@ -1,41 +1,40 @@
 //Models
-const Subscription = require("../models/Subscription.model");
+const CoinSubscription = require("../models/CoinSubscription.model");
 //Responses and errors
 const { error500, error409 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 
 //Add Subscriptions
-const addSubscription = async (req, res) => {
+const addCoinSubscription = async (req, res) => {
   try {
-    await Subscription.create({ ...req.body });
-    return status200(res, "Subscriptions added successfully");
+    await CoinSubscription.create({ ...req.body });
+    return status200(res, "Subscriptions coins added successfully");
   } catch (err) {
     error500(res, err);
   }
 };
 
 // Get All Subscriptions
-const getAllSubscriptions = async (req, res) => {
+const getAllCoinSubscriptions = async (req, res) => {
   try {
-    const subscriptions = await Subscription.find();
-    return success(res, "200", "Success", subscriptions);
+    const coinSubscriptions = await CoinSubscription.find();
+    return success(res, "200", "Success", coinSubscriptions);
   } catch (err) {
     error500(res, err);
   }
 };
 
-//Edit Subscriptions
-const editSubscription = async (req, res) => {
-  console.log("The ", req.params);
+//Edit Coin Subscriptions
+const editCoinSubscription = async (req, res) => {
   const { id } = req.params;
   try {
-    const subscription = await Subscription.findByIdAndUpdate(
+    const subscription = await CoinSubscription.findByIdAndUpdate(
       id,
       { $set: { ...req.body } },
       { new: true }
     );
     if (!subscription) {
-      return error409(res, "Subscription not found");
+      return error409(res, "Subscriptions coins record not found");
     }
     return success(res, "200", "Success", subscription);
   } catch (err) {
@@ -43,15 +42,15 @@ const editSubscription = async (req, res) => {
   }
 };
 
-// Delete Subscription
-const deleteSubscription = async (req, res) => {
+// Delete Coin Subscription
+const deleteCoinSubscription = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await Subscription.deleteOne({ _id: id });
+    const result = await CoinSubscription.deleteOne({ _id: id });
     if (result.deletedCount === 0) {
-      return error409(res, "Subscription not found");
+      return error409(res, "Subscriptions coins record not found");
     }
-    return status200(res, "Subscriptions deleted successfully");
+    return status200(res, "Subscriptions coins deleted successfully");
   } catch (err) {
     error500(res, err);
   }
@@ -72,9 +71,9 @@ const deleteSubscription = async (req, res) => {
 // };
 
 module.exports = {
-  addSubscription,
-  getAllSubscriptions,
-  editSubscription,
-  deleteSubscription,
+  addCoinSubscription,
+  getAllCoinSubscriptions,
+  editCoinSubscription,
+  deleteCoinSubscription,
   // getSubscriptionByPlan,
 };

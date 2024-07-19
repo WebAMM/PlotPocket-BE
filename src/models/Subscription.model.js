@@ -10,15 +10,7 @@ const subscriptionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    coins: {
-      type: String,
-      required: true,
-    },
-    discount: {
-      type: String,
-      required: true,
-    },
-    bonus: {
+    description: {
       type: String,
       required: true,
     },
