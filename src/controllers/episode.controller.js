@@ -137,7 +137,7 @@ const allEpisodeOfSeries = async (req, res) => {
           title: 1,
           description: 1,
           content: 1,
-          visibility: 1,
+          // visibility: 1,
           views: 1,
           totalRating: 1,
           createdAt: 1,
@@ -182,7 +182,7 @@ const episodesOfSeries = async (req, res) => {
     const allEpisodesOfSeries = await Episode.find({
       series: id,
     })
-      .select("episodeVideo.publicUrl views createdAt content visibility")
+      .select("episodeVideo.publicUrl views createdAt content")
       .populate({
         path: "series",
         select: "thumbnail.publicUrl",
@@ -225,10 +225,59 @@ const deleteEpisode = async (req, res) => {
   }
 };
 
+// Update Episode
+const updateEpisode = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const episode = await Episode.findById(id);
+    if (!episode) {
+      return error404(res, "Episode not found");
+    }
+    if (req.file) {
+      if (episode.episodeVideo && episode.episodeVideo.publicId) {
+        await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "video",
+        folder: "episode",
+        eager: [{ format: "mp4" }],
+      });
+      await Episode.updateOne(
+        {
+          _id: id,
+        },
+        {
+          ...req.body,
+          thumbnail: {
+            publicUrl: result.url,
+            secureUrl: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+          },
+        }
+      );
+      return status200(res, "Episode updated successfully");
+    } else {
+      await Episode.updateOne(
+        {
+          _id: id,
+        },
+        {
+          ...req.body,
+        }
+      );
+      return status200(res, "Episode updated successfully");
+    }
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addEpisode,
   rateTheEpisode,
   allEpisodeOfSeries,
   episodesOfSeries,
   deleteEpisode,
+  updateEpisode,
 };

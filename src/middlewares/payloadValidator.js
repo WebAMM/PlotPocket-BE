@@ -136,7 +136,6 @@ const validateAddSeries = [
 const validateAddEpisode = [
   body("title").notEmpty().withMessage("Title of the episode is required"),
   body("content").notEmpty().withMessage("Content is required"),
-  body("visibility").notEmpty().withMessage("Visibility is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {

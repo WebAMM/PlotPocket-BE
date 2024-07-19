@@ -36,10 +36,10 @@ const episodeSchema = new mongoose.Schema(
       type: String,
       enum: ["Paid", "Free"],
     },
-    visibility: {
-      type: String,
-      enum: ["Public", "Private"],
-    },
+    // visibility: {
+    //   type: String,
+    //   enum: ["Public", "Private"],
+    // },
     views: {
       type: Number,
       default: 0,
