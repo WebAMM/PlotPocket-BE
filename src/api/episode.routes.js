@@ -31,4 +31,12 @@ router.get("/app/all/:id", verifyToken, episodeController.allEpisodeOfSeries);
 //Delete episode based on series
 router.delete("/admin/:id", verifyToken, episodeController.deleteEpisode);
 
+//Edit episode
+router.put(
+  "/admin/:id",
+  verifyToken,
+  upload.single("episode"),
+  episodeController.updateEpisode
+);
+
 module.exports = router;
