@@ -1,7 +1,6 @@
 //Models
 const Novel = require("../models/Novel.model");
-const Series = require("../models/Series.model");
-const Episode = require("../models/Episode.model");
+const Chapter = require("../models/Chapter.model");
 //Responses and errors
 const {
   error500,
@@ -65,10 +64,19 @@ const addNovel = async (req, res) => {
 // Get All Novels
 const getAllNovels = async (req, res) => {
   try {
+    console.log("asd");
     const novels = await Novel.find()
       .select(
-        "_id thumbnail.publicUrl title description publishDate views visibility language rating"
+        "_id thumbnail.publicUrl title description createdAt views visibility language reviews"
       )
+      // .populate({
+      //   path: "reviews",
+      // populate: {
+      //   path: "user",
+      //   select: "userName profileImage.publicUrl",
+      // },
+      // select: "rating comment totalLikes createdAt",
+      // })
       .populate({
         path: "category",
         select: "_id title",
@@ -88,14 +96,28 @@ const getAllNovels = async (req, res) => {
       thumbnail: novel.thumbnail,
       title: novel.title,
       description: novel.description,
-      publishDate: novel.publishDate,
+      publishDate: novel.createdAt,
       views: novel.views,
       visibility: novel.visibility,
       language: novel.language,
       totalChapters: novel.chapters.length,
       category: novel.category,
       author: novel.author,
+      // reviews: novel.reviews.map((review) => ({
+      //   user: {
+      //     profileImage: review.user.profileImage,
+      //     _id: review.user._id,
+      //     name: review.user.name,
+      //     gender: review.user.gender,
+      //   },
+      //   rating: review.rating,
+      //   comment: review.comment,
+      //   totalLikes: review.totalLikes,
+      //   createdAt: review.createdAt,
+      // })),
+      reviews: novel.reviews.length || 0,
     }));
+
     success(res, "200", "Success", allNovels);
   } catch (err) {
     error500(res, err);
@@ -114,7 +136,7 @@ const getAuthorNovels = async (req, res) => {
       author: id,
     })
       .select(
-        "_id thumbnail.publicUrl title description publishDate views visibility language reviews"
+        "_id thumbnail.publicUrl title description createdAt views visibility language reviews"
       )
       .populate({
         path: "category",
@@ -135,7 +157,7 @@ const getAuthorNovels = async (req, res) => {
       thumbnail: novel.thumbnail,
       title: novel.title,
       description: novel.description,
-      publishDate: novel.publishDate,
+      publishDate: novel.createdAt,
       views: novel.views,
       visibility: novel.visibility,
       language: novel.language,
@@ -172,11 +194,25 @@ const editNovel = async (req, res) => {
 const deleteNovel = async (req, res) => {
   const { id } = req.params;
   try {
-    const novel = await Novel.findByIdAndDelete(id);
+    const novel = await Novel.findById(id);
     if (!novel) {
       return error404(res, "Novel not found");
     }
-    return status200(res, "Novel deleted successfully");
+
+    const novelsChapters = await Chapter.find({ novel: id });
+    if (novelsChapters.length) {
+      for (const chapter of novelsChapters) {
+        if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
+          await cloudinary.uploader.destroy(chapter.chapterPdf.publicId);
+        }
+        await Chapter.deleteOne(chapter._id);
+      }
+    }
+    if (novel.thumbnail && novel.thumbnail.publicId) {
+      await cloudinary.uploader.destroy(novel.thumbnail.publicId);
+    }
+    await Novel.deleteOne({ _id: id });
+    return status200(res, "Novel deleted successfully with all chapters");
   } catch (err) {
     return error500(res, err);
   }
@@ -318,6 +354,93 @@ const getTopRatedNovels = async (req, res) => {
   }
 };
 
+//All reviews of novel
+const allReviewsOfNovels = async (req, res) => {
+  const { dateFilter } = req.query;
+  const { id } = req.params;
+
+  let startDate;
+  const currentDate = new Date();
+
+  try {
+    if (dateFilter) {
+      switch (dateFilter) {
+        case "lastMonth":
+          startDate = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth() - 1,
+            1
+          );
+          endDate = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            0
+          );
+          break;
+        case "lastSixMonth":
+          startDate = new Date();
+          startDate.setMonth(startDate.getMonth() - 6);
+          endDate = new Date();
+          break;
+        case "lastYear":
+          const currentYear = new Date().getFullYear();
+          const lastYear = currentYear - 1;
+          startDate = new Date(`${lastYear}-01-01T00:00:00.000Z`);
+          endDate = new Date(`${lastYear}-12-31T23:59:59.999Z`);
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid date filter" });
+      }
+    }
+
+    const query = startDate
+      ? { $gte: startDate, $lte: endDate }
+      : {
+          $lte: new Date(),
+        };
+    const novels = await Novel.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $unwind: "$reviews",
+      },
+      {
+        $match: {
+          "reviews.createdAt": query,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "reviews.user",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $unwind: "$userDetails",
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          "reviews.rating": 1,
+          "reviews.comment": 1,
+          "reviews.totalLikes": 1,
+          "reviews.createdAt": 1,
+          "userDetails.userName": 1,
+          "userDetails.profileImage.publicUrl": 1,
+        },
+      },
+    ]);
+
+    return success(res, "200", "Success", novels);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addNovel,
   getAllNovels,
@@ -327,4 +450,5 @@ module.exports = {
   rateNovel,
   likeCommentOnNovel,
   getTopRatedNovels,
+  allReviewsOfNovels,
 };

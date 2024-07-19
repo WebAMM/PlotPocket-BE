@@ -44,7 +44,6 @@ const adminDashboardInsights = async (req, res) => {
       ? { createdAt: { $gt: startDate, $lte: endDate } }
       : { createdAt: { $gte: startDate, $lte: endDate } };
 
-  console.log("The query", query);
 
   try {
     const totalNovels = await Novel.countDocuments(query);
@@ -78,7 +77,7 @@ const adminDashboardMetrics = async (req, res) => {
         createdAt: { $gte: startDate, $lte: endDate },
       };
     }
-    const totalUsers = await User.countDocuments(query);
+    const totalUsers = await User.find(query);
     const dashboardData = {
       totalUsers,
     };

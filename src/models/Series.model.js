@@ -31,14 +31,18 @@ const seriesSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.ObjectId,
       ref: "Category",
-      required: true,
+      // required: true,
     },
-    publishDate: {
-      type: Date,
-    },
+    // publishDate: {
+    //   type: Date,
+    // },
     visibility: {
       type: String,
       enum: ["Public", "Private"],
+    },
+    status: {
+      type: String,
+      enum: ["Published", "Draft"],
     },
     type: {
       type: String,
