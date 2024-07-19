@@ -56,7 +56,7 @@ const validateAddNovel = [
   body("title").notEmpty().withMessage("Title of novel is required"),
   body("category").notEmpty().withMessage("Category of novel is required"),
   body("language").notEmpty().withMessage("Language is required"),
-  body("publishDate").notEmpty().withMessage("Publish date is required"),
+  // body("publishDate").notEmpty().withMessage("Publish date is required"),
   body("visibility").notEmpty().withMessage("Visibility is required"),
   body("author").notEmpty().withMessage("Publish date is required"),
   body("description")
@@ -113,7 +113,7 @@ const validateAddSeries = [
   body("title").notEmpty().withMessage("Title of series is required"),
   body("category").notEmpty().withMessage("Category of series is required"),
   body("visibility").notEmpty().withMessage("Visibility is required"),
-  body("publishDate").notEmpty().withMessage("Publish date is required"),
+  // body("publishDate").notEmpty().withMessage("Publish date is required"),
   body("description")
     .notEmpty()
     .withMessage("Description is required")
@@ -121,7 +121,6 @@ const validateAddSeries = [
     .withMessage("Description must be at least 5 characters long")
     .isLength({ max: 400 })
     .withMessage("Description cannot exceed 400 characters"),
-
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {

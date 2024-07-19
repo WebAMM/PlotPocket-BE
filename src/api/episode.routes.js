@@ -28,4 +28,7 @@ router.get(
 //All episode of series (id represents series id), this API will increase the view of Series alway which episode is first showed
 router.get("/app/all/:id", verifyToken, episodeController.allEpisodeOfSeries);
 
+//Delete episode based on series
+router.delete("/admin/:id", verifyToken, episodeController.deleteEpisode);
+
 module.exports = router;

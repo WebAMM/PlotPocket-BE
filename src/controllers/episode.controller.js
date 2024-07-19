@@ -182,7 +182,7 @@ const episodesOfSeries = async (req, res) => {
     const allEpisodesOfSeries = await Episode.find({
       series: id,
     })
-      .select("episodeVideo.publicUrl views publishDate content visibility")
+      .select("episodeVideo.publicUrl views createdAt content visibility")
       .populate({
         path: "series",
         select: "thumbnail.publicUrl",
@@ -193,9 +193,42 @@ const episodesOfSeries = async (req, res) => {
   }
 };
 
+// Delete Episode
+const deleteEpisode = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const episode = await Episode.findById(id);
+    if (!episode) {
+      return error404(res, "Episode not found");
+    }
+    const series = await Series.findOne({ _id: episode.series });
+    if (!series) {
+      return error404(res, "Series against episode not found");
+    }
+    await Series.updateOne(
+      {
+        _id: episode.series,
+      },
+      {
+        $pull: {
+          episodes: id,
+        },
+      }
+    );
+    if (episode.episodeVideo && episode.episodeVideo.publicId) {
+      await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+    }
+    await Episode.deleteOne({ _id: id });
+    return status200(res, "Episode removed successfully");
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addEpisode,
   rateTheEpisode,
   allEpisodeOfSeries,
   episodesOfSeries,
+  deleteEpisode,
 };

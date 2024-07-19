@@ -22,4 +22,12 @@ router.get(
   chapterController.getAllChaptersByNovel
 );
 
+//Delete chapters based on novel
+router.delete(
+  "/admin/:id",
+  verifyToken,
+  chapterController.deleteChapter
+);
+
+
 module.exports = router;

@@ -29,7 +29,7 @@ router.post(
 router.put("/admin/edit/:id", verifyToken, novelController.editNovel);
 
 //Delete novel
-router.delete("/admin/delete/:id", verifyToken, novelController.deleteNovel);
+router.delete("/admin/:id", verifyToken, novelController.deleteNovel);
 
 //Get novels
 router.get("/admin/all", verifyToken, novelController.getAllNovels);
@@ -61,5 +61,12 @@ router.post("/app/like", verifyToken, novelController.likeCommentOnNovel);
 
 //Get all top ranked novels
 router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
+
+//Get all reviews of novels
+router.get(
+  "/admin/all-reviews/:id",
+  verifyToken,
+  novelController.allReviewsOfNovels
+);
 
 module.exports = router;

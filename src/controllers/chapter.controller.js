@@ -56,7 +56,7 @@ const addChapter = async (req, res) => {
   }
 };
 
-// Get All Novels
+// Get All Chapters by Novel
 const getAllChaptersByNovel = async (req, res) => {
   const { id } = req.params;
   try {
@@ -78,7 +78,40 @@ const getAllChaptersByNovel = async (req, res) => {
   }
 };
 
+// Delete Chapter
+const deleteChapter = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const chapter = await Chapter.findById(id);
+    if (!chapter) {
+      return error404(res, "Chapter not found");
+    }
+    const novel = await Novel.findOne({ _id: chapter.novel });
+    if (!novel) {
+      return error404(res, "Novel against chapter not found");
+    }
+    await Novel.updateOne(
+      {
+        _id: chapter.novel,
+      },
+      {
+        $pull: {
+          chapters: id,
+        },
+      }
+    );
+    if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
+      await cloudinary.uploader.destroy(chapter.chapterPdf.publicId);
+    }
+    await Chapter.deleteOne({ _id: id });
+    return status200(res, "Chapter removed successfully");
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addChapter,
   getAllChaptersByNovel,
+  deleteChapter,
 };
