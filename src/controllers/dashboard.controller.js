@@ -14,16 +14,72 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 const mongoose = require("mongoose");
+const moment = require("moment");
 
-// Admin dashboard
-const adminDashboard = async (req, res) => {
+// Admin dashboard insights
+const adminDashboardInsights = async (req, res) => {
+  const { day } = req.query;
+
+  let startDate;
+  let endDate;
+
+  if (day === "7") {
+    startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    endDate = new Date();
+  } else if (day === "14") {
+    startDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    endDate = new Date();
+  } else if (day === "30") {
+    const now = new Date();
+    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    endDate.setHours(23, 59, 59, 999);
+  } else {
+    startDate = new Date(0);
+    endDate = new Date();
+  }
+
+  const query =
+    day === "30"
+      ? { createdAt: { $gt: startDate, $lte: endDate } }
+      : { createdAt: { $gte: startDate, $lte: endDate } };
+
+  console.log("The query", query);
+
   try {
-    const totalNovels = await Novel.countDocuments();
-    const totalSeries = await Series.countDocuments();
-    const totalUsers = await User.countDocuments();
+    const totalNovels = await Novel.countDocuments(query);
+    const totalSeries = await Series.countDocuments(query);
+    const totalUsers = await User.countDocuments(query);
+
     const dashboardData = {
       totalNovels,
       totalSeries,
+      totalUsers,
+    };
+    success(res, "200", "Success", dashboardData);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+// Admin dashboard metrics
+const adminDashboardMetrics = async (req, res) => {
+  try {
+    let query = {};
+    if (req.query.year) {
+      const year = parseInt(req.query.year);
+      if (!moment(year, "YYYY", true).isValid()) {
+        return error400(res, "Invalid year provided");
+      }
+
+      const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+      const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+      query = {
+        createdAt: { $gte: startDate, $lte: endDate },
+      };
+    }
+    const totalUsers = await User.countDocuments(query);
+    const dashboardData = {
       totalUsers,
     };
     success(res, "200", "Success", dashboardData);
@@ -619,7 +675,8 @@ const bestSeries = async (req, res) => {
 // };
 
 module.exports = {
-  adminDashboard,
+  adminDashboardInsights,
+  adminDashboardMetrics,
   appDashboard,
   dashboardSeries,
   bestSeries,

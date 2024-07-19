@@ -23,14 +23,15 @@ router.get(
   categoryController.getCategoriesByType
 );
 
-//Edit category
-router.put("/admin/edit/:id", verifyToken, categoryController.editCategory);
+//Delete category - Replace category
+router.delete("/admin/:id", verifyToken, categoryController.deleteCategory);
 
-//Delete category
-router.delete(
-  "/admin/delete/:id",
+//Edit category
+router.put(
+  "/admin/:id",
   verifyToken,
-  categoryController.deleteCategory
+  payloadValidator.validateEditCategory,
+  categoryController.editCategory
 );
 
 //Change category status

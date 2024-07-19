@@ -4,8 +4,11 @@ const dashboardController = require("../controllers/dashboard.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
 
-//Admin dashboard
-router.get("/admin", verifyToken, dashboardController.adminDashboard);
+//Admin dashboard Insights
+router.get("/admin/insights", verifyToken, dashboardController.adminDashboardInsights);
+
+//Admin dashboard Metrics
+router.get("/admin/metrics", verifyToken, dashboardController.adminDashboardMetrics);
 
 //1st APP page in dashboard [APP]
 router.get("/app/main", verifyToken, dashboardController.appDashboard);
