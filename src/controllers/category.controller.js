@@ -57,8 +57,8 @@ const getCategoriesByType = async (req, res) => {
   }
 };
 
-// Edit Category
-const editCategory = async (req, res) => {
+// Delete Category
+const deleteCategory = async (req, res) => {
   const { id } = req.params;
   const { replaceCategoryId } = req.body;
   try {
@@ -89,15 +89,30 @@ const editCategory = async (req, res) => {
   }
 };
 
-// Delete Category
-const deleteCategory = async (req, res) => {
+// Edit Category
+const editCategory = async (req, res) => {
   const { id } = req.params;
+  const { title } = req.body;
   try {
-    const category = await Category.findByIdAndDelete(id);
-    if (!category) {
+    const updatedCategory = await Category.findByIdAndUpdate(
+      id,
+      {
+        title: title,
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!updatedCategory) {
       return error404(res, "Category not found");
     }
-    return status200(res, "Category deleted successfully");
+    return success(
+      res,
+      "200",
+      "Category title updated successfully",
+      updatedCategory
+    );
   } catch (err) {
     return error500(res, err);
   }
@@ -132,7 +147,7 @@ module.exports = {
   addCategory,
   getAllCategories,
   getCategoriesByType,
-  editCategory,
   deleteCategory,
+  editCategory,
   changeCategoryStatus,
 };
