@@ -66,4 +66,11 @@ router.get(
   novelController.allReviewsOfNovels
 );
 
+//Get all views of novels
+router.get(
+  "/admin/all-views/:id",
+  verifyToken,
+  novelController.allViewsOfNovels
+);
+
 module.exports = router;

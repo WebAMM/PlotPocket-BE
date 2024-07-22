@@ -18,13 +18,29 @@ const chapterSchema = new mongoose.Schema(
       type: String,
       enum: ["Paid", "Free"],
     },
-    views: {
+    totalViews: {
       type: Number,
       default: 0,
     },
-    publishedDate: {
-      type: Date,
-      default: Date.now,
+    views: {
+      type: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: [true, "User is required"],
+          },
+          view: {
+            type: Number,
+            default: 0,
+          },
+          date: {
+            type: Date,
+            required: [true, "Date of view is required"],
+          },
+        },
+      ],
+      default: [],
     },
     //Cloudinary images
     chapterPdf: {
