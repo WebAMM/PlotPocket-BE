@@ -18,7 +18,7 @@ const addAuthor = async (req, res) => {
   try {
     // const exists = await Author.findOne({ name });
     // if (exists) {
-    //   return error409(res, `Author ${name} already exists`);
+    //   return error409(res, `Author ${name} already exist`);
     // }
     const authorData = {
       name,

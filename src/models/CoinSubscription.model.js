@@ -3,19 +3,19 @@ const mongoose = require("mongoose");
 const coinSubscriptionSchema = new mongoose.Schema(
   {
     price: {
-      type: String,
+      type: Number,
       required: true,
     },
     coins: {
-      type: String,
+      type: Number,
       required: true,
     },
     discount: {
-      type: String,
+      type: Number,
       required: true,
     },
     bonus: {
-      type: String,
+      type: Number,
       required: true,
     },
   },

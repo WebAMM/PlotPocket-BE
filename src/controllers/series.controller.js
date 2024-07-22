@@ -14,28 +14,37 @@ const Category = require("../models/Category.model");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
-//Add Series
+//Publish the series
 const addSeries = async (req, res) => {
   try {
     const { title, category, draftId } = req.body;
     if (draftId) {
-      const draftedSeries = await Series.findById({
+      const draftSeries = await Series.findById({
         _id: draftId,
         status: "Draft",
       });
 
-      if (!draftedSeries) {
-        return error409(res, "No such draft exists");
+      if (!draftSeries) {
+        return error409(res, "Series not found in draft");
       }
-      const existCategory = await Category.findById(category);
 
+      const alreadyPublished = await Series.findById({
+        _id: draftId,
+        status: "Published",
+      });
+
+      if (alreadyPublished) {
+        return error400(res, "Series already published");
+      }
+
+      const existCategory = await Category.findById(category);
       if (!existCategory) {
-        return error409(res, "Category don't exists");
+        return error409(res, "Category don't exist");
       }
       if (existCategory.type !== "Series") {
         return error400(res, "Category type don't belong to series");
       }
-      if (draftedSeries.thumbnail.publicUrl) {
+      if (draftSeries.thumbnail.publicUrl) {
         await Series.updateOne(
           {
             _id: draftId,
@@ -73,11 +82,11 @@ const addSeries = async (req, res) => {
     } else {
       const existSeries = await Series.findOne({ title, status: "Published" });
       if (existSeries) {
-        return error409(res, "Series already exists");
+        return error409(res, "Series already exist");
       }
       const existCategory = await Category.findById(category);
       if (!existCategory) {
-        return error409(res, "Category don't exists");
+        return error409(res, "Category don't exist");
       }
       if (existCategory.type !== "Series") {
         return error400(res, "Category type don't belong to series");
@@ -114,14 +123,14 @@ const addSeriesToDraft = async (req, res) => {
     if (title) {
       const existSeries = await Series.findOne({ title });
       if (existSeries) {
-        return error409(res, "Series already exists");
+        return error409(res, "Series already exist");
       }
     }
 
     if (category) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
-        return error409(res, "Category don't exists");
+        return error409(res, "Category don't exist");
       }
       if (existCategory.type !== "Series") {
         return error400(res, "Category type don't belong to series");
@@ -135,21 +144,27 @@ const addSeriesToDraft = async (req, res) => {
       });
       await Series.create({
         ...req.body,
-        status: "Draft",
         thumbnail: {
           publicUrl: result.url,
           secureUrl: result.secure_url,
           publicId: result.public_id,
           format: result.format,
         },
+        status: "Draft",
       });
     } else {
       await Series.create({
-        status: "Draft",
         ...req.body,
+        thumbnail: {
+          publicUrl: "",
+          secureUrl: "",
+          publicId: "",
+          format: "",
+        },
+        status: "Draft",
       });
     }
-    return status200(res, "Series drafted successfully");
+    return status200(res, "Series saved as draft");
   } catch (err) {
     error500(res, err);
   }
@@ -168,7 +183,7 @@ const editSeries = async (req, res) => {
     if (category) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
-        return error409(res, "Category don't exists");
+        return error409(res, "Category don't exist");
       }
       if (existCategory.type !== "Series") {
         return error400(res, "Category type don't belong to series");
