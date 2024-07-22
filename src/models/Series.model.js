@@ -50,8 +50,24 @@ const seriesSchema = new mongoose.Schema(
       default: "Series",
     },
     views: {
-      type: Number,
-      default: 0,
+      type: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: [true, "User is required"],
+          },
+          view: {
+            type: Number,
+            default: 0,
+          },
+          date: {
+            type: Date,
+            required: [true, "Date for views is required"],
+          },
+        },
+      ],
+      default: [],
     },
     seriesRating: {
       type: Number,

@@ -68,8 +68,24 @@ const novelSchema = new mongoose.Schema(
       default: "Novel",
     },
     views: {
-      type: Number,
-      default: 0,
+      type: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: [true, "User is required"],
+          },
+          view: {
+            type: Number,
+            default: 0,
+          },
+          date: {
+            type: Date,
+            required: [true, "Date of view is required"],
+          },
+        },
+      ],
+      default: [],
     },
     isAdult: {
       type: Boolean,
