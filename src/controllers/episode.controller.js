@@ -216,7 +216,10 @@ const deleteEpisode = async (req, res) => {
       }
     );
     if (episode.episodeVideo && episode.episodeVideo.publicId) {
-      await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+      await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
+        resource_type: "video",
+        folder: "episode",
+      });
     }
     await Episode.deleteOne({ _id: id });
     return status200(res, "Episode removed successfully");
@@ -235,7 +238,10 @@ const updateEpisode = async (req, res) => {
     }
     if (req.file) {
       if (episode.episodeVideo && episode.episodeVideo.publicId) {
-        await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+        await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
+          resource_type: "video",
+          folder: "episode",
+        });
       }
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "video",

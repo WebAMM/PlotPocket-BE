@@ -194,7 +194,10 @@ const editNovel = async (req, res) => {
 
     if (req.file) {
       if (novelExist.thumbnail && novelExist.thumbnail.publicId) {
-        await cloudinary.uploader.destroy(novelExist.thumbnail.publicId);
+        await cloudinary.uploader.destroy(novelExist.thumbnail.publicId, {
+          resource_type: "image",
+          folder: "novel",
+        });
       }
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",
@@ -246,13 +249,19 @@ const deleteNovel = async (req, res) => {
     if (novelsChapters.length) {
       for (const chapter of novelsChapters) {
         if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
-          await cloudinary.uploader.destroy(chapter.chapterPdf.publicId);
+          await cloudinary.uploader.destroy(chapter.chapterPdf.publicId, {
+            resource_type: "image",
+            folder: "novel",
+          });
         }
         await Chapter.deleteOne(chapter._id);
       }
     }
     if (novel.thumbnail && novel.thumbnail.publicId) {
-      await cloudinary.uploader.destroy(novel.thumbnail.publicId);
+      await cloudinary.uploader.destroy(novel.thumbnail.publicId, {
+        resource_type: "image",
+        folder: "novel",
+      });
     }
     await Novel.deleteOne({ _id: id });
     return status200(res, "Novel deleted successfully with all chapters");
