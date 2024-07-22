@@ -163,7 +163,6 @@ const claimReward = async (req, res) => {
             if (timeDiff < 24) {
               return status200(res, "Cannot avail before next day");
             } else if (timeDiff >= 24 && timeDiff < 48) {
-              console.log("The timeDiff ii", timeDiff);
               //Means can avail after 24 hours means tomorrow and before tomorrow day ends.
               await UserSteak.findOneAndUpdate(
                 {

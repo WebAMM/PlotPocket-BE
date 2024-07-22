@@ -166,7 +166,6 @@ const addNovelToDraft = async (req, res) => {
 // Get All Novels
 const getAllNovels = async (req, res) => {
   try {
-    console.log("asd");
     const novels = await Novel.find()
       .select(
         "_id thumbnail.publicUrl title description createdAt views visibility language reviews"
