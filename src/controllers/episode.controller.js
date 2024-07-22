@@ -148,15 +148,29 @@ const allEpisodeOfSeries = async (req, res) => {
       },
     ]);
     // Increase series views
-    await Series.updateOne(
-      {
-        _id: id,
-      },
-      {
-        $inc: { views: 1 },
-      },
-      { new: true }
-    );
+    // if (req.user._id) {
+    //   const userAlreadyView = series.views.findIndex()
+    //   await Series.updateOne(
+    //     {
+    //       _id: id,
+    //     },
+    //     {
+    //       $addToSet: {
+    //         views: {
+    //           $each: [
+    //             {
+    //               user: new mongoose.Types.ObjectId(req.user._id),
+    //               view: 1,
+    //               date: new Date(),
+    //             },
+    //           ],
+    //         },
+    //       },
+    //     },
+    //     { new: true, runValidators: true }
+    //   );
+    // }
+
     //Add series in history
     const existHistory = await History.findOne({
       user: req.user._id,
