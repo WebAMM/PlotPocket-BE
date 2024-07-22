@@ -19,7 +19,10 @@ const addEpisode = async (req, res) => {
   const { title } = req.body;
   const { id } = req.params;
   try {
-    const seriesExist = await Series.findById(id);
+    const seriesExist = await Series.findOne({
+      _id: id,
+      status: "Published",
+    });
     if (!seriesExist) {
       return error404(res, "Series not found");
     }
@@ -49,7 +52,7 @@ const addEpisode = async (req, res) => {
         { $push: { episodes: newEpisode._id } },
         { new: true }
       );
-      return status200(res, "Episode added successfully in series");
+      return status200(res, "Episode added in series");
     } else {
       return error400(res, "Episode video is required");
     }
