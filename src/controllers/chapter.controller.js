@@ -101,7 +101,10 @@ const deleteChapter = async (req, res) => {
       }
     );
     if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
-      await cloudinary.uploader.destroy(chapter.chapterPdf.publicId);
+      await cloudinary.uploader.destroy(chapter.chapterPdf.publicId, {
+        resource_type: "raw",
+        folder: "chapter",
+      });
     }
     await Chapter.deleteOne({ _id: id });
     return status200(res, "Chapter removed successfully");
@@ -120,7 +123,10 @@ const updateChapter = async (req, res) => {
     }
     if (req.file) {
       if (chapter.episodeVideo && chapter.episodeVideo.publicId) {
-        await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+        await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
+          resource_type: "raw",
+          folder: "chapter",
+        });
       }
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "raw",

@@ -176,7 +176,10 @@ const editSeries = async (req, res) => {
     }
     if (req.file) {
       if (seriesExist.thumbnail && seriesExist.thumbnail.publicId) {
-        await cloudinary.uploader.destroy(seriesExist.thumbnail.publicId);
+        await cloudinary.uploader.destroy(seriesExist.thumbnail.publicId, {
+          resource_type: "image",
+          folder: "series",
+        });
       }
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",
@@ -267,13 +270,19 @@ const deleteSeries = async (req, res) => {
     if (seriesEpisode.length) {
       for (const episode of seriesEpisode) {
         if (episode.episodeVideo && episode.episodeVideo.publicId) {
-          await cloudinary.uploader.destroy(episode.episodeVideo.publicId);
+          await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
+            resource_type: "image",
+            folder: "series",
+          });
         }
         await Episode.deleteOne(episode._id);
       }
     }
     if (series.thumbnail && series.thumbnail.publicId) {
-      await cloudinary.uploader.destroy(series.thumbnail.publicId);
+      await cloudinary.uploader.destroy(series.thumbnail.publicId, {
+        resource_type: "image",
+        folder: "series",
+      });
     }
     await Series.deleteOne({ _id: id });
     return status200(res, "Series deleted successfully with all episodes");

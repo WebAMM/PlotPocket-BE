@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add series
+//Publish the series
 router.post(
   "/admin/publish",
   verifyToken,
@@ -15,7 +15,7 @@ router.post(
   seriesController.addSeries
 );
 
-//Add series
+//Add series in draft
 router.post(
   "/admin/draft",
   verifyToken,

@@ -342,7 +342,10 @@ const updateAdminProfilePic = async (req, res) => {
     if (req.file) {
       // Remove existing profile image from Cloudinary
       if (userExist.profileImage.publicId) {
-        await cloudinary.uploader.destroy(userExist.profileImage.publicId);
+        await cloudinary.uploader.destroy(userExist.profileImage.publicId, {
+          resource_type: "image",
+          folder: "user",
+        });
       }
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",
@@ -359,7 +362,10 @@ const updateAdminProfilePic = async (req, res) => {
       return status200(res, "Profile pic updated successfully");
     } else {
       if (userExist.profileImage.publicId) {
-        await cloudinary.uploader.destroy(userExist.profileImage.publicId);
+        await cloudinary.uploader.destroy(userExist.profileImage.publicId, {
+          resource_type: "image",
+          folder: "user",
+        });
       }
       userExist.profileImage = {
         publicUrl: "",
