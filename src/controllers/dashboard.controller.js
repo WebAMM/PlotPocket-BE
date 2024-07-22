@@ -3,6 +3,7 @@ const Novel = require("../models/Novel.model");
 const Series = require("../models/Series.model");
 const User = require("../models/User.model");
 const Episode = require("../models/Episode.model");
+const Category = require("../models/Category.model");
 const History = require("../models/History.model");
 //Responses and errors
 const {
@@ -43,7 +44,6 @@ const adminDashboardInsights = async (req, res) => {
     day === "30"
       ? { createdAt: { $gt: startDate, $lte: endDate } }
       : { createdAt: { $gte: startDate, $lte: endDate } };
-
 
   try {
     const totalNovels = await Novel.countDocuments(query);
@@ -89,11 +89,30 @@ const adminDashboardMetrics = async (req, res) => {
 
 //1st Main screen [APP]
 const appDashboard = async (req, res) => {
-  const { categoryId } = req.query;
-  const query = {};
+  const { category, day } = req.query;
+  const query = {
+    status: "Published",
+  };
 
-  if (categoryId) {
-    query.category = categoryId;
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category not found");
+    }
+    query.category = category;
+  }
+  if (day) {
+    const parsedDay = parseInt(day);
+    if (![7, 14, 30].includes(parsedDay)) {
+      return error400(res, "Invalid date parameter");
+    }
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - day);
+    query.createdAt = {
+      $gte: startDate,
+      $lte: today,
+    };
   }
   try {
     //Latest novels and series
@@ -122,22 +141,28 @@ const appDashboard = async (req, res) => {
         },
       });
     //Featured novel and series [Based on more views]
-    const featuredSeries = await Series.find({ ...query, views: { $gte: 1 } })
+    const featuredSeries = await Series.find({
+      ...query,
+      "views.view": { $gte: 1 },
+    })
       .select("thumbnail.publicUrl title type")
-      .sort({ views: -1 })
+      .sort({ "views.view": -1 })
       .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
         options: { sort: { createdAt: 1 }, limit: 1 },
       });
-    const featuredNovels = await Novel.find({ ...query, views: { $gte: 1 } })
+    const featuredNovels = await Novel.find({
+      ...query,
+      "views.view": { $gte: 1 },
+    })
       .select("thumbnail.publicUrl title type")
-      .sort({ views: -1 })
+      .sort({ "views.view": -1 })
       .limit(10)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content views",
+        select: "chapterPdf.publicUrl name chapterNo content views.view",
         options: { sort: { createdAt: 1 }, limit: 1 },
       });
     //Series + novels history based on logged in user
@@ -150,7 +175,7 @@ const appDashboard = async (req, res) => {
         .limit(10)
         .populate({
           path: "series",
-          select: "thumbnail.publicUrl type views",
+          select: "thumbnail.publicUrl type views.view",
           populate: [
             {
               path: "category",
@@ -166,7 +191,7 @@ const appDashboard = async (req, res) => {
         })
         .populate({
           path: "novel",
-          select: "thumbnail.publicUrl title type view",
+          select: "thumbnail.publicUrl title type views.view",
           populate: [
             {
               path: "category",
@@ -174,7 +199,7 @@ const appDashboard = async (req, res) => {
             },
             {
               path: "chapters",
-              select: "chapterPdf.publicUrl name chapterNo content views",
+              select: "chapterPdf.publicUrl name chapterNo content views.view",
               options: { sort: { createdAt: 1 }, limit: 1 },
             },
             {
@@ -187,7 +212,7 @@ const appDashboard = async (req, res) => {
 
     //New released novel and series [Based on latest created]
     const newSeries = await Series.find(query)
-      .select("thumbnail.publicUrl title type views")
+      .select("thumbnail.publicUrl title type views.view")
       .sort({ createdAt: -1 })
       .limit(10)
       .populate({
@@ -205,7 +230,7 @@ const appDashboard = async (req, res) => {
         select: "title",
       });
     const newNovels = await Novel.find(query)
-      .select("thumbnail.publicUrl title views type")
+      .select("thumbnail.publicUrl title views.view type")
       .sort({ createdAt: -1 })
       .limit(10)
       .populate({
@@ -268,7 +293,7 @@ const appDashboard = async (req, res) => {
       ...query,
       seriesRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl title view type")
+      .select("thumbnail.publicUrl title views.view type")
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -323,16 +348,16 @@ const appDashboard = async (req, res) => {
         $unwind: "$category",
       },
     ];
-    // if (categoryId) {
+    // if (category) {
     //   topRatedNovelsPipeline.unshift({
-    //     $match: { category: new mongoose.Types.ObjectId(categoryId) },
+    //     $match: { category: new mongoose.Types.ObjectId(category) },
     //   });
     // }
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
       options: { sort: { createdAt: 1 }, limit: 1 },
-      select: "chapterPdf.publicUrl name chapterNo content views",
+      select: "chapterPdf.publicUrl name chapterNo content views.view",
     });
 
     //All record in response
@@ -355,10 +380,10 @@ const appDashboard = async (req, res) => {
 
 //Dashboard Series
 const dashboardSeries = async (req, res) => {
-  const { categoryId } = req.query;
+  const { category } = req.query;
   let query = {};
-  if (categoryId) {
-    query.category = categoryId;
+  if (category) {
+    query.category = category;
   }
   try {
     //Latest series
@@ -483,10 +508,10 @@ const dashboardSeries = async (req, res) => {
 
 // Dashboard Novels.
 const dashboardNovels = async (req, res) => {
-  const { categoryId } = req.query;
+  const { category } = req.query;
   let query = {};
-  if (categoryId) {
-    query.category = categoryId;
+  if (category) {
+    query.category = category;
   }
   try {
     //Latest novels
@@ -568,9 +593,9 @@ const dashboardNovels = async (req, res) => {
       },
     ];
 
-    if (categoryId) {
+    if (category) {
       topRatedNovelsPipeline.unshift({
-        $match: { category: new mongoose.Types.ObjectId(categoryId) },
+        $match: { category: new mongoose.Types.ObjectId(category) },
       });
     }
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
@@ -595,10 +620,10 @@ const dashboardNovels = async (req, res) => {
 
 //Best Series
 const bestSeries = async (req, res) => {
-  const { categoryId } = req.query;
+  const { category } = req.query;
   let query = {};
-  if (categoryId) {
-    query.category = categoryId;
+  if (category) {
+    query.category = category;
   }
   try {
     //Best series
