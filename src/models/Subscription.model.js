@@ -7,7 +7,7 @@ const subscriptionSchema = new mongoose.Schema(
       enum: ["Weekly", "Monthly", "Yearly"],
     },
     price: {
-      type: String,
+      type: Number,
       required: true,
     },
     description: {

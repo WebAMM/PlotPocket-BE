@@ -26,7 +26,6 @@ const getAllSubscriptions = async (req, res) => {
 
 //Edit Subscriptions
 const editSubscription = async (req, res) => {
-  console.log("The ", req.params);
   const { id } = req.params;
   try {
     const subscription = await Subscription.findByIdAndUpdate(
