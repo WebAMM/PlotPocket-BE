@@ -168,7 +168,7 @@ const getAllNovels = async (req, res) => {
   try {
     const novels = await Novel.find()
       .select(
-        "_id thumbnail.publicUrl title description createdAt views visibility language reviews"
+        "_id thumbnail.publicUrl title description createdAt views visibility language reviews status"
       )
       // .populate({
       //   path: "reviews",

@@ -241,7 +241,7 @@ const editSeries = async (req, res) => {
 const getAllSeries = async (req, res) => {
   try {
     const series = await Series.find()
-      .select("_id title description visibility createdAt thumbnail.publicUrl")
+      .select("_id title description visibility createdAt thumbnail.publicUrl status")
       .populate({
         path: "category",
         select: "_id title",
