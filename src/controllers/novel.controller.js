@@ -204,6 +204,7 @@ const getAllNovels = async (req, res) => {
       totalChapters: novel.chapters.length,
       category: novel.category,
       author: novel.author,
+      status: novel.status,
       // reviews: novel.reviews.map((review) => ({
       //   user: {
       //     profileImage: review.user.profileImage,
