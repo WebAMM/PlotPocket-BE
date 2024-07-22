@@ -241,7 +241,9 @@ const editSeries = async (req, res) => {
 const getAllSeries = async (req, res) => {
   try {
     const series = await Series.find()
-      .select("_id title description visibility createdAt thumbnail.publicUrl status")
+      .select(
+        "_id title description visibility createdAt thumbnail.publicUrl status"
+      )
       .populate({
         path: "category",
         select: "_id title",
@@ -262,7 +264,7 @@ const getAllSeries = async (req, res) => {
       language: series.language,
       category: series.category,
       author: series.author,
-      reviews: series.reviews,
+      status: series.status,
       totalEpisode: series.episodes.length,
     }));
 
