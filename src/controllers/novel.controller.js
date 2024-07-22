@@ -168,7 +168,7 @@ const getAllNovels = async (req, res) => {
   try {
     const novels = await Novel.find()
       .select(
-        "_id thumbnail.publicUrl title description createdAt views visibility language reviews status"
+        "_id thumbnail.publicUrl title description createdAt views visibility language reviews status adult"
       )
       // .populate({
       //   path: "reviews",
@@ -205,6 +205,8 @@ const getAllNovels = async (req, res) => {
       category: novel.category,
       author: novel.author,
       status: novel.status,
+      reviews: novel.reviews.length || 0,
+      adult: novel.adult || false,
       // reviews: novel.reviews.map((review) => ({
       //   user: {
       //     profileImage: review.user.profileImage,
@@ -217,7 +219,6 @@ const getAllNovels = async (req, res) => {
       //   totalLikes: review.totalLikes,
       //   createdAt: review.createdAt,
       // })),
-      reviews: novel.reviews.length || 0,
     }));
 
     success(res, "200", "Success", allNovels);
@@ -238,7 +239,7 @@ const getAuthorNovels = async (req, res) => {
       author: id,
     })
       .select(
-        "_id thumbnail.publicUrl title description createdAt views visibility language reviews"
+        "_id thumbnail.publicUrl title description createdAt views visibility language reviews adult"
       )
       .populate({
         path: "category",
