@@ -23,7 +23,7 @@ const addChapter = async (req, res) => {
     }
     // const existChapter = await Chapter.findOne({ name });
     // if (existChapter) {
-    //   return error409(res, "Chapter Already Exists");
+    //   return error409(res, "Chapter Already Exist");
     // }
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {

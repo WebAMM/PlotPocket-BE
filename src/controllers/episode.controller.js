@@ -25,7 +25,7 @@ const addEpisode = async (req, res) => {
     }
     // const existEpisode = await Episode.findOne({ title });
     // if (existEpisode) {
-    //   return error409(res, "Episode Already Exists");
+    //   return error409(res, "Episode Already Exist");
     // }
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
