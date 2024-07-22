@@ -87,7 +87,7 @@ const novelSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    isAdult: {
+    adult: {
       type: Boolean,
       default: false,
     },
