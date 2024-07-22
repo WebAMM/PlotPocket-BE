@@ -9,6 +9,28 @@ const seriesSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    category: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Category",
+      // required: true,
+    },
+    visibility: {
+      type: String,
+      enum: ["Public", "Private"],
+    },
+    status: {
+      type: String,
+      enum: ["Published", "Draft"],
+      required: true,
+    },
+    type: {
+      type: String,
+      default: "Series",
+    },
+    seriesRating: {
+      type: Number,
+      default: 0,
+    },
     //Cloudinary images
     thumbnail: {
       publicUrl: {
@@ -27,27 +49,6 @@ const seriesSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
-    },
-    category: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Category",
-      // required: true,
-    },
-    // publishDate: {
-    //   type: Date,
-    // },
-    visibility: {
-      type: String,
-      enum: ["Public", "Private"],
-    },
-    status: {
-      type: String,
-      enum: ["Published", "Draft"],
-      required: true,
-    },
-    type: {
-      type: String,
-      default: "Series",
     },
     views: {
       type: [
@@ -69,7 +70,7 @@ const seriesSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    seriesRating: {
+    totalViews: {
       type: Number,
       default: 0,
     },

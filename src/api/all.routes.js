@@ -6,6 +6,9 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
+// Increase View
+router.post("/app/view", verifyToken, allController.increaseView);
+
 //Search All Novels + Series
 router.get("/app/search", verifyToken, allController.globalSearch);
 
