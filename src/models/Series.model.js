@@ -4,7 +4,7 @@ const seriesSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, "Please enter title"],
+      // required: [true, "Please enter title"],
     },
     description: {
       type: String,
@@ -43,6 +43,7 @@ const seriesSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Published", "Draft"],
+      required: true,
     },
     type: {
       type: String,

@@ -16,28 +16,120 @@ const mongoose = require("mongoose");
 const Category = require("../models/Category.model");
 const Author = require("../models/Author.model");
 
-//Add Novel
+//Publish the novel
 const addNovel = async (req, res) => {
   try {
-    const { title, category, author } = req.body;
-    const existNovel = await Novel.findOne({ title });
-    if (existNovel) {
-      return error409(res, "Novel already exists");
+    const { title, category, author, draftId } = req.body;
+    if (draftId) {
+      const draftNovel = await Novel.findById({
+        _id: draftId,
+        status: "Draft",
+      });
+      if (!draftNovel) {
+        return error409(res, "Novel not found in draft");
+      }
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exist");
+      }
+      if (existCategory.type !== "Novels") {
+        return error400(res, "Category type don't belong to novels");
+      }
+      const existAuthor = await Author.findById(author);
+      if (!existAuthor) {
+        return error409(res, "Author don't exist");
+      }
+      if (draftNovel.thumbnail.publicUrl) {
+        await Novel.updateOne(
+          {
+            _id: draftId,
+          },
+          {
+            ...req.body,
+            status: "Published",
+          }
+        );
+      } else if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          resource_type: "image",
+          folder: "novel",
+        });
+        await Novel.updateOne(
+          {
+            _id: draftId,
+          },
+          {
+            ...req.body,
+            thumbnail: {
+              publicUrl: result.url,
+              secureUrl: result.secure_url,
+              publicId: result.public_id,
+              format: result.format,
+            },
+            status: "Published",
+          }
+        );
+        return status200(res, "Novel published successfully");
+      } else {
+        return error400(res, "Thumbnail is required");
+      }
+    } else {
+      const existNovel = await Novel.findOne({ title, status: "Published" });
+      if (existNovel) {
+        return error409(res, "Novel already exist");
+      }
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exist");
+      }
+      if (existCategory.type !== "Novels") {
+        return error409(res, "Category type don't belong to novels");
+      }
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          resource_type: "image",
+          folder: "novel",
+        });
+        await Novel.create({
+          ...req.body,
+          status: "Published",
+          thumbnail: {
+            publicUrl: result.url,
+            secureUrl: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+          },
+        });
+        return status200(res, "Novel published successfully");
+      } else {
+        return error400(res, "Thumbnail is required");
+      }
     }
-    const existCategory = await Category.findById(category);
-    const existAuthor = await Author.findById(author);
+  } catch (err) {
+    error500(res, err);
+  }
+};
 
-    if (!existCategory) {
-      return error409(res, "Category don't exists");
-    }
-    if (existCategory.type !== "Novels") {
-      return error400(res, "Category type don't belong to novels");
+//Draft Novel
+const addNovelToDraft = async (req, res) => {
+  try {
+    const { title, category } = req.body;
+    if (title) {
+      const existNovel = await Novel.findOne({ title });
+      if (existNovel) {
+        return error409(res, "Novel already exist");
+      }
     }
 
-    if (!existAuthor) {
-      return error409(res, "Author don't exists");
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exist");
+      }
+      if (existCategory.type !== "Novels") {
+        return error400(res, "Category type don't belong to novel");
+      }
     }
-
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",
@@ -51,11 +143,21 @@ const addNovel = async (req, res) => {
           publicId: result.public_id,
           format: result.format,
         },
+        status: "Draft",
       });
-      return status200(res, "Novel created successfully");
     } else {
-      return error400(res, "Thumbnail is required");
+      await Novel.create({
+        ...req.body,
+        thumbnail: {
+          publicUrl: "",
+          secureUrl: "",
+          publicId: "",
+          format: "",
+        },
+        status: "Draft",
+      });
     }
+    return status200(res, "Novel saved as draft");
   } catch (err) {
     error500(res, err);
   }
@@ -64,7 +166,6 @@ const addNovel = async (req, res) => {
 // Get All Novels
 const getAllNovels = async (req, res) => {
   try {
-    console.log("asd");
     const novels = await Novel.find()
       .select(
         "_id thumbnail.publicUrl title description createdAt views visibility language reviews"
@@ -185,7 +286,7 @@ const editNovel = async (req, res) => {
     if (category) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
-        return error409(res, "Category don't exists");
+        return error409(res, "Category don't exist");
       }
       if (existCategory.type !== "Novels") {
         return error400(res, "Category type don't belong to novel");
@@ -495,6 +596,7 @@ const allReviewsOfNovels = async (req, res) => {
 
 module.exports = {
   addNovel,
+  addNovelToDraft,
   getAllNovels,
   editNovel,
   deleteNovel,

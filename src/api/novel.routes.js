@@ -7,22 +7,21 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add novel
+//Publish the novel
 router.post(
-  "/admin/add",
+  "/admin/publish",
   verifyToken,
   upload.single("thumbnail"),
   payloadValidator.validateAddNovel,
   novelController.addNovel
 );
 
-//Add chapters to novel
+//Add novels in draft
 router.post(
-  "/admin/add-chapter/:id",
+  "/admin/draft",
   verifyToken,
-  upload.single("chapter"),
-  payloadValidator.validateAddChapter,
-  chapterController.addChapter
+  upload.single("thumbnail"),
+  novelController.addNovelToDraft
 );
 
 //Edit novel
@@ -38,13 +37,6 @@ router.delete("/admin/:id", verifyToken, novelController.deleteNovel);
 
 //Get novels
 router.get("/admin/all", verifyToken, novelController.getAllNovels);
-
-//Get chapters based on novel
-router.get(
-  "/admin/get-chapters",
-  verifyToken,
-  chapterController.getAllChaptersByNovel
-);
 
 //Get novels of author
 router.get(

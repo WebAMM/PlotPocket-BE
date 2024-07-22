@@ -24,7 +24,7 @@ const registerUser = async (req, res) => {
     const { email, password, userName } = req.body;
     const existUser = await User.findOne({ email });
     if (existUser) {
-      return error409(res, "User Already Exists");
+      return error409(res, "User already exist");
     }
     const userData = { userName, email, password };
     if (req.file) {
@@ -82,7 +82,7 @@ const loginUser = async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
-      return success(res, "200", "Login Success", {
+      return success(res, "200", "Login success", {
         token,
         user: responseUser,
       });
@@ -116,7 +116,7 @@ const guestLogin = async (req, res) => {
       role: "Guest",
     };
 
-    return success(res, "200", "Guest Login Success", {
+    return success(res, "200", "Guest login success", {
       token,
       user: responseUser,
     });
@@ -153,7 +153,7 @@ const loginWithFacebook = async (req, res) => {
       const token = jwt.sign({ _id: checkUser._id }, secret, {
         expiresIn: "24h",
       });
-      success(res, "200", "Login Success", {
+      success(res, "200", "Login success", {
         token,
         user: checkUser,
       });
@@ -167,7 +167,7 @@ const loginWithFacebook = async (req, res) => {
       const token = jwt.sign({ _id: newUser._id }, secret, {
         expiresIn: "24h",
       });
-      success(res, "200", "Login Success", {
+      success(res, "200", "Login success", {
         token,
         user: newUser,
       });
@@ -190,12 +190,11 @@ const loginWithInstagram = async (req, res) => {
       const token = jwt.sign({ _id: checkUser._id }, secret, {
         expiresIn: "24h",
       });
-      success(res, "200", "Login Success", {
+      success(res, "200", "Login success", {
         token,
         user: checkUser,
       });
     } else {
-      console.log("In creation");
       const newUser = await new User({
         email: email,
         password: instaId,
@@ -258,7 +257,7 @@ const verifyResetPasswordOTP = async (req, res) => {
       //clearing the OTP after successful otp verification
       user.resetPassOtp = null;
       await user.save();
-      success(res, "200", "OTP verified Successfully", true);
+      success(res, "200", "OTP verified successfully", true);
     }
   } catch (err) {
     error500(res, err);
