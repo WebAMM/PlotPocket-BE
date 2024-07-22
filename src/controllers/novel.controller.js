@@ -145,7 +145,6 @@ const addNovelToDraft = async (req, res) => {
         },
         status: "Draft",
       });
-      return status200(res, "Novel saved as draft");
     } else {
       await Novel.create({
         ...req.body,
@@ -158,7 +157,10 @@ const addNovelToDraft = async (req, res) => {
         status: "Draft",
       });
     }
-  } catch (err) {}
+    return status200(res, "Novel saved as draft");
+  } catch (err) {
+    error500(res, err);
+  }
 };
 
 // Get All Novels

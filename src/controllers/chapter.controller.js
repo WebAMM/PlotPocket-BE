@@ -17,7 +17,10 @@ const addChapter = async (req, res) => {
   const { name } = req.body;
   const { id } = req.params;
   try {
-    const novelExist = await Novel.findById(id);
+    const novelExist = await Novel.findOne({
+      _id: id,
+      status: "Published",
+    });
     if (!novelExist) {
       return error404(res, "Novel not found");
     }
@@ -47,7 +50,7 @@ const addChapter = async (req, res) => {
         { $push: { chapters: newChapter._id } },
         { new: true }
       );
-      return status200(res, "Chapter added successfully in novel");
+      return status200(res, "Chapter added in novel");
     } else {
       return error400(res, "Chapter pdf is required");
     }
