@@ -73,7 +73,7 @@ const getAllChaptersByNovel = async (req, res) => {
       .select("chapterPdf.publicUrl totalViews createdAt content name")
       .populate({
         path: "novel",
-        select: "thumbnail.publicUrl",
+        select: "thumbnail.publicUrl thumbnail.format",
       });
     success(res, "200", "Success", chapters);
   } catch (err) {
