@@ -309,50 +309,6 @@ const deleteSeries = async (req, res) => {
   }
 };
 
-// Top rated series
-const getTopRatedSeries = async (req, res) => {
-  const { categoryId } = req.query;
-  const { latest } = req.body;
-
-  const query = {};
-
-  if (categoryId) {
-    query.category = categoryId;
-  }
-
-  const sortOptions = {
-    seriesRating: -1,
-  };
-
-  if (latest) {
-    sortOptions.createdAt = -1;
-  }
-
-  try {
-    const topRatedSeries = await Series.find(query)
-      .select("thumbnail.publicUrl title view type")
-      .populate({
-        path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
-        options: {
-          sort: {
-            createdAt: 1,
-          },
-          limit: 5,
-        },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .sort(sortOptions);
-
-    return success(res, "200", "Success", topRatedSeries);
-  } catch (err) {
-    return error500(res, err);
-  }
-};
-
 //All views of series
 const allViewsOfSeries = async (req, res) => {
   const { date } = req.query;
@@ -510,14 +466,81 @@ const topSeries = async (req, res) => {
   }
 };
 
+// Top rated series
+const getTopRatedSeries = async (req, res) => {
+  const { category, latest, day } = req.query;
+
+  const query = {};
+
+  //Filtering based on classifications
+  const sortOptions = {
+    seriesRating: -1,
+  };
+
+  if (latest) {
+    sortOptions.createdAt = -1;
+  }
+
+  try {
+    //Filtering based on Category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
+    //Filtering based on Day
+    if (day) {
+      const parsedDay = parseInt(day);
+      if (![7, 14, 30].includes(parsedDay)) {
+        return error400(res, "Invalid date parameter");
+      }
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - day);
+      topRankQuery.createdAt = {
+        $gte: startDate,
+        $lte: today,
+      };
+    }
+
+    const topRatedSeries = await Series.find({
+      ...query,
+      seriesRating: { $gte: 1 },
+    })
+      .select("thumbnail.publicUrl title view type")
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: {
+          sort: {
+            createdAt: 1,
+          },
+          limit: 5,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort(sortOptions);
+
+    return success(res, "200", "Success", topRatedSeries);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addSeries,
   addSeriesToDraft,
   getAllSeries,
   deleteSeries,
-  getTopRatedSeries,
   editSeries,
   allViewsOfSeries,
   bestSeries,
   topSeries,
+  getTopRatedSeries,
 };
