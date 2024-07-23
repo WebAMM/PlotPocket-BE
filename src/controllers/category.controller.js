@@ -2,7 +2,6 @@
 const Category = require("../models/Category.model");
 const Novel = require("../models/Novel.model");
 const Series = require("../models/Series.model");
-
 //Responses and errors
 const {
   error500,

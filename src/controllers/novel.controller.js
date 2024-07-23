@@ -663,6 +663,8 @@ const allViewsOfNovels = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   addNovel,
   addNovelToDraft,

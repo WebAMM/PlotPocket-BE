@@ -1,11 +1,9 @@
 //Models
 const Novel = require("../models/Novel.model");
 const Series = require("../models/Series.model");
-const User = require("../models/User.model");
 const Episode = require("../models/Episode.model");
-const History = require("../models/History.model");
 const Chapter = require("../models/Chapter.model");
-
+const Category = require("../models/Category.model");
 //Responses and errors
 const {
   error500,
@@ -20,7 +18,6 @@ const mongoose = require("mongoose");
 //Global Search Novels + Series
 const globalSearch = async (req, res) => {
   const { title } = req.query;
-
   try {
     const regex = new RegExp(`.*${title}.*`, "i");
     const novels = await Novel.find({
@@ -36,10 +33,9 @@ const globalSearch = async (req, res) => {
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
         options: {
           sort: { createdAt: 1 },
-          limit: 1,
+          limit: 5,
         },
       });
-
     const series = await Series.find({
       title: {
         $regex: regex,
@@ -53,7 +49,7 @@ const globalSearch = async (req, res) => {
         select: "episodeVideo.publicUrl title content visibility description",
         options: {
           sort: { createdAt: 1 },
-          limit: 1,
+          limit: 5,
         },
       });
 
@@ -64,138 +60,8 @@ const globalSearch = async (req, res) => {
   }
 };
 
-// Single novel/series detail with comments + might like.
-const singleDetailPage = async (req, res) => {
-  const { id } = req.params;
-  const { type } = req.body;
-
-  let content;
-  let mightLike;
-
-  try {
-    if (type === "Novel") {
-      content = await Novel.findById(id)
-        .select("thumbnail.publicUrl title type language description")
-        .populate([
-          {
-            path: "author",
-            select: "authorPic.publicUrl name",
-          },
-          {
-            path: "category",
-            select: "title",
-          },
-          {
-            path: "chapters",
-            select: "chapterPdf.publicUrl chapterNo content totalViews createdAt",
-          },
-          {
-            path: "reviews",
-            select: "rating comment totalLikes createdAt",
-            populate: {
-              path: "user",
-              select: "profileImage.publicUrl userName email",
-            },
-          },
-        ])
-        .lean();
-
-      if (!content) {
-        return error404(res, "Novel not found");
-      }
-
-      if (content.reviews?.length) {
-        content.reviews = content.reviews.map((review) => ({
-          rating: review.rating,
-          comment: review.comment,
-          totalLikes: review.totalLikes,
-          createdAt: review.createdAt,
-          user: {
-            profileImage: review.user.profileImage,
-            userName: review.user.userName,
-            email: review.user.email,
-          },
-        }));
-      }
-
-      //For Might like
-      const categories = await Novel.aggregate([
-        { $unwind: "$reviews" },
-        {
-          $match: { "reviews.user": new mongoose.Types.ObjectId(req.user._id) },
-        },
-        { $group: { _id: "$category" } },
-      ]);
-
-      const categoryIds = categories.map((category) => category._id);
-
-      mightLike = await Novel.find({
-        category: { $in: categoryIds },
-        "reviews.user": { $ne: new mongoose.Types.ObjectId(req.user._id) },
-      })
-        .select("thumbnail.publicUrl title description totalViews category")
-        .populate("category", "title")
-        .populate(
-          "chapters",
-          "chapterPdf.publicUrl chapterNo content totalViews createdAt"
-        );
-    } else if (type === "Series") {
-      content = await Series.findById(id)
-        .select("thumbnail.publicUrl title description")
-        .populate([
-          {
-            path: "category",
-            select: "title",
-          },
-          {
-            path: "episodes",
-            select:
-              "episodeVideo.publicUrl title content visibility description",
-            options: {
-              sort: {
-                createdAt: 1,
-              },
-            },
-          },
-        ]);
-
-      //For Might like
-      const episodesUserRated = await Episode.find({
-        "ratings.user": req.user._id,
-      }).select("series");
-
-      //If user like 5 episode of same series so need to have just one series of that episode
-      const filteredSeriesId = episodesUserRated.filter((id) => id);
-
-      const sameCategorySeries = await Series.find({
-        _id: {
-          $in: filteredSeriesId,
-        },
-      }).select("category");
-
-      const categoryIds = sameCategorySeries.map((series) => series.category);
-
-      mightLike = await Series.find({
-        category: {
-          $in: categoryIds,
-        },
-      }).limit(10);
-    }
-
-    const data = {
-      singleContent: content,
-      mightLike,
-    };
-
-    return success(res, "200", "Success", data);
-  } catch (err) {
-    return error500(res, err);
-  }
-};
-
 const topRanked = async (req, res) => {
-  const { categoryId } = req.query;
-  const { latest } = req.body;
+  const { category, latest } = req.query;
   let query;
 
   const sortSeriesOptions = {
@@ -211,8 +77,12 @@ const topRanked = async (req, res) => {
     sortNovelOptions.createdAt = -1;
   }
 
-  if (categoryId) {
-    query.category = categoryId;
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category don't exist");
+    }
+    query.category = category;
   }
 
   try {
@@ -264,9 +134,9 @@ const topRanked = async (req, res) => {
       },
     ];
 
-    if (categoryId) {
+    if (category) {
       topRatedNovelsPipelines.unshift({
-        $match: { category: new mongoose.Types.ObjectId(categoryId) },
+        $match: { category: new mongoose.Types.ObjectId(category) },
       });
     }
 
@@ -476,9 +346,221 @@ const increaseView = async (req, res) => {
   }
 };
 
+// Single novel/series detail with comments + might like.
+const singleDetailPage = async (req, res) => {
+  const { id } = req.params;
+  const { type } = req.query;
+
+  let content;
+  let mightLike;
+
+  try {
+    if (type === "Novel") {
+      content = await Novel.findById(id)
+        .select("thumbnail.publicUrl title type language description")
+        .populate([
+          {
+            path: "author",
+            select: "authorPic.publicUrl name",
+          },
+          {
+            path: "category",
+            select: "title",
+          },
+          {
+            path: "chapters",
+            select:
+              "chapterPdf.publicUrl chapterNo content totalViews createdAt",
+            options: {
+              sort: { createdAt: 1 },
+              limit: 5,
+            },
+          },
+          {
+            path: "reviews",
+            select: "rating comment totalLikes createdAt",
+            populate: {
+              path: "user",
+              select: "profileImage.publicUrl userName email",
+            },
+          },
+        ])
+        .lean();
+
+      if (!content) {
+        return error404(res, "Novel not found");
+      }
+
+      const totalChapters = await Chapter.find({
+        novel: id,
+      }).countDocuments();
+
+      if (content.reviews?.length) {
+        content.reviews = content.reviews.map((review) => ({
+          rating: review.rating,
+          comment: review.comment,
+          totalLikes: review.totalLikes,
+          createdAt: review.createdAt,
+          user: {
+            profileImage: review.user.profileImage,
+            userName: review.user.userName,
+            email: review.user.email,
+          },
+        }));
+      }
+
+      content = { ...content, totalChapters };
+      //For Might like
+      const categories = await Novel.aggregate([
+        { $unwind: "$reviews" },
+        {
+          $match: { "reviews.user": new mongoose.Types.ObjectId(req.user._id) },
+        },
+        { $group: { _id: "$category" } },
+      ]);
+
+      const categoryIds = categories.map((category) => category._id);
+
+      mightLike = await Novel.find({
+        category: { $in: categoryIds },
+        "reviews.user": { $ne: new mongoose.Types.ObjectId(req.user._id) },
+      })
+        .select("thumbnail.publicUrl title description totalViews category")
+        .populate("category", "title")
+        .populate(
+          "chapters",
+          "chapterPdf.publicUrl chapterNo content totalViews createdAt"
+        );
+    } else if (type === "Series") {
+      const totalEpisode = await Episode.find({
+        series: id,
+      }).countDocuments();
+
+      content = await Series.findById(id)
+        .select("thumbnail.publicUrl title description")
+        .populate([
+          {
+            path: "category",
+            select: "title",
+          },
+          {
+            path: "episodes",
+            select:
+              "episodeVideo.publicUrl title content visibility description",
+            options: {
+              sort: {
+                createdAt: 1,
+              },
+            },
+          },
+        ])
+        .lean();
+      content = { ...content, totalEpisode };
+      //For Might like
+      const episodesUserRated = await Episode.find({
+        "ratings.user": req.user._id,
+      }).select("series");
+
+      //If user like 5 episode of same series so need to have just one series of that episode
+      const filteredSeriesId = episodesUserRated.filter((id) => id);
+
+      const sameCategorySeries = await Series.find({
+        _id: {
+          $in: filteredSeriesId,
+        },
+      }).select("category");
+
+      const categoryIds = sameCategorySeries.map((series) => series.category);
+
+      mightLike = await Series.find({
+        category: {
+          $in: categoryIds,
+        },
+      }).limit(10);
+    }
+
+    const data = {
+      detail: content,
+      mightLike,
+    };
+    return success(res, "200", "Success", data);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+// All featured series and novel
+const featuredSeriesNovels = async (req, res) => {
+  const { category, day } = req.query;
+  //Query's
+  let query = {
+    status: "Published",
+  };
+  let topRankQuery = {};
+  //Filtering based on Category
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error404(res, "Category not found");
+    }
+    query.category = category;
+  }
+  if (day) {
+    const parsedDay = parseInt(day);
+    if (![7, 14, 30].includes(parsedDay)) {
+      return error400(res, "Invalid date parameter");
+    }
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - day);
+    topRankQuery.createdAt = {
+      $gte: startDate,
+      $lte: today,
+    };
+  }
+
+  try {
+    //Featured novel and series [Based on more views]
+    const featuredSeries = await Series.find({
+      ...query,
+      totalViews: { $gte: 10 },
+    })
+      .select("thumbnail.publicUrl title type")
+      .sort({ totalViews: -1 })
+      .limit(10)
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      });
+    const featuredNovels = await Novel.find({
+      ...query,
+      totalViews: { $gte: 10 },
+    })
+      .select("thumbnail.publicUrl title type")
+      .sort({ totalViews: -1 })
+      .limit(10)
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      });
+
+    const data = {
+      featuredSeries,
+      featuredNovels,
+    };
+
+    return success(res, "200", "Success", data);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   globalSearch,
-  singleDetailPage,
   topRanked,
   increaseView,
+  singleDetailPage,
+  featuredSeriesNovels,
 };
