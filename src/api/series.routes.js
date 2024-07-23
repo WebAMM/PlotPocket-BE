@@ -2,7 +2,7 @@ const router = require("express").Router();
 //controllers
 const seriesController = require("../controllers/series.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
@@ -10,6 +10,7 @@ const payloadValidator = require("../middlewares/payloadValidator");
 router.post(
   "/admin/publish",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("thumbnail"),
   payloadValidator.validateAddSeries,
   seriesController.addSeries
@@ -19,6 +20,7 @@ router.post(
 router.post(
   "/admin/draft",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("thumbnail"),
   seriesController.addSeriesToDraft
 );
@@ -27,16 +29,27 @@ router.post(
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("thumbnail"),
   // payloadValidator.validateAddSeries,
   seriesController.editSeries
 );
 
 //[ADMIN] Get series
-router.get("/admin/all", verifyToken, seriesController.getAllSeries);
+router.get(
+  "/admin/all",
+  verifyToken,
+  verifyRole(["Admin"]),
+  seriesController.getAllSeries
+);
 
 //[ADMIN] Delete series
-router.delete("/admin/:id", verifyToken, seriesController.deleteSeries);
+router.delete(
+  "/admin/:id",
+  verifyToken,
+  verifyRole(["Admin"]),
+  seriesController.deleteSeries
+);
 
 //[APP] Get all top rated series
 router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
@@ -45,6 +58,7 @@ router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
 router.get(
   "/admin/all-views/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   seriesController.allViewsOfSeries
 );
 

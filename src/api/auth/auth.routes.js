@@ -17,7 +17,14 @@ router.post(
 //Login User
 router.post("/login", payloadValidator.validateLogin, authController.loginUser);
 
-//Login as Guest
+//Login Admin
+router.post(
+  "/admin-login",
+  payloadValidator.validateLogin,
+  authController.loginAdmin
+);
+
+//Login Guest
 router.post("/guest-login", authController.guestLogin);
 
 //Admin updates password

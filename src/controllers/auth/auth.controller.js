@@ -51,7 +51,7 @@ const registerUser = async (req, res) => {
 //Login User
 const loginUser = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email, role: "User" });
     if (!user) {
       return error404(res, "User not found!");
     }
@@ -71,13 +71,61 @@ const loginUser = async (req, res) => {
         },
         secret,
         {
-          expiresIn: "24h",
+          expiresIn: "48h",
         }
       );
       const responseUser = {
         _id: user._id,
         userName: user.userName,
         email: user.email,
+        role: user.role,
+        profileImage: user.profileImage.publicUrl,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+      return success(res, "200", "Login success", {
+        token,
+        user: responseUser,
+      });
+    } else {
+      customError(res, 401, "Invalid credentials");
+    }
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+//Login User
+const loginAdmin = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email, role: "Admin" });
+    if (!user) {
+      return error404(res, "User not found!");
+    }
+    if (user.status === "Inactive") {
+      return error404(res, "User is inactive");
+    }
+    if (user && bcryptjs.compareSync(req.body.password, user.password)) {
+      const secret = config.jwtPrivateKey;
+      const token = jwt.sign(
+        {
+          _id: user._id,
+          name: user.userName,
+          email: user.email,
+          role: user.role,
+          profileImage: user.profileImage.publicUrl,
+          createdAt: user.createdAt,
+        },
+        secret,
+        {
+          expiresIn: "48h",
+        }
+      );
+      const responseUser = {
+        _id: user._id,
+        userName: user.userName,
+        email: user.email,
+        role: user.role,
         profileImage: user.profileImage.publicUrl,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -383,6 +431,7 @@ const updateAdminProfilePic = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  loginAdmin,
   guestLogin,
   generateResetPasswordEmailWithOTP,
   verifyResetPasswordOTP,
