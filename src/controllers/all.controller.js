@@ -33,7 +33,7 @@ const globalSearch = async (req, res) => {
       .limit(10)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content views",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
         options: {
           sort: { createdAt: 1 },
           limit: 1,
@@ -87,7 +87,7 @@ const singleDetailPage = async (req, res) => {
           },
           {
             path: "chapters",
-            select: "chapterPdf.publicUrl chapterNo content views createdAt",
+            select: "chapterPdf.publicUrl chapterNo content totalViews createdAt",
           },
           {
             path: "reviews",
@@ -133,11 +133,11 @@ const singleDetailPage = async (req, res) => {
         category: { $in: categoryIds },
         "reviews.user": { $ne: new mongoose.Types.ObjectId(req.user._id) },
       })
-        .select("thumbnail.publicUrl title description views category")
+        .select("thumbnail.publicUrl title description totalViews category")
         .populate("category", "title")
         .populate(
           "chapters",
-          "chapterPdf.publicUrl chapterNo content views createdAt"
+          "chapterPdf.publicUrl chapterNo content totalViews createdAt"
         );
     } else if (type === "Series") {
       content = await Series.findById(id)
@@ -274,7 +274,7 @@ const topRanked = async (req, res) => {
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
       options: { sort: { createdAt: 1 }, limit: 1 },
-      select: "chapterPdf.publicUrl name chapterNo content views",
+      select: "chapterPdf.publicUrl name chapterNo content totalViews",
     });
 
     const data = {

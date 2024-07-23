@@ -21,12 +21,7 @@ router.get(
 );
 
 //[APP] 1st APP page in dashboard
-router.get(
-  "/app/main",
-  verifyToken,
-  verifyRole(["User"]),
-  dashboardController.appDashboard
-);
+router.get("/app/main", verifyToken, dashboardController.appDashboard);
 
 //[APP] Series in dashboard
 router.get("/app-series", verifyToken, dashboardController.dashboardSeries);
