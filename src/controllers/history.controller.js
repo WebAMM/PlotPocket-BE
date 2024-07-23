@@ -19,7 +19,7 @@ const allHistory = async (req, res) => {
       .populate([
         {
           path: "series",
-          select: "thumbnail.publicUrl type views",
+          select: "thumbnail.publicUrl type totalViews",
           populate: {
             path: "episodes",
             select:
@@ -29,10 +29,10 @@ const allHistory = async (req, res) => {
         },
         {
           path: "novel",
-          select: "thumbnail.publicUrl type views",
+          select: "thumbnail.publicUrl type totalViews",
           populate: {
             path: "chapters",
-            select: "chapterPdf.publicUrl name chapterNo content views",
+            select: "chapterPdf.publicUrl name chapterNo content totalViews",
             options: {
               sort: {
                 createdAt: 1,
