@@ -1,6 +1,8 @@
 //Models
 const Novel = require("../models/Novel.model");
 const Chapter = require("../models/Chapter.model");
+const Category = require("../models/Category.model");
+const Author = require("../models/Author.model");
 //Responses and errors
 const {
   error500,
@@ -13,8 +15,6 @@ const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
-const Category = require("../models/Category.model");
-const Author = require("../models/Author.model");
 
 //Publish the novel
 const addNovel = async (req, res) => {
@@ -646,19 +646,18 @@ const allViewsOfNovels = async (req, res) => {
         },
       },
       {
-        $group: {
-          _id: "$_id",
-          views: { $push: "$views" },
-        },
-      },
-      {
         $project: {
           _id: 0,
-          views: 1,
+          "views.user": 1,
+          "views.date": 1,
+          "views.view": 1,
+          "views._id": 1,
         },
       },
     ]);
-    return success(res, "200", "Success", novels);
+
+    const novelViews = novels.map((elem) => elem.views);
+    return success(res, "200", "Success", novelViews);
   } catch (err) {
     return error500(res, err);
   }
