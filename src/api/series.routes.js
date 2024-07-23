@@ -51,8 +51,7 @@ router.delete(
   seriesController.deleteSeries
 );
 
-//[APP] Get all top rated series
-router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
+
 
 //[ADMIN] Get series views
 router.get(
@@ -66,6 +65,9 @@ router.get(
 router.get("/app/best", verifyToken, seriesController.bestSeries);
 
 //[APP] Get all top series
-router.get("/app/top", verifyToken, seriesController.topSeries);
+router.get("/app/top-rated", verifyToken, seriesController.topSeries);
+
+//[APP] Get all top rated series
+router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
 
 module.exports = router;

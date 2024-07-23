@@ -40,7 +40,7 @@ const addChapter = async (req, res) => {
           publicUrl: result.url,
           secureUrl: result.secure_url,
           publicId: result.public_id,
-          format: "pdf",
+          format: result.format,
         },
       });
       await Novel.updateOne(
