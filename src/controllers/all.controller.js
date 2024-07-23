@@ -389,10 +389,10 @@ const increaseView = async (req, res) => {
       if (!novel) {
         return error400(res, "Novel not found");
       }
-      // const chapter = await Chapter.findById(chapterId);
-      // if (!chapter) {
-      //   return error400(res, "Chapter not found");
-      // }
+      const chapter = await Chapter.findById(chapterId);
+      if (!chapter) {
+        return error400(res, "Chapter not found");
+      }
       const alreadyViewedNovel = novel.views.find(
         (viewRec) => viewRec.user == req.user._id
       );
@@ -414,7 +414,6 @@ const increaseView = async (req, res) => {
         );
         return status200(res, "Novel and chapters views increased");
       } else {
-        console.log("The ");
         await Novel.updateOne(
           {
             _id: novelId,
@@ -433,47 +432,46 @@ const increaseView = async (req, res) => {
             runValidators: true,
           }
         );
-        return status200(res, "Novel and chapters views increased");
       }
-      // const alreadyViewedChapter = chapter.views.find(
-      //   (viewRec) => viewRec.user == req.user._id
-      // );
-      // if (alreadyViewedChapter) {
-      //   Chapter.updateOne(
-      //     {
-      //       _id: chapterId,
-      //     },
-      //     {
-      //       "views.$[elem].date": new Date(),
-      //     },
-      //     {
-      //       arrayFilters: [
-      //         {
-      //           "elem.user": new mongoose.Type.ObjectId(req.user._id),
-      //         },
-      //       ],
-      //     }
-      //   );
-      // } else {
-      //   Chapter.updateOne(
-      // {
-      //   _id: chapterId,
-      // },
-      // {
-      //   $push: {
-      //     views: {
-      //       user: new mongoose.Types.ObjectId(req.user._id),
-      //       view: 1,
-      //       date: new Date(),
-      //     },
-      //   },
-      //   $inc: { totalViews: 1 },
-      // },
-      // {
-      //   runValidators: true,
-      // }
-      //   );
-      // }
+      const alreadyViewedChapter = chapter.views.find(
+        (viewRec) => viewRec.user == req.user._id
+      );
+      if (alreadyViewedChapter) {
+        Chapter.updateOne(
+          {
+            _id: chapterId,
+          },
+          {
+            "views.$[elem].date": new Date(),
+          },
+          {
+            arrayFilters: [
+              {
+                "elem.user": new mongoose.Type.ObjectId(req.user._id),
+              },
+            ],
+          }
+        );
+      } else {
+        Chapter.updateOne(
+          {
+            _id: chapterId,
+          },
+          {
+            $push: {
+              views: {
+                user: new mongoose.Types.ObjectId(req.user._id),
+                view: 1,
+                date: new Date(),
+              },
+            },
+            $inc: { totalViews: 1 },
+          },
+          {
+            runValidators: true,
+          }
+        );
+      }
     }
   }
 };

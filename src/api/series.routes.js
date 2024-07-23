@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Publish the series
+//[ADMIN] Publish the series
 router.post(
   "/admin/publish",
   verifyToken,
@@ -15,7 +15,7 @@ router.post(
   seriesController.addSeries
 );
 
-//Add series in draft
+//[ADMIN] Add series in draft
 router.post(
   "/admin/draft",
   verifyToken,
@@ -23,7 +23,7 @@ router.post(
   seriesController.addSeriesToDraft
 );
 
-//Edit series
+//[ADMIN] Edit series
 router.put(
   "/admin/:id",
   verifyToken,
@@ -32,16 +32,16 @@ router.put(
   seriesController.editSeries
 );
 
-//Get series
+//[ADMIN] Get series
 router.get("/admin/all", verifyToken, seriesController.getAllSeries);
 
-//Delete series
+//[ADMIN] Delete series
 router.delete("/admin/:id", verifyToken, seriesController.deleteSeries);
 
-//Get all top rated series
+//[APP] Get all top rated series
 router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
 
-//Get series views
+//[ADMIN] Get series views
 router.get(
   "/admin/all-views/:id",
   verifyToken,

@@ -4,42 +4,42 @@ const dashboardController = require("../controllers/dashboard.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
 
-//Admin dashboard Insights
+//[ADMIN] Admin dashboard Insights
 router.get("/admin/insights", verifyToken, dashboardController.adminDashboardInsights);
 
-//Admin dashboard Metrics
+//[ADMIN] Admin dashboard Metrics
 router.get("/admin/metrics", verifyToken, dashboardController.adminDashboardMetrics);
 
-//1st APP page in dashboard [APP]
+//[APP] 1st APP page in dashboard
 router.get("/app/main", verifyToken, dashboardController.appDashboard);
 
-//Series in dashboard [APP]
+//[APP] Series in dashboard
 router.get("/app-series", verifyToken, dashboardController.dashboardSeries);
 
-//Novels in dashboard [APP]
+//[APP] Novels in dashboard 
 router.get("/app-novels", verifyToken, dashboardController.dashboardNovels);
 
-//Best Series in dashboard [APP]
+//[APP] Best Series in dashboard 
 router.get("/app-best-series", verifyToken, dashboardController.bestSeries);
 
-// //Top ranked novel + series
+//[APP] Top ranked novel + series
 // router.get(
 //   "/app/single/:id",
 //   verifyToken,
 //   dashboardController.singleDetailPage
 // );
 
-// //Detailed novel + series
+//[APP] Detailed novel + series
 // router.get(
 //   "/app/single/:id",
 //   verifyToken,
 //   dashboardController.singleDetailPage
 // );
 
-//Featured Series [APP]
+//[APP] Featured Series [APP]
 // router.get("/all-featured", verifyToken, dashboardController.allFeaturedSeries);
 
-//New releases in dashboard [APP]
+//[APP] New releases in dashboard [APP]
 // router.get("/new-releases", verifyToken, dashboardController.newReleases);
 
 module.exports = router;
