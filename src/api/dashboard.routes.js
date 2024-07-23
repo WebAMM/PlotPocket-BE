@@ -29,27 +29,4 @@ router.get("/app-series", verifyToken, dashboardController.dashboardSeries);
 //[APP] Novels in dashboard
 router.get("/app-novels", verifyToken, dashboardController.dashboardNovels);
 
-//[APP] Best Series in dashboard
-router.get("/app-best-series", verifyToken, dashboardController.bestSeries);
-
-//[APP] Top ranked novel + series
-// router.get(
-//   "/app/single/:id",
-//   verifyToken,
-//   dashboardController.singleDetailPage
-// );
-
-//[APP] Detailed novel + series
-// router.get(
-//   "/app/single/:id",
-//   verifyToken,
-//   dashboardController.singleDetailPage
-// );
-
-//[APP] Featured Series [APP]
-// router.get("/all-featured", verifyToken, dashboardController.allFeaturedSeries);
-
-//[APP] New releases in dashboard [APP]
-// router.get("/new-releases", verifyToken, dashboardController.newReleases);
-
 module.exports = router;
