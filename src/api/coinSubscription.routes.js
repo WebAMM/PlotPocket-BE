@@ -5,7 +5,7 @@ const coinSubscription = require("../controllers/coinSubscription.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add coin subscription
+//[ADMIN] Add coin subscription
 router.post(
   "/admin/add",
   verifyToken,
@@ -13,10 +13,10 @@ router.post(
   coinSubscription.addCoinSubscription
 );
 
-//All coin subscriptions
+//[ADMIN] All coin subscriptions
 router.get("/admin/all", verifyToken, coinSubscription.getAllCoinSubscriptions);
 
-//Edit coin subscriptions
+//[ADMIN] Edit coin subscriptions
 router.put(
   "/admin/:id",
   verifyToken,
@@ -24,14 +24,14 @@ router.put(
   coinSubscription.editCoinSubscription
 );
 
-//Delete coin subscriptions
+//[ADMIN] Delete coin subscriptions
 router.delete(
   "/admin/:id",
   verifyToken,
   coinSubscription.deleteCoinSubscription
 );
 
-//Get coin subscription by plan
+//[ADMIN] Get coin subscription by plan
 // router.get("/admin/by-plan", verifyToken, subscriptionController.getSubscriptionByPlan);
 
 module.exports = router;

@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//All history of logged in user
+//[APP] All history of logged in user
 router.get("/app/all", verifyToken, historyController.allHistory);
 
 module.exports = router;

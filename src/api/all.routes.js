@@ -6,16 +6,16 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-// Increase View
+// [APP] Increase View 
 router.post("/app/view", verifyToken, allController.increaseView);
 
-//Search All Novels + Series
+//[APP] Search All Novels + Series
 router.get("/app/search", verifyToken, allController.globalSearch);
 
-//All top ranked
+//[APP] All top ranked
 router.get("/app/top-ranked", verifyToken, allController.topRanked);
 
-//Single Novel/Series detail
+//[APP] Single Novel/Series detail
 router.get("/app/single/:id", verifyToken, allController.singleDetailPage);
 
 module.exports = router;
