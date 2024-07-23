@@ -96,7 +96,7 @@ const topRanked = async (req, res) => {
           sort: {
             createdAt: 1,
           },
-          limit: 1,
+          limit: 5,
         },
       })
       .populate({
@@ -143,7 +143,7 @@ const topRanked = async (req, res) => {
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipelines);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
-      options: { sort: { createdAt: 1 }, limit: 1 },
+      options: { sort: { createdAt: 1 }, limit: 5 },
       select: "chapterPdf.publicUrl name chapterNo content totalViews",
     });
 
@@ -518,7 +518,6 @@ const featuredSeriesNovels = async (req, res) => {
       $lte: today,
     };
   }
-
   try {
     //Featured novel and series [Based on more views]
     const featuredSeries = await Series.find({
@@ -557,10 +556,85 @@ const featuredSeriesNovels = async (req, res) => {
   }
 };
 
+const latestSeriesNovels = async (req, res) => {
+  const { category, day } = req.query;
+  //Query's
+  let query = {
+    status: "Published",
+  };
+  let topRankQuery = {};
+  //Filtering based on Category
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error404(res, "Category not found");
+    }
+    query.category = category;
+  }
+  if (day) {
+    const parsedDay = parseInt(day);
+    if (![7, 14, 30].includes(parsedDay)) {
+      return error400(res, "Invalid date parameter");
+    }
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - day);
+    topRankQuery.createdAt = {
+      $gte: startDate,
+      $lte: today,
+    };
+  }
+  try {
+    const latestSeries = await Series.find(query)
+      .select("thumbnail.publicUrl title type totalViews")
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: {
+          sort: {
+            createdAt: 1,
+          },
+          limit: 5,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      });
+    const latestNovels = await Novel.find(query)
+      .select("thumbnail.publicUrl title type totalViews")
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .populate({
+        path: "author",
+        select: "name",
+      });
+    const data = {
+      latestSeries,
+      latestNovels,
+    };
+    return success(res, "200", "Success", data);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   globalSearch,
   topRanked,
   increaseView,
   singleDetailPage,
   featuredSeriesNovels,
+  latestSeriesNovels,
 };

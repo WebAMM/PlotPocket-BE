@@ -496,7 +496,7 @@ const getTopRatedNovels = async (req, res) => {
     const topRatedNovels = await Novel.aggregate(topRatedNovelsPipelines);
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
-      options: { sort: { createdAt: 1 }, limit: 1 },
+      options: { sort: { createdAt: 1 }, limit: 5 },
       select: "chapterPdf.publicUrl name chapterNo content totalViews",
     });
 
@@ -663,7 +663,79 @@ const allViewsOfNovels = async (req, res) => {
   }
 };
 
+// Best novels
+const bestNovels = async (req, res) => {
+  const { category } = req.query;
 
+  const query = {
+    status: "Published",
+    totalViews: { $gt: 500 },
+  };
+
+  //Filtering based on Category
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category not found");
+    }
+    query.category = category;
+  }
+
+  try {
+    const bestNovels = await Novel.find({
+      ...query,
+    })
+      .select("thumbnail.publicUrl title type")
+      .sort({ totalViews: -1 })
+      .limit(10)
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      });
+
+    return success(res, "200", "Success", bestNovels);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+// Top novels
+const topNovels = async (req, res) => {
+  const { category } = req.query;
+
+  const query = {
+    status: "Published",
+    totalViews: { $gt: 0, $lte: 500 },
+  };
+
+  //Filtering based on Category
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category not found");
+    }
+    query.category = category;
+  }
+
+  try {
+    const bestNovels = await Novel.find({
+      ...query,
+    })
+      .select("thumbnail.publicUrl title type")
+      .sort({ totalViews: -1 })
+      .limit(10)
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      });
+
+    return success(res, "200", "Success", bestNovels);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
 
 module.exports = {
   addNovel,
@@ -677,4 +749,6 @@ module.exports = {
   getTopRatedNovels,
   allReviewsOfNovels,
   allViewsOfNovels,
+  bestNovels,
+  topNovels,
 };

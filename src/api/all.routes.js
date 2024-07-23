@@ -15,10 +15,17 @@ router.get("/app/search", verifyToken, allController.globalSearch);
 //[APP] All top ranked
 router.get("/app/top-ranked", verifyToken, allController.topRanked);
 
+//Series + Novels
 //[APP] Single Novel/Series detail
 router.get("/app/single/:id", verifyToken, allController.singleDetailPage);
 
 //[APP] Featured Series + Novels
 router.get("/app/featured", verifyToken, allController.featuredSeriesNovels);
+
+//[APP] Featured Series + Novels
+router.get("/app/latest", verifyToken, allController.latestSeriesNovels);
+
+//[APP] Top ranked Series + Novels
+router.get("/app/ranked", verifyToken, allController.topRanked);
 
 module.exports = router;

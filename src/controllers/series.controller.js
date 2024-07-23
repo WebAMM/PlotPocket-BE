@@ -338,7 +338,7 @@ const getTopRatedSeries = async (req, res) => {
           sort: {
             createdAt: 1,
           },
-          limit: 1,
+          limit: 5,
         },
       })
       .populate({
@@ -423,6 +423,93 @@ const allViewsOfSeries = async (req, res) => {
     return error500(res, err);
   }
 };
+
+// Best rated series
+const bestSeries = async (req, res) => {
+  const { category } = req.query;
+
+  const query = {
+    status: "Published",
+    totalViews: { $gt: 500 },
+  };
+
+  //Filtering based on Category
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category not found");
+    }
+    query.category = category;
+  }
+
+  try {
+    const bestSeries = await Series.find(query)
+      .select("thumbnail.publicUrl title view type")
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: {
+          sort: {
+            createdAt: 1,
+          },
+          limit: 5,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort({ totalViews: -1 });
+
+    return success(res, "200", "Success", bestSeries);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+// Top rated series
+const topSeries = async (req, res) => {
+  const { category } = req.query;
+
+  const query = {
+    status: "Published",
+    totalViews: { $gt: 0, $lte: 500 },
+  };
+
+  //Filtering based on Category
+  if (category) {
+    const existCategory = await Category.findById(category);
+    if (!existCategory) {
+      return error409(res, "Category not found");
+    }
+    query.category = category;
+  }
+
+  try {
+    const topSeries = await Series.find(query)
+      .select("thumbnail.publicUrl title totalViews type")
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: {
+          sort: {
+            createdAt: 1,
+          },
+          limit: 5,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort({ totalViews: -1 });
+
+    return success(res, "200", "Success", topSeries);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addSeries,
   addSeriesToDraft,
@@ -431,4 +518,6 @@ module.exports = {
   getTopRatedSeries,
   editSeries,
   allViewsOfSeries,
+  bestSeries,
+  topSeries,
 };
