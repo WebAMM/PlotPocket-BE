@@ -60,104 +60,6 @@ const globalSearch = async (req, res) => {
   }
 };
 
-const topRanked = async (req, res) => {
-  const { category, latest } = req.query;
-  let query;
-
-  const sortSeriesOptions = {
-    seriesRating: -1,
-  };
-
-  const sortNovelOptions = {
-    totalRating: -1,
-  };
-
-  if (latest) {
-    sortSeriesOptions.createdAt = -1;
-    sortNovelOptions.createdAt = -1;
-  }
-
-  if (category) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category don't exist");
-    }
-    query.category = category;
-  }
-
-  try {
-    //Top ranked series
-    const topRatedSeries = await Series.find(query)
-      .select("thumbnail.publicUrl title view type seriesRating")
-      .populate({
-        path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
-        options: {
-          sort: {
-            createdAt: 1,
-          },
-          limit: 5,
-        },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .sort(sortSeriesOptions);
-
-    //Top ranked novels
-    const topRatedNovelsPipelines = [
-      { $unwind: "$reviews" },
-      {
-        $group: {
-          _id: "$_id",
-          title: { $first: "$title" },
-          category: { $first: "$category" },
-          type: { $first: "$type" },
-          chapters: { $first: "$chapters" },
-          thumbnail: { $first: { publicUrl: "$thumbnail.publicUrl" } },
-          totalRating: { $avg: "$reviews.rating" },
-        },
-      },
-      { $sort: sortNovelOptions },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-          pipeline: [{ $project: { _id: 1, title: 1 } }],
-        },
-      },
-      {
-        $unwind: "$category",
-      },
-    ];
-
-    if (category) {
-      topRatedNovelsPipelines.unshift({
-        $match: { category: new mongoose.Types.ObjectId(category) },
-      });
-    }
-
-    const topRatedNovels = await Novel.aggregate(topRatedNovelsPipelines);
-    const populatedNovels = await Novel.populate(topRatedNovels, {
-      path: "chapters",
-      options: { sort: { createdAt: 1 }, limit: 5 },
-      select: "chapterPdf.publicUrl name chapterNo content totalViews",
-    });
-
-    const data = {
-      topRatedSeries,
-      topRatedNovel: populatedNovels,
-    };
-
-    return success(res, "200", "Success", data);
-  } catch (err) {
-    return error500(res, err);
-  }
-};
-
 const increaseView = async (req, res) => {
   const { type, seriesId, episodeId, chapterId, novelId } = req.body;
   // Increase series views
@@ -491,12 +393,11 @@ const singleDetailPage = async (req, res) => {
 
 // All featured series and novel
 const featuredSeriesNovels = async (req, res) => {
-  const { category, day } = req.query;
+  const { category } = req.query;
   //Query's
   let query = {
     status: "Published",
   };
-  let topRankQuery = {};
   //Filtering based on Category
   if (category) {
     const existCategory = await Category.findById(category);
@@ -505,28 +406,15 @@ const featuredSeriesNovels = async (req, res) => {
     }
     query.category = category;
   }
-  if (day) {
-    const parsedDay = parseInt(day);
-    if (![7, 14, 30].includes(parsedDay)) {
-      return error400(res, "Invalid date parameter");
-    }
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - day);
-    topRankQuery.createdAt = {
-      $gte: startDate,
-      $lte: today,
-    };
-  }
+
   try {
     //Featured novel and series [Based on more views]
     const featuredSeries = await Series.find({
       ...query,
       totalViews: { $gte: 10 },
     })
-      .select("thumbnail.publicUrl title type")
+      .select("thumbnail.publicUrl title type seriesRating")
       .sort({ totalViews: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -538,7 +426,6 @@ const featuredSeriesNovels = async (req, res) => {
     })
       .select("thumbnail.publicUrl title type")
       .sort({ totalViews: -1 })
-      .limit(10)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
@@ -557,12 +444,11 @@ const featuredSeriesNovels = async (req, res) => {
 };
 
 const latestSeriesNovels = async (req, res) => {
-  const { category, day } = req.query;
+  const { category } = req.query;
   //Query's
   let query = {
     status: "Published",
   };
-  let topRankQuery = {};
   //Filtering based on Category
   if (category) {
     const existCategory = await Category.findById(category);
@@ -571,24 +457,10 @@ const latestSeriesNovels = async (req, res) => {
     }
     query.category = category;
   }
-  if (day) {
-    const parsedDay = parseInt(day);
-    if (![7, 14, 30].includes(parsedDay)) {
-      return error400(res, "Invalid date parameter");
-    }
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - day);
-    topRankQuery.createdAt = {
-      $gte: startDate,
-      $lte: today,
-    };
-  }
   try {
     const latestSeries = await Series.find(query)
       .select("thumbnail.publicUrl title type totalViews")
       .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -606,7 +478,6 @@ const latestSeriesNovels = async (req, res) => {
     const latestNovels = await Novel.find(query)
       .select("thumbnail.publicUrl title type totalViews")
       .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
@@ -630,11 +501,132 @@ const latestSeriesNovels = async (req, res) => {
   }
 };
 
+const topRankedSeriesNovel = async (req, res) => {
+  const { category, latest, day } = req.query;
+  let query = {
+    status: "Published",
+  };
+  let sortSeriesOptions = {
+    seriesRating: -1,
+  };
+  let sortNovelOptions = {
+    totalRating: -1,
+  };
+
+  //Filtering based on Day
+  if (day) {
+    const parsedDay = parseInt(day);
+    if (![7, 14, 30].includes(parsedDay)) {
+      return error400(res, "Invalid date parameter");
+    }
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - day);
+    query.createdAt = {
+      $gte: startDate,
+      $lte: today,
+    };
+  }
+
+  //New Book and New Novel
+  if (latest) {
+    sortSeriesOptions.createdAt = -1;
+    sortNovelOptions.createdAt = -1;
+  }
+
+  try {
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category don't exist");
+      }
+      query.category = category;
+    }
+
+    //Top ranked series
+    const topRatedSeries = await Series.find({
+      ...query,
+      seriesRating: { $gte: 1 },
+    })
+      .select("thumbnail.publicUrl title view type seriesRating")
+      .populate({
+        path: "episodes",
+        select: "episodeVideo.publicUrl title content visibility description",
+        options: {
+          sort: {
+            createdAt: 1,
+          },
+          limit: 5,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort(sortSeriesOptions);
+
+    //Top ranked novels
+    const topRatedNovelsPipelines = [
+      {
+        $match: {
+          ...query,
+          reviews: { $ne: [] },
+        },
+      },
+      { $unwind: "$reviews" },
+      {
+        $group: {
+          _id: "$_id",
+          title: { $first: "$title" },
+          category: { $first: "$category" },
+          type: { $first: "$type" },
+          chapters: { $first: "$chapters" },
+          thumbnail: { $first: { publicUrl: "$thumbnail.publicUrl" } },
+          totalRating: { $avg: "$reviews.rating" },
+        },
+      },
+      { $sort: sortNovelOptions },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+          pipeline: [{ $project: { _id: 1, title: 1 } }],
+        },
+      },
+      {
+        $unwind: "$category",
+      },
+    ];
+    // if (category) {
+    //   topRatedNovelsPipelines.unshift({
+    //     $match: { category: new mongoose.Types.ObjectId(category) },
+    //   });
+    // }
+    const topRatedNovels = await Novel.aggregate(topRatedNovelsPipelines);
+    const populatedNovels = await Novel.populate(topRatedNovels, {
+      path: "chapters",
+      options: { sort: { createdAt: 1 }, limit: 5 },
+      select: "chapterPdf.publicUrl name chapterNo content totalViews",
+    });
+
+    const data = {
+      topRatedSeries,
+      topRatedNovel: populatedNovels,
+    };
+
+    return success(res, "200", "Success", data);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   globalSearch,
-  topRanked,
   increaseView,
   singleDetailPage,
   featuredSeriesNovels,
   latestSeriesNovels,
+  topRankedSeriesNovel,
 };

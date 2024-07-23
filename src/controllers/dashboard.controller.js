@@ -147,7 +147,7 @@ const appDashboard = async (req, res) => {
       ...query,
       totalViews: { $gte: 10 },
     })
-      .select("thumbnail.publicUrl title type")
+      .select("thumbnail.publicUrl title type seriesRating")
       .sort({ totalViews: -1 })
       .limit(10)
       .populate({
