@@ -207,18 +207,6 @@ const getAllNovels = async (req, res) => {
       reviews: novel.reviews.length || 0,
       adult: novel.adult || false,
       totalViews: novel.totalViews || 0,
-      // reviews: novel.reviews.map((review) => ({
-      //   user: {
-      //     profileImage: review.user.profileImage,
-      //     _id: review.user._id,
-      //     name: review.user.name,
-      //     gender: review.user.gender,
-      //   },
-      //   rating: review.rating,
-      //   comment: review.comment,
-      //   totalLikes: review.totalLikes,
-      //   createdAt: review.createdAt,
-      // })),
     }));
 
     success(res, "200", "Success", allNovels);
@@ -239,7 +227,7 @@ const getAuthorNovels = async (req, res) => {
       author: id,
     })
       .select(
-        "_id thumbnail.publicUrl title description createdAt totalViews visibility language reviews adult"
+        "_id thumbnail.publicUrl title description createdAt totalViews visibility language reviews status adult totalViews"
       )
       .populate({
         path: "category",
@@ -261,13 +249,15 @@ const getAuthorNovels = async (req, res) => {
       title: novel.title,
       description: novel.description,
       publishDate: novel.createdAt,
-      views: novel.totalViews,
       visibility: novel.visibility,
       language: novel.language,
       totalChapters: novel.chapters.length,
       category: novel.category,
       author: novel.author,
-      reviews: novel.reviews,
+      status: novel.status,
+      reviews: novel.reviews.length || 0,
+      adult: novel.adult || false,
+      totalViews: novel.totalViews || 0,
     }));
 
     success(res, "200", "Success", allNovels);

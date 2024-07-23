@@ -13,6 +13,8 @@ const upload = multer({
       ext !== ".png" &&
       ext !== ".gif" &&
       ext !== ".pdf" &&
+      ext !== ".doc" &&
+      ext !== ".docx" &&
       ext !== ".mp4"
     ) {
       cb(new Error("File type is not supported"), false);
