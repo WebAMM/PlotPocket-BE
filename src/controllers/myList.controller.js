@@ -37,7 +37,7 @@ const allMyLists = async (req, res) => {
       user: req.user._id,
     }).populate({
       path: "episode",
-      select: "title series views",
+      select: "title series totalViews",
       populate: {
         path: "series",
         select: "title type",

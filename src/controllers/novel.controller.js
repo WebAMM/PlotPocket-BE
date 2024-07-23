@@ -168,7 +168,7 @@ const getAllNovels = async (req, res) => {
   try {
     const novels = await Novel.find()
       .select(
-        "_id thumbnail.publicUrl title description createdAt views visibility language reviews status adult totalViews"
+        "_id thumbnail.publicUrl title description createdAt totalViews visibility language reviews status adult totalViews"
       )
       // .populate({
       //   path: "reviews",
@@ -239,7 +239,7 @@ const getAuthorNovels = async (req, res) => {
       author: id,
     })
       .select(
-        "_id thumbnail.publicUrl title description createdAt views visibility language reviews adult"
+        "_id thumbnail.publicUrl title description createdAt totalViews visibility language reviews adult"
       )
       .populate({
         path: "category",
@@ -261,7 +261,7 @@ const getAuthorNovels = async (req, res) => {
       title: novel.title,
       description: novel.description,
       publishDate: novel.createdAt,
-      views: novel.views,
+      views: novel.totalViews,
       visibility: novel.visibility,
       language: novel.language,
       totalChapters: novel.chapters.length,
@@ -497,7 +497,7 @@ const getTopRatedNovels = async (req, res) => {
     const populatedNovels = await Novel.populate(topRatedNovels, {
       path: "chapters",
       options: { sort: { createdAt: 1 }, limit: 1 },
-      select: "chapterPdf.publicUrl name chapterNo content views",
+      select: "chapterPdf.publicUrl name chapterNo content totalViews",
     });
 
     const data = {

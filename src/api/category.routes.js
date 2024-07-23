@@ -14,10 +14,29 @@ router.post(
   categoryController.addCategory
 );
 
+//[APP] Get all categories
+router.get(
+  "/app/all",
+  verifyToken,
+  verifyRole(["User"]),
+  categoryController.getAllCategories
+);
+
+//[APP] Get categories by type
+router.get(
+  "/app/by-type",
+  verifyToken,
+  verifyRole(["User"]),
+  categoryController.getCategoriesByType
+);
+
 //[ADMIN] Get all categories
-router.get("/admin/all", verifyToken,
+router.get(
+  "/admin/all",
+  verifyToken,
   verifyRole(["Admin"]),
-  categoryController.getAllCategories);
+  categoryController.getAllCategories
+);
 
 //[ADMIN] Get category by type
 router.get(
@@ -28,9 +47,12 @@ router.get(
 );
 
 //[ADMIN] Delete category - Replace category
-router.delete("/admin/:id", verifyToken, 
+router.delete(
+  "/admin/:id",
+  verifyToken,
   verifyRole(["Admin"]),
-  categoryController.deleteCategory);
+  categoryController.deleteCategory
+);
 
 //[ADMIN] Edit category
 router.put(
