@@ -51,9 +51,6 @@ const novelSchema = new mongoose.Schema(
     language: {
       type: String,
     },
-    // publishDate: {
-    //   type: Date,
-    // },
     visibility: {
       type: String,
       enum: ["Public", "Private"],
@@ -66,6 +63,18 @@ const novelSchema = new mongoose.Schema(
     type: {
       type: String,
       default: "Novel",
+    },
+    adult: {
+      type: Boolean,
+      default: false,
+    },
+    author: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Author",
+    },
+    totalViews: {
+      type: Number,
+      default: 0,
     },
     views: {
       type: [
@@ -86,14 +95,6 @@ const novelSchema = new mongoose.Schema(
         },
       ],
       default: [],
-    },
-    adult: {
-      type: Boolean,
-      default: false,
-    },
-    author: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Author",
     },
     chapters: [
       {
