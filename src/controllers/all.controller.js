@@ -4,6 +4,8 @@ const Series = require("../models/Series.model");
 const User = require("../models/User.model");
 const Episode = require("../models/Episode.model");
 const History = require("../models/History.model");
+const Chapter = require("../models/Chapter.model");
+
 //Responses and errors
 const {
   error500,
@@ -85,8 +87,7 @@ const singleDetailPage = async (req, res) => {
           },
           {
             path: "chapters",
-            select:
-              "chapterPdf.publicUrl chapterNo content views publishedDate createdAt",
+            select: "chapterPdf.publicUrl chapterNo content views createdAt",
           },
           {
             path: "reviews",
@@ -136,7 +137,7 @@ const singleDetailPage = async (req, res) => {
         .populate("category", "title")
         .populate(
           "chapters",
-          "chapterPdf.publicUrl chapterNo content views publishedDate createdAt"
+          "chapterPdf.publicUrl chapterNo content views createdAt"
         );
     } else if (type === "Series") {
       content = await Series.findById(id)
@@ -287,8 +288,199 @@ const topRanked = async (req, res) => {
   }
 };
 
+const increaseView = async (req, res) => {
+  const { type, seriesId, episodeId, chapterId, novelId } = req.body;
+  // Increase series views
+  if (!req.user._id) {
+    return error400(res, "User not found");
+  }
+
+  if (req.user._id) {
+    if (type === "Series") {
+      const series = await Series.findById(seriesId);
+      if (!series) {
+        return error400(res, "Series not found");
+      }
+      const episode = await Episode.findById(episodeId);
+      if (!episode) {
+        return error400(res, "Episode not found");
+      }
+      const alreadyViewedSeries = series.views.find(
+        (viewRec) => viewRec.user == req.user._id
+      );
+      const alreadyViewedEpisode = episode.views.find(
+        (viewRec) => viewRec.user == req.user._id
+      );
+      if (alreadyViewedSeries) {
+        await Series.updateOne(
+          {
+            _id: seriesId,
+          },
+          {
+            "views.$[elem].date": new Date(),
+          },
+          {
+            arrayFilters: [
+              {
+                "elem.user": new mongoose.Types.ObjectId(req.user._id),
+              },
+            ],
+            runValidators: true,
+          }
+        );
+      } else {
+        await Series.updateOne(
+          {
+            _id: seriesId,
+          },
+          {
+            $push: {
+              views: {
+                user: new mongoose.Types.ObjectId(req.user._id),
+                view: 1,
+                date: new Date(),
+              },
+            },
+            $inc: { totalViews: 1 },
+          },
+          { runValidators: true }
+        );
+      }
+      if (alreadyViewedEpisode) {
+        await Episode.updateOne(
+          {
+            _id: episodeId,
+          },
+          {
+            "views.$[elem].date": new Date(),
+          },
+          {
+            arrayFilters: [
+              {
+                "elem.user": new mongoose.Types.ObjectId(req.user._id),
+              },
+            ],
+            runValidators: true,
+          }
+        );
+      } else {
+        await Episode.updateOne(
+          {
+            _id: episodeId,
+          },
+          {
+            $push: {
+              views: {
+                user: new mongoose.Types.ObjectId(req.user._id),
+                view: 1,
+                date: new Date(),
+              },
+            },
+            $inc: { totalViews: 1 },
+          },
+          {
+            runValidators: true,
+          }
+        );
+      }
+      return status200(res, "Series and episodes views increased");
+    } else if (type === "Novel") {
+      const novel = await Novel.findById(novelId);
+      if (!novel) {
+        return error400(res, "Novel not found");
+      }
+      // const chapter = await Chapter.findById(chapterId);
+      // if (!chapter) {
+      //   return error400(res, "Chapter not found");
+      // }
+      const alreadyViewedNovel = novel.views.find(
+        (viewRec) => viewRec.user == req.user._id
+      );
+      if (alreadyViewedNovel) {
+        await Novel.updateOne(
+          {
+            _id: novelId,
+          },
+          {
+            "views.$[elem].date": new Date(),
+          },
+          {
+            arrayFilters: [
+              {
+                "elem.user": new mongoose.Types.ObjectId(req.user._id),
+              },
+            ],
+          }
+        );
+        return status200(res, "Novel and chapters views increased");
+      } else {
+        console.log("The ");
+        await Novel.updateOne(
+          {
+            _id: novelId,
+          },
+          {
+            $push: {
+              views: {
+                user: new mongoose.Types.ObjectId(req.user._id),
+                view: 1,
+                date: new Date(),
+              },
+            },
+            $inc: { totalViews: 1 },
+          },
+          {
+            runValidators: true,
+          }
+        );
+        return status200(res, "Novel and chapters views increased");
+      }
+      // const alreadyViewedChapter = chapter.views.find(
+      //   (viewRec) => viewRec.user == req.user._id
+      // );
+      // if (alreadyViewedChapter) {
+      //   Chapter.updateOne(
+      //     {
+      //       _id: chapterId,
+      //     },
+      //     {
+      //       "views.$[elem].date": new Date(),
+      //     },
+      //     {
+      //       arrayFilters: [
+      //         {
+      //           "elem.user": new mongoose.Type.ObjectId(req.user._id),
+      //         },
+      //       ],
+      //     }
+      //   );
+      // } else {
+      //   Chapter.updateOne(
+      // {
+      //   _id: chapterId,
+      // },
+      // {
+      //   $push: {
+      //     views: {
+      //       user: new mongoose.Types.ObjectId(req.user._id),
+      //       view: 1,
+      //       date: new Date(),
+      //     },
+      //   },
+      //   $inc: { totalViews: 1 },
+      // },
+      // {
+      //   runValidators: true,
+      // }
+      //   );
+      // }
+    }
+  }
+};
+
 module.exports = {
   globalSearch,
   singleDetailPage,
   topRanked,
+  increaseView,
 };

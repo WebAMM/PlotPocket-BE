@@ -1,6 +1,8 @@
 //Models
 const Novel = require("../models/Novel.model");
 const Chapter = require("../models/Chapter.model");
+const Category = require("../models/Category.model");
+const Author = require("../models/Author.model");
 //Responses and errors
 const {
   error500,
@@ -13,8 +15,6 @@ const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
-const Category = require("../models/Category.model");
-const Author = require("../models/Author.model");
 
 //Publish the novel
 const addNovel = async (req, res) => {
@@ -168,7 +168,7 @@ const getAllNovels = async (req, res) => {
   try {
     const novels = await Novel.find()
       .select(
-        "_id thumbnail.publicUrl title description createdAt views visibility language reviews status adult"
+        "_id thumbnail.publicUrl title description createdAt views visibility language reviews status adult totalViews"
       )
       // .populate({
       //   path: "reviews",
@@ -198,7 +198,6 @@ const getAllNovels = async (req, res) => {
       title: novel.title,
       description: novel.description,
       publishDate: novel.createdAt,
-      views: novel.views,
       visibility: novel.visibility,
       language: novel.language,
       totalChapters: novel.chapters.length,
@@ -207,6 +206,7 @@ const getAllNovels = async (req, res) => {
       status: novel.status,
       reviews: novel.reviews.length || 0,
       adult: novel.adult || false,
+      totalViews: novel.totalViews || 0,
       // reviews: novel.reviews.map((review) => ({
       //   user: {
       //     profileImage: review.user.profileImage,
@@ -511,15 +511,13 @@ const getTopRatedNovels = async (req, res) => {
 
 //All reviews of novel
 const allReviewsOfNovels = async (req, res) => {
-  const { dateFilter } = req.query;
+  const { date } = req.query;
   const { id } = req.params;
-
   let startDate;
   const currentDate = new Date();
-
   try {
-    if (dateFilter) {
-      switch (dateFilter) {
+    if (date) {
+      switch (date) {
         case "lastMonth":
           startDate = new Date(
             currentDate.getFullYear(),
@@ -544,10 +542,9 @@ const allReviewsOfNovels = async (req, res) => {
           endDate = new Date(`${lastYear}-12-31T23:59:59.999Z`);
           break;
         default:
-          return res.status(400).json({ message: "Invalid date filter" });
+          return error404(res, "Invalid date filter");
       }
     }
-
     const query = startDate
       ? { $gte: startDate, $lte: endDate }
       : {
@@ -589,8 +586,78 @@ const allReviewsOfNovels = async (req, res) => {
         },
       },
     ]);
-
     return success(res, "200", "Success", novels);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+//All views of novels
+const allViewsOfNovels = async (req, res) => {
+  const { date } = req.query;
+  const { id } = req.params;
+  let startDate;
+  const currentDate = new Date();
+  try {
+    if (date) {
+      switch (date) {
+        case "lastMonth":
+          startDate = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth() - 1,
+            1
+          );
+          endDate = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            0
+          );
+          break;
+        case "lastSixMonth":
+          startDate = new Date();
+          startDate.setMonth(startDate.getMonth() - 6);
+          endDate = new Date();
+          break;
+        case "lastYear":
+          const currentYear = new Date().getFullYear();
+          const lastYear = currentYear - 1;
+          startDate = new Date(`${lastYear}-01-01T00:00:00.000Z`);
+          endDate = new Date(`${lastYear}-12-31T23:59:59.999Z`);
+          break;
+        default:
+          return error404(res, "Invalid date filter");
+      }
+    }
+
+    const query = startDate
+      ? { $gte: startDate, $lte: endDate }
+      : { $lte: new Date() };
+
+    const novels = await Novel.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $unwind: "$views",
+      },
+      {
+        $match: {
+          "views.date": query,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          "views.user": 1,
+          "views.date": 1,
+          "views.view": 1,
+          "views._id": 1,
+        },
+      },
+    ]);
+
+    const novelViews = novels.map((elem) => elem.views);
+    return success(res, "200", "Success", novelViews);
   } catch (err) {
     return error500(res, err);
   }
@@ -607,4 +674,5 @@ module.exports = {
   likeCommentOnNovel,
   getTopRatedNovels,
   allReviewsOfNovels,
+  allViewsOfNovels,
 };

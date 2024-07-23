@@ -41,4 +41,11 @@ router.delete("/admin/:id", verifyToken, seriesController.deleteSeries);
 //Get all top rated series
 router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
 
+//Get series views
+router.get(
+  "/admin/all-views/:id",
+  verifyToken,
+  seriesController.allViewsOfSeries
+);
+
 module.exports = router;

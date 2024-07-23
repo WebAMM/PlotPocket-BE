@@ -1,6 +1,7 @@
 //Models
 const Series = require("../models/Series.model");
 const Episode = require("../models/Episode.model");
+const Category = require("../models/Category.model");
 //Responses and errors
 const {
   error500,
@@ -10,9 +11,9 @@ const {
   error400,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
-const Category = require("../models/Category.model");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
+const mongoose = require("mongoose");
 
 //Publish the series
 const addSeries = async (req, res) => {
@@ -352,6 +353,76 @@ const getTopRatedSeries = async (req, res) => {
   }
 };
 
+//All views of series
+const allViewsOfSeries = async (req, res) => {
+  const { date } = req.query;
+  const { id } = req.params;
+  let startDate;
+  const currentDate = new Date();
+  try {
+    if (date) {
+      switch (date) {
+        case "lastMonth":
+          startDate = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth() - 1,
+            1
+          );
+          endDate = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            0
+          );
+          break;
+        case "lastSixMonth":
+          startDate = new Date();
+          startDate.setMonth(startDate.getMonth() - 6);
+          endDate = new Date();
+          break;
+        case "lastYear":
+          const currentYear = new Date().getFullYear();
+          const lastYear = currentYear - 1;
+          startDate = new Date(`${lastYear}-01-01T00:00:00.000Z`);
+          endDate = new Date(`${lastYear}-12-31T23:59:59.999Z`);
+          break;
+        default:
+          return error404(res, "Invalid date filter");
+      }
+    }
+
+    const query = startDate
+      ? { $gte: startDate, $lte: endDate }
+      : { $lte: new Date() };
+
+    const series = await Series.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $unwind: "$views",
+      },
+      {
+        $match: {
+          "views.date": query,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          "views.user": 1,
+          "views.date": 1,
+          "views.view": 1,
+          "views._id": 1,
+        },
+      },
+    ]);
+
+    const seriesViews = series.map((elem) => elem.views);
+    return success(res, "200", "Success", seriesViews);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
 module.exports = {
   addSeries,
   addSeriesToDraft,
@@ -359,4 +430,5 @@ module.exports = {
   deleteSeries,
   getTopRatedSeries,
   editSeries,
+  allViewsOfSeries,
 };
