@@ -5,7 +5,7 @@ const subscriptionController = require("../controllers/subscription.controller")
 const { verifyToken } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add subscription
+//[ADMIN] Add subscription
 router.post(
   "/admin/add",
   verifyToken,
@@ -13,14 +13,14 @@ router.post(
   subscriptionController.addSubscription
 );
 
-//All subscriptions
+//[ADMIN] All subscriptions
 router.get(
   "/admin/all",
   verifyToken,
   subscriptionController.getAllSubscriptions
 );
 
-//Edit subscriptions
+//[ADMIN] Edit subscriptions
 router.put(
   "/admin/:id",
   verifyToken,
@@ -28,7 +28,7 @@ router.put(
   subscriptionController.editSubscription
 );
 
-//Delete subscriptions
+//[ADMIN] Delete subscriptions
 router.delete(
   "/admin/:id",
   verifyToken,

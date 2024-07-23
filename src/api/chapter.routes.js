@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add chapters to novel
+//[ADMIN] Add chapters to novel
 router.post(
   "/admin/add-chapter/:id",
   verifyToken,
@@ -15,17 +15,17 @@ router.post(
   chapterController.addChapter
 );
 
-//Get chapters based on novel
+//[ADMIN] Get chapters based on novel
 router.get(
   "/admin/novel-chapters/:id",
   verifyToken,
   chapterController.getAllChaptersByNovel
 );
 
-//Delete chapters based on novel
+//[ADMIN] Delete chapters based on novel
 router.delete("/admin/:id", verifyToken, chapterController.deleteChapter);
 
-//Edit chapter
+//[ADMIN] Edit chapter
 router.put(
   "/admin/:id",
   verifyToken,

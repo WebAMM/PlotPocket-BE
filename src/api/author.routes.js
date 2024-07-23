@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add author
+//[ADMIN] Add author
 router.post(
   "/admin/add",
   verifyToken,
@@ -15,10 +15,10 @@ router.post(
   authorController.addAuthor
 );
 
-//Get all authors
+//[ADMIN] Get all authors
 router.get("/admin/all", verifyToken, authorController.getAllAuthors);
 
-//Follow the author
+//[APP] Follow the author
 router.post("/app/follow/:id", verifyToken, authorController.followAuthor);
 
 module.exports = router;
