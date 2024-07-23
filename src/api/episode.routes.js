@@ -2,7 +2,7 @@ const router = require("express").Router();
 //controllers
 const episodeController = require("../controllers/episode.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
@@ -10,6 +10,7 @@ const payloadValidator = require("../middlewares/payloadValidator");
 router.post(
   "/admin/add/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("episode"),
   payloadValidator.validateAddEpisode,
   episodeController.addEpisode
@@ -22,6 +23,7 @@ router.post("/app/rate/:id", verifyToken, episodeController.rateTheEpisode);
 router.get(
   "/admin/series-episodes/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   episodeController.episodesOfSeries
 );
 
@@ -29,12 +31,18 @@ router.get(
 router.get("/app/all/:id", verifyToken, episodeController.allEpisodeOfSeries);
 
 //[ADMIN] Delete episode based on series
-router.delete("/admin/:id", verifyToken, episodeController.deleteEpisode);
+router.delete(
+  "/admin/:id",
+  verifyToken,
+  verifyRole(["Admin"]),
+  episodeController.deleteEpisode
+);
 
 //[ADMIN] Edit episode
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("episode"),
   episodeController.updateEpisode
 );

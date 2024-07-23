@@ -2,7 +2,7 @@ const router = require("express").Router();
 //controllers
 const chapterController = require("../controllers/chapter.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
@@ -10,6 +10,7 @@ const payloadValidator = require("../middlewares/payloadValidator");
 router.post(
   "/admin/add-chapter/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("chapter"),
   payloadValidator.validateAddChapter,
   chapterController.addChapter
@@ -19,16 +20,23 @@ router.post(
 router.get(
   "/admin/novel-chapters/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   chapterController.getAllChaptersByNovel
 );
 
 //[ADMIN] Delete chapters based on novel
-router.delete("/admin/:id", verifyToken, chapterController.deleteChapter);
+router.delete(
+  "/admin/:id",
+  verifyToken,
+  verifyRole(["Admin"]),
+  chapterController.deleteChapter
+);
 
 //[ADMIN] Edit chapter
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("chapter"),
   chapterController.updateChapter
 );

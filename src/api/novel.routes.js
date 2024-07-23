@@ -3,7 +3,7 @@ const router = require("express").Router();
 const novelController = require("../controllers/novel.controller");
 const chapterController = require("../controllers/chapter.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
@@ -11,6 +11,7 @@ const payloadValidator = require("../middlewares/payloadValidator");
 router.post(
   "/admin/publish",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("thumbnail"),
   payloadValidator.validateAddNovel,
   novelController.addNovel
@@ -20,6 +21,7 @@ router.post(
 router.post(
   "/admin/draft",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("thumbnail"),
   novelController.addNovelToDraft
 );
@@ -28,20 +30,32 @@ router.post(
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("thumbnail"),
   novelController.editNovel
 );
 
 //[ADMIN] Delete novel
-router.delete("/admin/:id", verifyToken, novelController.deleteNovel);
+router.delete(
+  "/admin/:id",
+  verifyToken,
+  verifyRole(["Admin"]),
+  novelController.deleteNovel
+);
 
 //[ADMIN] Get novels
-router.get("/admin/all", verifyToken, novelController.getAllNovels);
+router.get(
+  "/admin/all",
+  verifyToken,
+  verifyRole(["Admin"]),
+  novelController.getAllNovels
+);
 
 //[ADMIN] Get novels of author
 router.get(
   "/admin/author-novels/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   novelController.getAuthorNovels
 );
 
@@ -63,6 +77,7 @@ router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
 router.get(
   "/admin/all-reviews/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   novelController.allReviewsOfNovels
 );
 
@@ -70,6 +85,7 @@ router.get(
 router.get(
   "/admin/all-views/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   novelController.allViewsOfNovels
 );
 

@@ -71,13 +71,14 @@ const loginUser = async (req, res) => {
         },
         secret,
         {
-          expiresIn: "24h",
+          expiresIn: "48h",
         }
       );
       const responseUser = {
         _id: user._id,
         userName: user.userName,
         email: user.email,
+        role: user.role,
         profileImage: user.profileImage.publicUrl,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

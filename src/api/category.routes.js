@@ -2,34 +2,41 @@ const router = require("express").Router();
 //controllers
 const categoryController = require("../controllers/category.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 
 //[ADMIN] Add category
 router.post(
   "/admin/add",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateAddCategory,
   categoryController.addCategory
 );
 
 //[ADMIN] Get all categories
-router.get("/admin/all", verifyToken, categoryController.getAllCategories);
+router.get("/admin/all", verifyToken,
+  verifyRole(["Admin"]),
+  categoryController.getAllCategories);
 
 //[ADMIN] Get category by type
 router.get(
   "/admin/by-type",
   verifyToken,
+  verifyRole(["Admin"]),
   categoryController.getCategoriesByType
 );
 
 //[ADMIN] Delete category - Replace category
-router.delete("/admin/:id", verifyToken, categoryController.deleteCategory);
+router.delete("/admin/:id", verifyToken, 
+  verifyRole(["Admin"]),
+  categoryController.deleteCategory);
 
 //[ADMIN] Edit category
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateEditCategory,
   categoryController.editCategory
 );
@@ -38,6 +45,7 @@ router.put(
 router.patch(
   "/admin/change-status/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   categoryController.changeCategoryStatus
 );
 
