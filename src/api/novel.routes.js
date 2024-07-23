@@ -89,4 +89,10 @@ router.get(
   novelController.allViewsOfNovels
 );
 
+//[APP] Get all best novels
+router.get("/app/best", verifyToken, novelController.bestNovels);
+
+//[APP] Get all top novels
+router.get("/app/top", verifyToken, novelController.topNovels);
+
 module.exports = router;
