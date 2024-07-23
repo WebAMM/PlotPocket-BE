@@ -7,7 +7,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Publish the novel
+//[ADMIN] Publish the novel
 router.post(
   "/admin/publish",
   verifyToken,
@@ -16,7 +16,7 @@ router.post(
   novelController.addNovel
 );
 
-//Add novels in draft
+//[ADMIN] Add novels in draft
 router.post(
   "/admin/draft",
   verifyToken,
@@ -24,7 +24,7 @@ router.post(
   novelController.addNovelToDraft
 );
 
-//Edit novel
+//[ADMIN] Edit novel
 router.put(
   "/admin/:id",
   verifyToken,
@@ -32,20 +32,20 @@ router.put(
   novelController.editNovel
 );
 
-//Delete novel
+//[ADMIN] Delete novel
 router.delete("/admin/:id", verifyToken, novelController.deleteNovel);
 
-//Get novels
+//[ADMIN] Get novels
 router.get("/admin/all", verifyToken, novelController.getAllNovels);
 
-//Get novels of author
+//[ADMIN] Get novels of author
 router.get(
   "/admin/author-novels/:id",
   verifyToken,
   novelController.getAuthorNovels
 );
 
-//Rate the novel
+//[APP] Rate the novel
 router.post(
   "/app/rate/:id",
   verifyToken,
@@ -53,20 +53,20 @@ router.post(
   novelController.rateNovel
 );
 
-//Like the user comment on novel
+//[APP] Like the user comment on novel
 router.post("/app/like", verifyToken, novelController.likeCommentOnNovel);
 
-//Get all top ranked novels
+//[APP] Get all top ranked novels
 router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
 
-//Get all reviews of novels
+//[ADMIN] Get all reviews of novels
 router.get(
   "/admin/all-reviews/:id",
   verifyToken,
   novelController.allReviewsOfNovels
 );
 
-//Get all views of novels
+//[ADMIN] Get all views of novels
 router.get(
   "/admin/all-views/:id",
   verifyToken,

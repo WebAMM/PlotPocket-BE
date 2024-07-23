@@ -5,7 +5,7 @@ const categoryController = require("../controllers/category.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add category
+//[ADMIN] Add category
 router.post(
   "/admin/add",
   verifyToken,
@@ -13,20 +13,20 @@ router.post(
   categoryController.addCategory
 );
 
-//Get all categories
+//[ADMIN] Get all categories
 router.get("/admin/all", verifyToken, categoryController.getAllCategories);
 
-//Get category by type
+//[ADMIN] Get category by type
 router.get(
   "/admin/by-type",
   verifyToken,
   categoryController.getCategoriesByType
 );
 
-//Delete category - Replace category
+//[ADMIN] Delete category - Replace category
 router.delete("/admin/:id", verifyToken, categoryController.deleteCategory);
 
-//Edit category
+//[ADMIN] Edit category
 router.put(
   "/admin/:id",
   verifyToken,
@@ -34,17 +34,17 @@ router.put(
   categoryController.editCategory
 );
 
-//Change category status
+//[ADMIN] Change category status
 router.patch(
   "/admin/change-status/:id",
   verifyToken,
   categoryController.changeCategoryStatus
 );
 
-//Get all categories [APP]
+//[APP] Get all categories
 router.get("/all", verifyToken, categoryController.getAllCategories);
 
-//Get category by type  [APP]
+//[APP] Get category by type
 router.get("/by-type", verifyToken, categoryController.getCategoriesByType);
 
 module.exports = router;

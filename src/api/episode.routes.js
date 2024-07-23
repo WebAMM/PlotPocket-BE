@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 const { upload } = require("../services/helpers/fileHelper");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//Add episodes in series
+//[ADMIN] Add episodes in series
 router.post(
   "/admin/add/:id",
   verifyToken,
@@ -15,23 +15,23 @@ router.post(
   episodeController.addEpisode
 );
 
-//Rate the episode on episode view screen
+//[APP] Rate the episode on episode view screen
 router.post("/app/rate/:id", verifyToken, episodeController.rateTheEpisode);
 
-//Series episodes
+//[ADMIN] Series episodes
 router.get(
   "/admin/series-episodes/:id",
   verifyToken,
   episodeController.episodesOfSeries
 );
 
-//All episode of series (id represents series id), this API will increase the view of Series alway which episode is first showed
+//[APP] All episode of series (id represents series id), this API will increase the view of Series alway which episode is first showed
 router.get("/app/all/:id", verifyToken, episodeController.allEpisodeOfSeries);
 
-//Delete episode based on series
+//[ADMIN] Delete episode based on series
 router.delete("/admin/:id", verifyToken, episodeController.deleteEpisode);
 
-//Edit episode
+//[ADMIN] Edit episode
 router.put(
   "/admin/:id",
   verifyToken,
