@@ -1,5 +1,9 @@
 //Responses and errors
-const { error500, error404 } = require("../services/helpers/errors");
+const {
+  error500,
+  error404,
+  customError,
+} = require("../services/helpers/errors");
 //imports from packages
 const jwt = require("jsonwebtoken");
 //config
@@ -27,4 +31,19 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+// Middleware to verify token and role
+const verifyRole = (roles) => {
+  return (req, res, next) => {
+    // Check if the user's role is in the allowed roles
+    if (!roles.includes(req.user.role)) {
+      return customError(
+        res,
+        403,
+        "Forbidden: Do not have access to this resource"
+      );
+    }
+    next();
+  };
+};
+
+module.exports = { verifyToken, verifyRole };

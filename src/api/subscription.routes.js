@@ -2,13 +2,14 @@ const router = require("express").Router();
 //controllers
 const subscriptionController = require("../controllers/subscription.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
 //[ADMIN] Add subscription
 router.post(
   "/admin/add",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateAddSubscription,
   subscriptionController.addSubscription
 );
@@ -17,6 +18,7 @@ router.post(
 router.get(
   "/admin/all",
   verifyToken,
+  verifyRole(["Admin"]),
   subscriptionController.getAllSubscriptions
 );
 
@@ -24,6 +26,7 @@ router.get(
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateAddSubscription,
   subscriptionController.editSubscription
 );
@@ -32,10 +35,11 @@ router.put(
 router.delete(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   subscriptionController.deleteSubscription
 );
 
-//Get subscription by plan
-// router.get("/admin/by-plan", verifyToken, subscriptionController.getSubscriptionByPlan);
+//[ADMIN] Get subscription by plan
+// router.get("/admin/by-plan", verifyToken, verifyRole(["Admin"]), subscriptionController.getSubscriptionByPlan);
 
 module.exports = router;

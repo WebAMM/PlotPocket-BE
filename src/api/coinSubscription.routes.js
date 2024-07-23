@@ -2,24 +2,31 @@ const router = require("express").Router();
 //controllers
 const coinSubscription = require("../controllers/coinSubscription.controller");
 //middlewares
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
 //[ADMIN] Add coin subscription
 router.post(
   "/admin/add",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateAddCoinSubscription,
   coinSubscription.addCoinSubscription
 );
 
 //[ADMIN] All coin subscriptions
-router.get("/admin/all", verifyToken, coinSubscription.getAllCoinSubscriptions);
+router.get(
+  "/admin/all",
+  verifyToken,
+  verifyRole(["Admin"]),
+  coinSubscription.getAllCoinSubscriptions
+);
 
 //[ADMIN] Edit coin subscriptions
 router.put(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateAddCoinSubscription,
   coinSubscription.editCoinSubscription
 );
@@ -28,6 +35,7 @@ router.put(
 router.delete(
   "/admin/:id",
   verifyToken,
+  verifyRole(["Admin"]),
   coinSubscription.deleteCoinSubscription
 );
 
