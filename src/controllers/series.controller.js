@@ -260,7 +260,7 @@ const getAllSeries = async (req, res) => {
       title: series.title,
       description: series.description,
       publishDate: series.createdAt,
-      views: series.views,
+      views: series.totalViews,
       visibility: series.visibility,
       language: series.language,
       category: series.category,

@@ -25,7 +25,7 @@ const mightLike = async (req, res) => {
       category: { $in: categoryIds },
       "reviews.user": { $ne: new mongoose.Types.ObjectId(req.user._id) },
     })
-      .select("thumbnail.publicUrl title description views category")
+      .select("thumbnail.publicUrl title description totalViews category")
       .populate("category", "title");
 
     return success(res, "200", "All might liked novels", novels);

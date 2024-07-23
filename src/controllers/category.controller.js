@@ -34,8 +34,8 @@ const addCategory = async (req, res) => {
 // Get All Categories
 const getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find().select(
-      "_id title type status createdAt views"
+    const categories = await Category.find({ status: "Active" }).select(
+      "_id title type status createdAt totalViews"
     );
     return success(res, "200", "Success", categories);
   } catch (err) {
@@ -50,7 +50,9 @@ const getCategoriesByType = async (req, res) => {
     return customError(res, 400, "Type is required");
   }
   try {
-    const categories = await Category.find({ type }).select("title type");
+    const categories = await Category.find({ type, status: "Active" }).select(
+      "_id title type"
+    );
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);
