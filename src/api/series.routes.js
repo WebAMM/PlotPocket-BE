@@ -62,4 +62,10 @@ router.get(
   seriesController.allViewsOfSeries
 );
 
+//[APP] Get all best series
+router.get("/app/best", verifyToken, seriesController.bestSeries);
+
+//[APP] Get all top series
+router.get("/app/top", verifyToken, seriesController.topSeries);
+
 module.exports = router;
