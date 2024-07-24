@@ -407,7 +407,7 @@ const allViewsOfSeries = async (req, res) => {
 
 // Best rated series
 const bestSeries = async (req, res) => {
-  const { category } = req.query;
+  const { category, page = 1, pageSize = 10 } = req.query;
 
   let query = {
     status: "Published",
@@ -424,8 +424,18 @@ const bestSeries = async (req, res) => {
       query.category = category;
     }
 
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalSeriesCount = await Series.countDocuments(query);
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
     const bestSeries = await Series.find(query)
       .select("thumbnail.publicUrl title view type totalViews")
+      .sort({ totalViews: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -439,10 +449,17 @@ const bestSeries = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
-      })
-      .sort({ totalViews: -1 });
+      });
 
-    return success(res, "200", "Success", bestSeries);
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalSeriesCount;
+
+    const data = {
+      bestSeries,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
@@ -450,7 +467,7 @@ const bestSeries = async (req, res) => {
 
 // Top rated series
 const topSeries = async (req, res) => {
-  const { category } = req.query;
+  const { category, page = 1, pageSize = 10 } = req.query;
 
   let query = {
     status: "Published",
@@ -467,8 +484,18 @@ const topSeries = async (req, res) => {
       query.category = category;
     }
 
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalSeriesCount = await Series.countDocuments(query);
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
     const topSeries = await Series.find(query)
       .select("thumbnail.publicUrl title type totalViews")
+      .sort({ totalViews: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -482,10 +509,17 @@ const topSeries = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
-      })
-      .sort({ totalViews: -1 });
+      });
 
-    return success(res, "200", "Success", topSeries);
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalSeriesCount;
+
+    const data = {
+      topSeries,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
@@ -493,7 +527,7 @@ const topSeries = async (req, res) => {
 
 // Top rated series
 const getTopRatedSeries = async (req, res) => {
-  const { category, latest, day } = req.query;
+  const { category, latest, day, page = 1, pageSize = 10 } = req.query;
   //Query's
   let query = {
     status: "Published",
@@ -518,6 +552,13 @@ const getTopRatedSeries = async (req, res) => {
       }
       query.category = category;
     }
+
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalSeriesCount = await Series.countDocuments(query);
+    const skip = (currentPage - 1) * size;
+    const limit = size;
 
     //Filtering based on Day
     if (day) {
@@ -550,9 +591,19 @@ const getTopRatedSeries = async (req, res) => {
         path: "category",
         select: "title",
       })
-      .sort(sortOptions);
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit);
 
-    return success(res, "200", "Success", topRatedSeries);
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalSeriesCount;
+
+    const data = {
+      topRatedSeries,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
