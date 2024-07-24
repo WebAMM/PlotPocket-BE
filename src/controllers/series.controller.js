@@ -278,11 +278,20 @@ const getAllSeries = async (req, res) => {
 // Get All Episode Of Series
 const getAllEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
+  const { page = 1, pageSize = 10 } = req.query;
   try {
     const seriesExist = await Series.findById(id);
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
+
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalEpisodeCount = await Episode.countDocuments({ series: id });
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
     const episodes = await Episode.find({
       series: id,
     })
@@ -292,9 +301,20 @@ const getAllEpisodeOfSeries = async (req, res) => {
       .populate({
         path: "series",
         select: "thumbnail.publicUrl",
-      });
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    return success(res, "200", "Success", episodes);
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalEpisodeCount;
+
+    const data = {
+      episodes,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
