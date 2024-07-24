@@ -9,7 +9,13 @@ const { corsSetup } = require("./cors");
 
 const appMiddlewares = (app) => {
   app.use(express.json({ limit: "100mb" }));
-  app.use(express.urlencoded({ limit: "100mb", extended: true }));
+  app.use(
+    express.urlencoded({
+      limit: "100mb",
+      extended: false,
+      parameterLimit: 100000,
+    })
+  );
   app.use(helmet());
   corsSetup(app);
   morganSetup(app);
