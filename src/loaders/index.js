@@ -12,8 +12,7 @@ const appMiddlewares = (app) => {
   app.use(
     express.urlencoded({
       limit: "100mb",
-      extended: false,
-      parameterLimit: 100000,
+      extended: true,
     })
   );
   app.use(helmet());
