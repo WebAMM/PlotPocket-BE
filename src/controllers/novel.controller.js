@@ -218,11 +218,20 @@ const getAllNovels = async (req, res) => {
 // Get All Chapters by Novel
 const getAllChaptersOfNovel = async (req, res) => {
   const { id } = req.params;
+  const { page = 1, pageSize = 10 } = req.query;
   try {
     const novelExist = await Novel.findById(id);
     if (!novelExist) {
       return error404(res, "Novel not found");
     }
+
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalChaptersCount = await Chapter.countDocuments({ novel: id });
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
     const chapters = await Chapter.find({
       novel: id,
     })
@@ -232,8 +241,20 @@ const getAllChaptersOfNovel = async (req, res) => {
       .populate({
         path: "novel",
         select: "thumbnail.publicUrl",
-      });
-    success(res, "200", "Success", chapters);
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalChaptersCount;
+
+    const data = {
+      chapters,
+      hasMore,
+    };
+
+    success(res, "200", "Success", data);
   } catch (err) {
     error500(res, err);
   }
@@ -789,7 +810,9 @@ const getTopRatedNovels = async (req, res) => {
         path: "author",
         select: "name",
       })
-      .sort(sortOptions);
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit);
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalNovelsCount;
