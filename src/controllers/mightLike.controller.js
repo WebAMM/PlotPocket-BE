@@ -12,6 +12,7 @@ const mongoose = require("mongoose");
 
 //Get User based like
 const mightLike = async (req, res) => {
+  const { page = 1, pageSize = 10 } = req.query;
   try {
     const categories = await Novel.aggregate([
       { $unwind: "$reviews" },
@@ -21,14 +22,34 @@ const mightLike = async (req, res) => {
 
     const categoryIds = categories.map((category) => category._id);
 
-    const novels = await Novel.find({
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalNovelsCount = await Novel.countDocuments({
+      category: { $in: categoryIds },
+      "reviews.user": { $ne: new mongoose.Types.ObjectId(req.user._id) },
+    });
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
+    const mightLikedNovels = await Novel.find({
       category: { $in: categoryIds },
       "reviews.user": { $ne: new mongoose.Types.ObjectId(req.user._id) },
     })
       .select("thumbnail.publicUrl title description totalViews category")
-      .populate("category", "title");
+      .populate("category", "title")
+      .skip(skip)
+      .limit(limit);
 
-    return success(res, "200", "All might liked novels", novels);
+    // To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalNovelsCount;
+
+    const data = {
+      mightLikedNovels,
+      hasMore,
+    };
+
+    return success(res, "200", "All might liked novels", data);
   } catch (err) {
     return error500(res, err);
   }
