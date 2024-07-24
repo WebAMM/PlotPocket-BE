@@ -467,72 +467,6 @@ const likeCommentOnNovel = async (req, res) => {
   }
 };
 
-// Top rated novels
-const getTopRatedNovels = async (req, res) => {
-  const { category, latest, day } = req.query;
-
-  let query = {
-    status: "Published",
-    averageRating: { $gte: 1 },
-  };
-
-  //Filtering based on classifications
-  let sortOptions = {
-    averageRating: -1,
-  };
-
-  if (latest) {
-    sortOptions.createdAt = -1;
-  }
-
-  try {
-    //Filtering based on Category
-    if (category) {
-      const existCategory = await Category.findById(category);
-      if (!existCategory) {
-        return error409(res, "Category not found");
-      }
-      query.category = category;
-    }
-
-    //Filtering based on Day
-    if (day) {
-      const parsedDay = parseInt(day);
-      if (![7, 14, 30].includes(parsedDay)) {
-        return error400(res, "Invalid date parameter");
-      }
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - day);
-      query.createdAt = {
-        $gte: startDate,
-        $lte: today,
-      };
-    }
-
-    const topRatedNovel = await Novel.find(query)
-      .select("thumbnail.publicUrl title view type averageRating")
-      .populate({
-        path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .populate({
-        path: "author",
-        select: "name",
-      })
-      .sort(sortOptions);
-
-    return success(res, "200", "Success", topRatedNovel);
-  } catch (err) {
-    return error500(res, err);
-  }
-};
-
 //All reviews of novel
 const allReviewsOfNovels = async (req, res) => {
   const { date } = req.query;
@@ -689,7 +623,7 @@ const allViewsOfNovels = async (req, res) => {
 
 // Best novels
 const bestNovels = async (req, res) => {
-  const { category } = req.query;
+  const { category, page = 1, pageSize = 10 } = req.query;
 
   const query = {
     status: "Published",
@@ -706,17 +640,33 @@ const bestNovels = async (req, res) => {
       query.category = category;
     }
 
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalNovelsCount = await Novel.countDocuments(query);
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
     const bestNovels = await Novel.find(query)
       .select("thumbnail.publicUrl title type averageRating")
       .sort({ totalViews: -1 })
-      .limit(10)
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
         options: { sort: { createdAt: 1 }, limit: 5 },
       });
 
-    return success(res, "200", "Success", bestNovels);
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalNovelsCount;
+
+    const data = {
+      bestNovels,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
@@ -724,7 +674,10 @@ const bestNovels = async (req, res) => {
 
 // Top novels
 const topNovels = async (req, res) => {
-  const { category } = req.query;
+  const { category, page = 1, pageSize = 10 } = req.query;
+
+  const currentPage = parseInt(page, 10) || 1;
+  const size = parseInt(pageSize, 10) || 10;
 
   const query = {
     status: "Published",
@@ -732,26 +685,121 @@ const topNovels = async (req, res) => {
   };
 
   //Filtering based on Category
-  if (category) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-
   try {
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
+    const totalNovelsCount = await Novel.countDocuments(query);
+
+    // Pagination calculations
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
     const topNovels = await Novel.find(query)
       .select("thumbnail.publicUrl title type averageRating")
       .sort({ totalViews: -1 })
-      .limit(10)
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
         options: { sort: { createdAt: 1 }, limit: 5 },
       });
 
-    return success(res, "200", "Success", topNovels);
+    const hasMore = skip + limit < totalNovelsCount;
+
+    const data = {
+      topNovels,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+// Top rated novels
+const getTopRatedNovels = async (req, res) => {
+  const { category, latest, day, page = 1, pageSize = 10 } = req.query;
+
+  let query = {
+    status: "Published",
+    averageRating: { $gte: 1 },
+  };
+
+  //Filtering based on classifications
+  let sortOptions = {
+    averageRating: -1,
+  };
+
+  if (latest) {
+    sortOptions.createdAt = -1;
+  }
+
+  try {
+    //Filtering based on Category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
+    //For Pagination
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalNovelsCount = await Novel.countDocuments(query);
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
+    //Filtering based on Day
+    if (day) {
+      const parsedDay = parseInt(day);
+      if (![7, 14, 30].includes(parsedDay)) {
+        return error400(res, "Invalid date parameter");
+      }
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - day);
+      query.createdAt = {
+        $gte: startDate,
+        $lte: today,
+      };
+    }
+
+    const topRatedNovel = await Novel.find(query)
+      .select("thumbnail.publicUrl title view type averageRating")
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .populate({
+        path: "author",
+        select: "name",
+      })
+      .sort(sortOptions);
+
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalNovelsCount;
+
+    const data = {
+      topRatedNovel,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }

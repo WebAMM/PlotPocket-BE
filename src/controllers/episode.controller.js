@@ -165,7 +165,7 @@ const episodesOfSeries = async (req, res) => {
     const allEpisodesOfSeries = await Episode.find({
       series: id,
     })
-      .select("episodeVideo.publicUrl totalViews createdAt content")
+      .select("episodeVideo.publicUrl totalViews createdAt content title description")
       .populate({
         path: "series",
         select: "thumbnail.publicUrl",

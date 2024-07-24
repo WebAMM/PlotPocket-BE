@@ -394,47 +394,60 @@ const singleDetailPage = async (req, res) => {
 
 // All featured series and novel
 const featuredSeriesNovels = async (req, res) => {
-  const { category } = req.query;
-  //Query's
+  const { category, pageSize = 10, page = 1 } = req.query;
+
+  const limit = Math.floor(pageSize / 2);
+  const skip = (page - 1) * limit;
+
+  // Query
   let query = {
     status: "Published",
+    totalViews: { $gte: 10 },
   };
-  //Filtering based on Category
-  if (category) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error404(res, "Category not found");
-    }
-    query.category = category;
-  }
+
   try {
-    //Featured novel and series [Based on more views]
-    const featuredSeries = await Series.find({
-      ...query,
-      totalViews: { $gte: 10 },
-    })
+    // Filtering based on category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error404(res, "Category not found");
+      }
+      query.category = category;
+    }
+
+    // Fetch Series and Novels
+    const featuredSeries = await Series.find(query)
       .select("thumbnail.publicUrl title type seriesRating")
       .sort({ totalViews: -1 })
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
-    const featuredNovels = await Novel.find({
-      ...query,
-      totalViews: { $gte: 10 },
-    })
+      })
+      .skip(skip)
+      .limit(limit);
+
+    const featuredNovels = await Novel.find(query)
       .select("thumbnail.publicUrl title type averageRating")
       .sort({ totalViews: -1 })
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
+      })
+      .skip(skip)
+      .limit(limit);
+
+    const seriesAndNovels = [...featuredSeries, ...featuredNovels].sort(
+      (a, b) => b.createdAt - a.createdAt
+    );
+
+    // Check if there are more results to fetch
+    const hasMore = page * pageSize < totalItems;
 
     const data = {
-      featuredSeries,
-      featuredNovels,
+      seriesAndNovels,
+      hasMore,
     };
 
     return success(res, "200", "Success", data);
@@ -444,11 +457,16 @@ const featuredSeriesNovels = async (req, res) => {
 };
 
 const latestSeriesNovels = async (req, res) => {
-  const { category } = req.query;
+  const { category, page = 1, pageSize = 10 } = req.query;
+
+  const limit = Math.floor(pageSize / 2);
+  const skip = (page - 1) * limit;
+
   //Query's
   let query = {
     status: "Published",
   };
+
   //Filtering based on Category
   if (category) {
     const existCategory = await Category.findById(category);
@@ -474,10 +492,15 @@ const latestSeriesNovels = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
-      });
+      })
+      .skip(skip)
+      .limit(limit);
+
     const latestNovels = await Novel.find(query)
       .select("thumbnail.publicUrl title type totalViews")
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
@@ -491,10 +514,17 @@ const latestSeriesNovels = async (req, res) => {
         path: "author",
         select: "name",
       });
+
+    const seriesAndNovels = [...latestSeries, ...latestNovels].sort(
+      (a, b) => b.createdAt - a.createdAt
+    );
+    const hasMore = page * pageSize < totalItems;
+
     const data = {
-      latestSeries,
-      latestNovels,
+      seriesAndNovels,
+      hasMore,
     };
+
     return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
@@ -502,7 +532,11 @@ const latestSeriesNovels = async (req, res) => {
 };
 
 const topRankedSeriesNovel = async (req, res) => {
-  const { category, latest, day } = req.query;
+  const { category, latest, day, page = 1, pageSize = 10 } = req.query;
+
+  const limit = Math.floor(pageSize / 2);
+  const skip = (page - 1) * limit;
+
   let query = {
     status: "Published",
   };
@@ -560,12 +594,13 @@ const topRankedSeriesNovel = async (req, res) => {
         path: "category",
         select: "title",
       })
-      .sort(sortSeriesOptions);
+      .sort(sortSeriesOptions)
+      .skip(skip)
+      .limit(limit);
 
     //Top ranked novels
     const topRankedNovels = await Novel.find({
       ...query,
-      ...topRankQuery,
       averageRating: { $gte: 1 },
     })
       .select("thumbnail.publicUrl averageRating type title averageRating")
@@ -582,11 +617,19 @@ const topRankedSeriesNovel = async (req, res) => {
         path: "author",
         select: "name",
       })
-      .sort(sortNovelOptions);
+      .sort(sortNovelOptions)
+      .skip(skip)
+      .limit(limit);
+
+    const seriesAndNovels = [...topRankedSeries, ...topRankedNovels].sort(
+      (a, b) => b.createdAt - a.createdAt
+    );
+
+    const hasMore = page * pageSize < totalItems;
 
     const data = {
-      topRankedSeries,
-      topRankedNovels,
+      seriesAndNovels,
+      hasMore,
     };
 
     return success(res, "200", "Success", data);
