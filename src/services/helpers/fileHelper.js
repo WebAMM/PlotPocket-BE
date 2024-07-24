@@ -3,8 +3,9 @@ const path = require("path");
 
 const upload = multer({
   storage: multer.diskStorage({}),
-  // limits: { fileSize: 100 * 1024 * 1024 }, //100mb
-  // limits: { fieldSize: 52428800 }, //100mb
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50 MB
+  },
   fileFilter: (req, file, cb) => {
     let ext = path.extname(file.originalname);
     if (

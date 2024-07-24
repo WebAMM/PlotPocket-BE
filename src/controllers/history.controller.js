@@ -11,11 +11,24 @@ const { status200, success } = require("../services/helpers/response");
 
 //Get All Histories of Logged in user
 const allHistory = async (req, res) => {
+  const { page = 1, pageSize = 10 } = req.query;
   try {
-    const history = await History.find({
+    //For Pagination
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalHistoryCount = await History.countDocuments({
+      user: req.user._id,
+    });
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
+    const userHistory = await History.find({
       user: req.user._id,
     })
+      .select("_id user createdAt")
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate([
         {
           path: "series",
@@ -24,7 +37,7 @@ const allHistory = async (req, res) => {
             path: "episodes",
             select:
               "episodeVideo.publicUrl title content visibility description",
-            options: { sort: { createdAt: 1 }, limit: 1 },
+            options: { sort: { createdAt: 1 }, limit: 5 },
           },
         },
         {
@@ -37,16 +50,24 @@ const allHistory = async (req, res) => {
               sort: {
                 createdAt: 1,
               },
-              limit: 1,
+              limit: 5,
             },
           },
         },
       ]);
 
-    return success(res, "200", "All History record", history);
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalHistoryCount;
+
+    const data = {
+      userHistory,
+      hasMore,
+    };
+
+    return success(res, "200", "All History record", data);
   } catch (err) {
     return error500(res, err);
-  } 
+  }
 };
 
 module.exports = {
