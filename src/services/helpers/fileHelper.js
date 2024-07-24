@@ -4,7 +4,7 @@ const path = require("path");
 const upload = multer({
   storage: multer.diskStorage({}),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50 MB
+    fileSize: 100 * 1024 * 1024, //100 MB
   },
   fileFilter: (req, file, cb) => {
     let ext = path.extname(file.originalname);
