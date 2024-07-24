@@ -51,6 +51,13 @@ router.get(
   novelController.getAllNovels
 );
 
+//[ADMIN] Get chapters of novels
+router.get(
+  "/admin/all-chapters/:id",
+  verifyToken,
+  novelController.getAllChaptersOfNovel
+);
+
 //[ADMIN] Get novels of author
 router.get(
   "/admin/author-novels/:id",
@@ -70,9 +77,6 @@ router.post(
 //[APP] Like the user comment on novel
 router.post("/app/like", verifyToken, novelController.likeCommentOnNovel);
 
-//[APP] Get all top ranked novels
-router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
-
 //[ADMIN] Get all reviews of novels
 router.get(
   "/admin/all-reviews/:id",
@@ -89,10 +93,14 @@ router.get(
   novelController.allViewsOfNovels
 );
 
+//Detailed pages of Dashboard
 //[APP] Get all best novels
 router.get("/app/best", verifyToken, novelController.bestNovels);
 
 //[APP] Get all top novels
 router.get("/app/top", verifyToken, novelController.topNovels);
+
+//[APP] Get all top ranked novels
+router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
 
 module.exports = router;

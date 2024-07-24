@@ -215,6 +215,30 @@ const getAllNovels = async (req, res) => {
   }
 };
 
+// Get All Chapters by Novel
+const getAllChaptersOfNovel = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const novelExist = await Novel.findById(id);
+    if (!novelExist) {
+      return error404(res, "Novel not found");
+    }
+    const chapters = await Chapter.find({
+      novel: id,
+    })
+      .select(
+        "chapterPdf.publicUrl totalViews createdAt content name chapterNo description"
+      )
+      .populate({
+        path: "novel",
+        select: "thumbnail.publicUrl",
+      });
+    success(res, "200", "Success", chapters);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
 // Get All Novels of Author
 const getAuthorNovels = async (req, res) => {
   const { id } = req.params;
@@ -366,23 +390,32 @@ const deleteNovel = async (req, res) => {
 // Rate the Novel
 const rateNovel = async (req, res) => {
   const { id } = req.params;
+  const { rating, comment } = req.body;
   try {
-    const novel = await Novel.findByIdAndUpdate(
-      {
-        _id: id,
-      },
-      {
-        $push: {
-          reviews: {
-            user: req.user._id,
-            ...req.body,
-          },
-        },
-      }
-    );
+    const novel = await Novel.findById(id);
     if (!novel) {
       return error404(res, "Novel not found");
     }
+    //Check user already rated
+    const existingReviewIndex = novel.reviews.findIndex(
+      (review) => review.user.toString() === req.user._id
+    );
+
+    if (existingReviewIndex !== -1) {
+      novel.reviews[existingReviewIndex].rating = rating;
+      novel.reviews[existingReviewIndex].comment = comment;
+    } else {
+      novel.reviews.push({ user: req.user._id, rating, comment });
+    }
+    //Storing novel avg rating
+    const totalRating = novel.reviews.reduce(
+      (sum, review) => sum + review.rating,
+      0
+    );
+    novel.averageRating = totalRating / novel.reviews.length;
+
+    await novel.save();
+
     return status200(res, "Novel rated successfully");
   } catch (err) {
     return error500(res, err);
@@ -436,11 +469,16 @@ const likeCommentOnNovel = async (req, res) => {
 
 // Top rated novels
 const getTopRatedNovels = async (req, res) => {
-  const { categoryId } = req.query;
-  const { latest } = req.body;
+  const { category, latest, day } = req.query;
 
-  const sortOptions = {
-    totalRating: -1,
+  let query = {
+    status: "Published",
+    averageRating: { $gte: 1 },
+  };
+
+  //Filtering based on classifications
+  let sortOptions = {
+    averageRating: -1,
   };
 
   if (latest) {
@@ -448,52 +486,48 @@ const getTopRatedNovels = async (req, res) => {
   }
 
   try {
-    const topRatedNovelsPipelines = [
-      { $unwind: "$reviews" },
-      {
-        $group: {
-          _id: "$_id",
-          title: { $first: "$title" },
-          category: { $first: "$category" },
-          type: { $first: "$type" },
-          // author: { $first: "$author" },
-          chapters: { $first: "$chapters" },
-          thumbnail: { $first: { publicUrl: "$thumbnail.publicUrl" } },
-          totalRating: { $avg: "$reviews.rating" },
-        },
-      },
-      { $sort: sortOptions },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-          pipeline: [{ $project: { _id: 1, title: 1 } }],
-        },
-      },
-      {
-        $unwind: "$category",
-      },
-    ];
-
-    if (categoryId) {
-      topRatedNovelsPipelines.unshift({
-        $match: { category: new mongoose.Types.ObjectId(categoryId) },
-      });
+    //Filtering based on Category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
     }
 
-    const topRatedNovels = await Novel.aggregate(topRatedNovelsPipelines);
-    const populatedNovels = await Novel.populate(topRatedNovels, {
-      path: "chapters",
-      options: { sort: { createdAt: 1 }, limit: 5 },
-      select: "chapterPdf.publicUrl name chapterNo content totalViews",
-    });
+    //Filtering based on Day
+    if (day) {
+      const parsedDay = parseInt(day);
+      if (![7, 14, 30].includes(parsedDay)) {
+        return error400(res, "Invalid date parameter");
+      }
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - day);
+      query.createdAt = {
+        $gte: startDate,
+        $lte: today,
+      };
+    }
 
-    const data = {
-      topRankedNovels: populatedNovels,
-    };
-    return success(res, "200", "Success", data);
+    const topRatedNovel = await Novel.find(query)
+      .select("thumbnail.publicUrl title view type averageRating")
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .populate({
+        path: "author",
+        select: "name",
+      })
+      .sort(sortOptions);
+
+    return success(res, "200", "Success", topRatedNovel);
   } catch (err) {
     return error500(res, err);
   }
@@ -662,20 +696,18 @@ const bestNovels = async (req, res) => {
     totalViews: { $gt: 500 },
   };
 
-  //Filtering based on Category
-  if (category) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-
   try {
-    const bestNovels = await Novel.find({
-      ...query,
-    })
-      .select("thumbnail.publicUrl title type")
+    //Filtering based on Category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
+    const bestNovels = await Novel.find(query)
+      .select("thumbnail.publicUrl title type averageRating")
       .sort({ totalViews: -1 })
       .limit(10)
       .populate({
@@ -709,10 +741,8 @@ const topNovels = async (req, res) => {
   }
 
   try {
-    const bestNovels = await Novel.find({
-      ...query,
-    })
-      .select("thumbnail.publicUrl title type")
+    const topNovels = await Novel.find(query)
+      .select("thumbnail.publicUrl title type averageRating")
       .sort({ totalViews: -1 })
       .limit(10)
       .populate({
@@ -721,7 +751,7 @@ const topNovels = async (req, res) => {
         options: { sort: { createdAt: 1 }, limit: 5 },
       });
 
-    return success(res, "200", "Success", bestNovels);
+    return success(res, "200", "Success", topNovels);
   } catch (err) {
     return error500(res, err);
   }
@@ -731,6 +761,7 @@ module.exports = {
   addNovel,
   addNovelToDraft,
   getAllNovels,
+  getAllChaptersOfNovel,
   editNovel,
   deleteNovel,
   getAuthorNovels,

@@ -71,7 +71,7 @@ const getAllChaptersByNovel = async (req, res) => {
       novel: id,
     })
       .select(
-        "chapterPdf.publicUrl chapterPdf.format totalViews createdAt content name chapterNo"
+        "chapterPdf.publicUrl chapterPdf.format totalViews  content name chapterNo createdAt"
       )
       .populate({
         path: "novel",

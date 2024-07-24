@@ -20,7 +20,7 @@ const validateLogin = [
 
 const allowedTypes = ["Novels", "Series"];
 const validateAddCategory = [
-  body("title").notEmpty().withMessage("Title of category is required"),
+  body("titles").notEmpty().withMessage("Title of category is required"),
   body("type")
     .notEmpty()
     .withMessage("Type of category is required")

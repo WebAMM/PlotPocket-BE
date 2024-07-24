@@ -3,9 +3,8 @@ const router = require("express").Router();
 const mightLikeController = require("../controllers/mightLike.controller");
 //middlewares
 const { verifyToken } = require("../middlewares/auth.middleware");
-const payloadValidator = require("../middlewares/payloadValidator");
 
-//[APP] Get all categories
+//[APP] Get all user can might like
 router.get("/app/all", verifyToken, mightLikeController.mightLike);
 
 module.exports = router;

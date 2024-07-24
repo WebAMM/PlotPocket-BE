@@ -140,7 +140,7 @@ const allEpisodeOfSeries = async (req, res) => {
           title: 1,
           description: 1,
           content: 1,
-          // visibility: 1,
+          visibility: 1,
           totalViews: 1,
           totalRating: 1,
           createdAt: 1,
@@ -148,18 +148,6 @@ const allEpisodeOfSeries = async (req, res) => {
       },
     ]);
 
-
-    //Add series in history
-    const existHistory = await History.findOne({
-      user: req.user._id,
-      series: id,
-    });
-    if (!existHistory) {
-      await History.create({
-        user: req.user._id,
-        series: id,
-      });
-    }
     success(res, "200", "Success", allEpisodesOfSeries);
   } catch (err) {
     error500(res, err);

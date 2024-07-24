@@ -51,7 +51,12 @@ router.delete(
   seriesController.deleteSeries
 );
 
-
+//[APP] Get episodes of series
+router.get(
+  "/app/all-episodes/:id",
+  verifyToken,
+  seriesController.getAllEpisodeOfSeries
+);
 
 //[ADMIN] Get series views
 router.get(
@@ -61,11 +66,12 @@ router.get(
   seriesController.allViewsOfSeries
 );
 
+//Detailed pages of Dashboard
 //[APP] Get all best series
 router.get("/app/best", verifyToken, seriesController.bestSeries);
 
 //[APP] Get all top series
-router.get("/app/top-rated", verifyToken, seriesController.topSeries);
+router.get("/app/top", verifyToken, seriesController.topSeries);
 
 //[APP] Get all top rated series
 router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
