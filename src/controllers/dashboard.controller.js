@@ -120,8 +120,6 @@ const appDashboard = async (req, res) => {
     //Latest novels and series
     const series = await Series.find(query)
       .select("thumbnail.publicUrl title type")
-      .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -129,11 +127,11 @@ const appDashboard = async (req, res) => {
           sort: { createdAt: 1 },
           limit: 5,
         },
-      });
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
     const novels = await Novel.find(query)
       .select("thumbnail.publicUrl title type")
-      .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content",
@@ -141,40 +139,40 @@ const appDashboard = async (req, res) => {
           sort: { createdAt: 1 },
           limit: 5,
         },
-      });
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
     //Featured novel and series [Based on more views]
     const featuredSeries = await Series.find({
       ...query,
       totalViews: { $gte: 10 },
     })
       .select("thumbnail.publicUrl title type seriesRating")
-      .sort({ totalViews: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
+      })
+      .sort({ totalViews: -1 })
+      .limit(10);
     const featuredNovels = await Novel.find({
       ...query,
       totalViews: { $gte: 10 },
     })
-      .select("thumbnail.publicUrl title type")
-      .sort({ totalViews: -1 })
-      .limit(10)
+      .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        select: "chapterPdf.publicUrl name chapterNo content",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
+      })
+      .sort({ totalViews: -1 })
+      .limit(10);
     //Series + novels history based on logged in user
     let watchedSeriesNovels;
     if (req.user.role === "User") {
       watchedSeriesNovels = await History.find({
         user: req.user._id,
       })
-        .sort({ createdAt: -1 })
-        .limit(10)
         .populate({
           path: "series",
           select: "thumbnail.publicUrl type totalViews",
@@ -209,13 +207,13 @@ const appDashboard = async (req, res) => {
               select: "name",
             },
           ],
-        });
+        })
+        .sort({ createdAt: -1 })
+        .limit(10);
     }
     //Latest released novel and series [Based on latest created]
     const latestSeries = await Series.find(query)
       .select("thumbnail.publicUrl title type totalViews")
-      .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -229,11 +227,11 @@ const appDashboard = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
-      });
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
     const latestNovels = await Novel.find(query)
       .select("thumbnail.publicUrl title type totalViews")
-      .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
@@ -246,14 +244,16 @@ const appDashboard = async (req, res) => {
       .populate({
         path: "author",
         select: "name",
-      });
-    //Top Rated [Based on ratings and reviews]
-    const topRatedSeries = await Series.find({
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    //Top Ranked [Based on ratings and reviews]
+    const topRankedSeries = await Series.find({
       ...query,
       ...topRankQuery,
       seriesRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl title totalViews type")
+      .select("thumbnail.publicUrl title totalViews type seriesRating")
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -270,50 +270,32 @@ const appDashboard = async (req, res) => {
       })
       .sort({
         seriesRating: -1,
-      });
-    //Novels based on top rated
-    const topRatedNovelsPipeline = [
-      {
-        $match: {
-          ...query,
-          ...topRankQuery,
-          reviews: { $ne: [] },
-        },
-      },
-      { $unwind: "$reviews" },
-      {
-        $group: {
-          _id: "$_id",
-          title: { $first: "$title" },
-          category: { $first: "$category" },
-          type: { $first: "$type" },
-          author: { $first: "$author" },
-          chapters: { $first: "$chapters" },
-          thumbnail: { $first: { publicUrl: "$thumbnail.publicUrl" } },
-          totalRating: { $avg: "$reviews.rating" },
-        },
-      },
-      { $sort: { totalRating: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-          pipeline: [{ $project: { _id: 1, title: 1 } }],
-        },
-      },
-      {
-        $unwind: "$category",
-      },
-    ];
-    const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
-    const populatedNovels = await Novel.populate(topRatedNovels, {
-      path: "chapters",
-      options: { sort: { createdAt: 1 }, limit: 5 },
-      select: "chapterPdf.publicUrl name chapterNo content totalViews",
-    });
+      })
+      .limit(10);
+
+    const topRankedNovels = await Novel.find({
+      ...query,
+      ...topRankQuery,
+      averageRating: { $gte: 1 },
+    })
+      .select("thumbnail.publicUrl type title averageRating")
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .populate({
+        path: "author",
+        select: "name",
+      })
+      .sort({
+        averageRating: -1,
+      })
+      .limit(10);
     //All record in response
     const data = {
       series,
@@ -323,50 +305,10 @@ const appDashboard = async (req, res) => {
       watchedSeriesNovels,
       latestNovels,
       latestSeries,
-      topRatedSeries,
-      topRatedNovels: populatedNovels,
+      topRankedSeries,
+      topRankedNovels,
     };
     return success(res, "200", "Success", data);
-    //Series based on episodes total ratings
-    // const allSeries = await Series.find(query)
-    //   .select("thumbnail.publicUrl title view type")
-    //   .populate({
-    //     path: "episodes",
-    //     select: "episodeVideo.publicUrl title content visibility description",
-    //     options: {
-    //       sort: {
-    //         createdAt: 1,
-    //       },
-    //       limit: 1,
-    //     },
-    //   })
-    //   .populate({
-    //     path: "category",
-    //     select: "title",
-    //   });
-    // const seriesRatings = [];
-    // for (const series of allSeries) {
-    //   let totalSeriesRating = 0;
-    //   let hasRatedEpisodes = false;
-    //   const episodes = await Episode.find({ series: series._id });
-    //   episodes.forEach((episode) => {
-    //     if (episode.ratings.length > 0) {
-    //       hasRatedEpisodes = true;
-    //       const episodeTotalRating = episode.ratings.reduce(
-    //         (acc, rating) => acc + rating.rating,
-    //         0
-    //       );
-    //       totalSeriesRating += episodeTotalRating;
-    //     }
-    //   });
-    //   if (hasRatedEpisodes) {
-    //     const seriesWithRating = series.toObject();
-    //     seriesWithRating.totalRating = totalSeriesRating;
-    //     seriesRatings.push(seriesWithRating);
-    //   }
-    // }
-    // seriesRatings.sort((a, b) => b.totalRating - a.totalRating);
-    // const topRatedSeries = seriesRatings.slice(0, 5);
   } catch (err) {
     error500(res, err);
   }
@@ -406,34 +348,32 @@ const dashboardSeries = async (req, res) => {
     //Latest series
     const series = await Series.find(query)
       .select("thumbnail.publicUrl title type")
-      .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
+      })
+      .sort({ createdAt: -1 })
+      .limit(10)
     //Best series
     const bestSeries = await Series.find({
       ...query,
       totalViews: { $gt: 500 },
     })
       .select("thumbnail.publicUrl title type")
-      .sort({ totalViews: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
+      })
+      .sort({ totalViews: -1 })
+      .limit(10);
     //Top series
     const topSeries = await Series.find({
       ...query,
       totalViews: { $gt: 0, $lte: 500 },
     })
       .select("thumbnail.publicUrl title type totalViews")
-      .sort({ totalViews: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -447,9 +387,15 @@ const dashboardSeries = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
-      });
-    //Top Rated [Based on ratings and reviews]
-    const topRatedSeries = await Series.find(query)
+      })
+      .sort({ totalViews: -1 })
+      .limit(10);
+    //Top Ranked [Based on ratings and reviews]
+    const topRankedSeries = await Series.find({
+      ...query,
+      ...topRankQuery,
+      seriesRating: { $gte: 1 },
+    })
       .select("thumbnail.publicUrl title totalViews type")
       .populate({
         path: "episodes",
@@ -467,55 +413,16 @@ const dashboardSeries = async (req, res) => {
       })
       .sort({
         seriesRating: -1,
-      });
+      })
+      .limit(10);
     //All record in response
     const data = {
       series,
       bestSeries,
       topSeries,
-      topRatedSeries,
+      topRankedSeries,
     };
     return success(res, "200", "Success", data);
-    //Series based on episodes total ratings OLD
-    // const allSeries = await Series.find(query)
-    //   .select("thumbnail.publicUrl title view type")
-    //   .populate({
-    //     path: "episodes",
-    //     select: "episodeVideo.publicUrl title content visibility description",
-    //     options: {
-    //       sort: {
-    //         createdAt: 1,
-    //       },
-    //       limit: 1,
-    //     },
-    //   })
-    //   .populate({
-    //     path: "category",
-    //     select: "title",
-    //   });
-    // const seriesRatings = [];
-    // for (const series of allSeries) {
-    //   let totalSeriesRating = 0;
-    //   let hasRatedEpisodes = false;
-    //   const episodes = await Episode.find({ series: series._id });
-    //   episodes.forEach((episode) => {
-    //     if (episode.ratings.length > 0) {
-    //       hasRatedEpisodes = true;
-    //       const episodeTotalRating = episode.ratings.reduce(
-    //         (acc, rating) => acc + rating.rating,
-    //         0
-    //       );
-    //       totalSeriesRating += episodeTotalRating;
-    //     }
-    //   });
-    //   if (hasRatedEpisodes) {
-    //     const seriesWithRating = series.toObject();
-    //     seriesWithRating.totalRating = totalSeriesRating;
-    //     seriesRatings.push(seriesWithRating);
-    //   }
-    // }
-    // seriesRatings.sort((a, b) => b.totalRating - a.totalRating);
-    // const topRatedSeries = seriesRatings.slice(0, 10);
   } catch (err) {
     error500(res, err);
   }
@@ -554,9 +461,7 @@ const dashboardNovels = async (req, res) => {
   try {
     //Latest novels
     const novels = await Novel.find(query)
-      .select("thumbnail.publicUrl title type")
-      .sort({ createdAt: -1 })
-      .limit(10)
+      .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
@@ -564,28 +469,28 @@ const dashboardNovels = async (req, res) => {
           sort: { createdAt: 1 },
           limit: 5,
         },
-      });
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
     //Best novels
     const bestNovels = await Novel.find({
       ...query,
       totalViews: { $gt: 500 },
     })
-      .select("thumbnail.publicUrl title type")
-      .sort({ totalViews: -1 })
-      .limit(10)
+      .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
         options: { sort: { createdAt: 1 }, limit: 5 },
-      });
+      })
+      .sort({ totalViews: -1 })
+      .limit(10);
     //Top novels
     const topNovels = await Novel.find({
       ...query,
       totalViews: { $gt: 0, $lte: 500 },
     })
       .select("thumbnail.publicUrl title type totalViews")
-      .sort({ totalViews: -1 })
-      .limit(10)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews",
@@ -599,66 +504,45 @@ const dashboardNovels = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
-      });
+      })
+      .sort({ totalViews: -1 })
+      .limit(10);
     //Top ranked novels
-    const topRatedNovelsPipeline = [
-      { $unwind: "$reviews" },
-      {
-        $group: {
-          _id: "$_id",
-          title: { $first: "$title" },
-          category: { $first: "$category" },
-          type: { $first: "$type" },
-          author: { $first: "$author" },
-          chapters: { $first: "$chapters" },
-          thumbnail: { $first: { publicUrl: "$thumbnail.publicUrl" } },
-          totalRating: { $avg: "$reviews.rating" },
-        },
-      },
-      { $sort: { totalRating: -1 } },
-      { $limit: 10 },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-          pipeline: [{ $project: { _id: 1, title: 1 } }],
-        },
-      },
-      {
-        $unwind: "$category",
-      },
-    ];
-
-    if (category) {
-      topRatedNovelsPipeline.unshift({
-        $match: { category: new mongoose.Types.ObjectId(category) },
-      });
-    }
-    const topRatedNovels = await Novel.aggregate(topRatedNovelsPipeline);
-    const populatedNovels = await Novel.populate(topRatedNovels, {
-      path: "chapters",
-      options: { sort: { createdAt: 1 }, limit: 5 },
-      select: "chapterPdf.publicUrl name chapterNo content totalViews",
-    });
+    const topRankedNovels = await Novel.find({
+      ...query,
+      ...topRankQuery,
+      averageRating: { $gte: 1 },
+    })
+      .select("thumbnail.publicUrl averageRating type title averageRating")
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        options: { sort: { createdAt: 1 }, limit: 5 },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .populate({
+        path: "author",
+        select: "name",
+      })
+      .sort({
+        averageRating: -1,
+      })
+      .limit(10);
     //All record in response
     const data = {
       novels,
       bestNovels,
       topNovels,
-      topRatedNovels: populatedNovels,
+      topRankedNovels,
     };
     success(res, "200", "Success", data);
   } catch (err) {
     error500(res, err);
   }
 };
-
-
-
-
-
 
 module.exports = {
   adminDashboardInsights,
