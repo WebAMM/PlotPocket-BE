@@ -44,14 +44,25 @@ const getAllCategories = async (req, res) => {
 
 // Get Category based on type
 const getCategoriesByType = async (req, res) => {
-  const { type } = req.query;
+  const { type, id } = req.query;
+
   if (!type) {
     return customError(res, 400, "Type is required");
   }
+  let query = {
+    type,
+    status: "Active",
+  };
+  //For Admin Panel check that id matches for what replacing
+  if (id) {
+    const categoryExist = await Category.findById(id, type);
+    if (!categoryExist) {
+      return error409(res, `Category don't exist`);
+    }
+    query._id = { $ne: id };
+  }
   try {
-    const categories = await Category.find({ type, status: "Active" }).select(
-      "_id title type"
-    );
+    const categories = await Category.find(query).select("_id title type");
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);

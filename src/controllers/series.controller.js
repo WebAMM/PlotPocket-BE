@@ -247,7 +247,7 @@ const getAllSeries = async (req, res) => {
       )
       .populate({
         path: "category",
-        select: "_id title",
+        select: "title",
       })
       .populate("episodes");
 
@@ -266,10 +266,35 @@ const getAllSeries = async (req, res) => {
       category: series.category,
       author: series.author,
       status: series.status,
-      totalEpisode: series.episodes.length,
+      totalEpisode: series.episodes.length || 0,
     }));
 
     return success(res, "200", "Success", allSeries);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
+// Get All Episode Of Series
+const getAllEpisodeOfSeries = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const seriesExist = await Series.findById(id);
+    if (!seriesExist) {
+      return error409(res, "Series not found");
+    }
+    const episodes = await Episode.find({
+      series: id,
+    })
+      .select(
+        "episodeVideo.publicUrl totalViews createdAt content title description "
+      )
+      .populate({
+        path: "series",
+        select: "thumbnail.publicUrl",
+      });
+
+    return success(res, "200", "Success", episodes);
   } catch (err) {
     return error500(res, err);
   }
@@ -384,23 +409,23 @@ const allViewsOfSeries = async (req, res) => {
 const bestSeries = async (req, res) => {
   const { category } = req.query;
 
-  const query = {
+  let query = {
     status: "Published",
     totalViews: { $gt: 500 },
   };
 
-  //Filtering based on Category
-  if (category) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-
   try {
+    //Filtering based on Category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
     const bestSeries = await Series.find(query)
-      .select("thumbnail.publicUrl title view type")
+      .select("thumbnail.publicUrl title view type totalViews")
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -427,23 +452,23 @@ const bestSeries = async (req, res) => {
 const topSeries = async (req, res) => {
   const { category } = req.query;
 
-  const query = {
+  let query = {
     status: "Published",
     totalViews: { $gt: 0, $lte: 500 },
   };
 
-  //Filtering based on Category
-  if (category) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-
   try {
+    //Filtering based on Category
+    if (category) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
     const topSeries = await Series.find(query)
-      .select("thumbnail.publicUrl title totalViews type")
+      .select("thumbnail.publicUrl title type totalViews")
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -469,11 +494,14 @@ const topSeries = async (req, res) => {
 // Top rated series
 const getTopRatedSeries = async (req, res) => {
   const { category, latest, day } = req.query;
-
-  const query = {};
+  //Query's
+  let query = {
+    status: "Published",
+    seriesRating: { $gte: 1 },
+  };
 
   //Filtering based on classifications
-  const sortOptions = {
+  let sortOptions = {
     seriesRating: -1,
   };
 
@@ -500,17 +528,14 @@ const getTopRatedSeries = async (req, res) => {
       const today = new Date();
       const startDate = new Date();
       startDate.setDate(today.getDate() - day);
-      topRankQuery.createdAt = {
+      query.createdAt = {
         $gte: startDate,
         $lte: today,
       };
     }
 
-    const topRatedSeries = await Series.find({
-      ...query,
-      seriesRating: { $gte: 1 },
-    })
-      .select("thumbnail.publicUrl title view type")
+    const topRatedSeries = await Series.find(query)
+      .select("thumbnail.publicUrl title view type seriesRating")
       .populate({
         path: "episodes",
         select: "episodeVideo.publicUrl title content visibility description",
@@ -543,4 +568,5 @@ module.exports = {
   bestSeries,
   topSeries,
   getTopRatedSeries,
+  getAllEpisodeOfSeries,
 };
