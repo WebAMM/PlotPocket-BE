@@ -232,7 +232,14 @@ const validateAddEpisode = [
 const validateAddSubscription = [
   body("plan").trim().notEmpty().withMessage("Plan is required"),
   body("price").trim().notEmpty().withMessage("Price is required"),
-  body("description").trim().notEmpty().withMessage("Description is required"),
+  body("description")
+    .trim()
+    .notEmpty()
+    .withMessage("Description is required")
+    .isLength({ min: 5 })
+    .withMessage("Description must be at least 5 characters long")
+    .isLength({ max: 400 })
+    .withMessage("Description cannot exceed 400 characters"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
