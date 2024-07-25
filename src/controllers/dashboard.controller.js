@@ -92,6 +92,7 @@ const appDashboard = async (req, res) => {
   //Query's
   let query = {
     status: "Published",
+    visibility: "Public",
   };
   let topRankQuery = {};
   //Filtering based on Category
@@ -320,6 +321,7 @@ const dashboardSeries = async (req, res) => {
   //Query's
   let query = {
     status: "Published",
+    visibility: "Public",
   };
   let topRankQuery = {};
   //Filtering based on Category
@@ -354,7 +356,7 @@ const dashboardSeries = async (req, res) => {
         options: { sort: { createdAt: 1 }, limit: 5 },
       })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(10);
     //Best series
     const bestSeries = await Series.find({
       ...query,
@@ -434,6 +436,7 @@ const dashboardNovels = async (req, res) => {
   //Query's
   let query = {
     status: "Published",
+    visibility: "Public",
   };
   let topRankQuery = {};
   //Filtering based on Category

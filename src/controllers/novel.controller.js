@@ -272,7 +272,7 @@ const getAuthorNovels = async (req, res) => {
       author: id,
     })
       .select(
-        "_id thumbnail.publicUrl title description createdAt totalViews visibility language reviews status adult totalViews"
+        "_id thumbnail.publicUrl title description createdAt visibility language reviews status adult totalViews"
       )
       .populate({
         path: "category",
@@ -423,8 +423,7 @@ const rateNovel = async (req, res) => {
     );
 
     if (existingReviewIndex !== -1) {
-      novel.reviews[existingReviewIndex].rating = rating;
-      novel.reviews[existingReviewIndex].comment = comment;
+      return error400(res, "Already rated");
     } else {
       novel.reviews.push({ user: req.user._id, rating, comment });
     }
@@ -648,6 +647,7 @@ const bestNovels = async (req, res) => {
 
   const query = {
     status: "Published",
+    visibility: "Public",
     totalViews: { $gt: 500 },
   };
 
@@ -702,6 +702,7 @@ const topNovels = async (req, res) => {
 
   const query = {
     status: "Published",
+    visibility: "Public",
     totalViews: { $gt: 0, $lte: 500 },
   };
 
@@ -751,6 +752,7 @@ const getTopRatedNovels = async (req, res) => {
 
   let query = {
     status: "Published",
+    visibility: "Public",
     averageRating: { $gte: 1 },
   };
 

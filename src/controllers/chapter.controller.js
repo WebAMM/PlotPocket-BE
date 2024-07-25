@@ -20,6 +20,7 @@ const addChapter = async (req, res) => {
     const novelExist = await Novel.findOne({
       _id: id,
       status: "Published",
+      visibility: "Public",
     });
     if (!novelExist) {
       return error404(res, "Novel not found");
@@ -71,7 +72,7 @@ const getAllChaptersByNovel = async (req, res) => {
       novel: id,
     })
       .select(
-        "chapterPdf.publicUrl chapterPdf.format totalViews  content name chapterNo createdAt"
+        "chapterPdf.publicUrl chapterPdf.format totalViews content name chapterNo createdAt"
       )
       .populate({
         path: "novel",

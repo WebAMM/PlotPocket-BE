@@ -10,7 +10,7 @@ const { upload } = require("../../services/helpers/fileHelper");
 router.post(
   "/register",
   upload.single("profilePic"),
-  payloadValidator.validateLogin,
+  payloadValidator.validateRegister,
   authController.registerUser
 );
 
