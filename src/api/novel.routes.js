@@ -103,4 +103,11 @@ router.get("/app/top", verifyToken, novelController.topNovels);
 //[APP] Get all top ranked novels
 router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
 
+//[APP] Get paginationated novels by type
+router.get(
+  "/app/all/by-type",
+  verifyToken,
+  novelController.getDetailNovelByType
+);
+
 module.exports = router;

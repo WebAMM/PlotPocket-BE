@@ -76,4 +76,12 @@ router.get("/app/top", verifyToken, seriesController.topSeries);
 //[APP] Get all top rated series
 router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
 
+//[APP] Get paginationated series by type
+router.get(
+  "/app/all/by-type",
+  verifyToken,
+  seriesController.getDetailSeriesByType
+);
+
+
 module.exports = router;

@@ -24,10 +24,10 @@ router.get("/app/single/:id", verifyToken, allController.singleDetailPage);
 // //[APP] Featured Series + Novels
 // router.get("/app/featured", verifyToken, allController.featuredSeriesNovels);
 
-//[APP] Latest Series + Novels
+// //[APP] Latest Series + Novels
 // router.get("/app/latest", verifyToken, allController.latestSeriesNovels);
 
-//[APP] Top ranked Series + Novels
+// //[APP] Top ranked Series + Novels
 // router.get("/app/top-ranked", verifyToken, allController.topRankedSeriesNovel);
 
 //[APP] Featured + Latest + Top Ranked
