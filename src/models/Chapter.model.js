@@ -5,6 +5,7 @@ const chapterSchema = new mongoose.Schema(
     novel: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Novel",
+      required: [true, "Novel is required"],
     },
     name: {
       type: String,
@@ -17,6 +18,7 @@ const chapterSchema = new mongoose.Schema(
     content: {
       type: String,
       enum: ["Paid", "Free"],
+      required: [true, "Content is required"],
     },
     totalViews: {
       type: Number,

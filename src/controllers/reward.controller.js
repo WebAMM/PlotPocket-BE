@@ -16,7 +16,7 @@ const addReward = async (req, res) => {
   try {
     const rewardExist = await Reward.findOne();
     if (rewardExist) {
-      return error409(res, `Reward exist already, update reward`);
+      return error409(res, "Reward exist already, update reward");
     }
     await Reward.create({
       ...req.body,
@@ -79,7 +79,7 @@ const getRewardsForUser = async (req, res) => {
   try {
     const rewards = await Reward.findOne({ status: "Active" });
     if (!rewards) {
-      return customError(res, 403, `Reward is inactive`);
+      return success(res, "200", "Success", []);
     }
     if (!rewards.weeklyRewards.length === 7) {
       return customError(res, 422, `Weekly rewards invalid`);

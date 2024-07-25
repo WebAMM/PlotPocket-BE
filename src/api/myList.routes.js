@@ -5,7 +5,7 @@ const myListController = require("../controllers/myList.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
 
 //[APP] Add series to my list
-router.post("/app/add-episode/:id", verifyToken, myListController.addEpisodeToList);
+router.post("/app/add/:id", verifyToken, myListController.addEpisodeToList);
 
 //[APP] All lists/bookmarks of user
 router.get("/app/all", verifyToken, myListController.allMyLists);

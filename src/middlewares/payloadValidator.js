@@ -1,11 +1,22 @@
 //imports from packages
 const { body, check, validationResult } = require("express-validator");
 
-const validateLogin = [
-  body("email").isEmail().withMessage("Please enter a valid email"),
+const allowedTypes = ["Novels", "Series"];
+
+const validateRegister = [
+  body("userName")
+    .trim()
+    .notEmpty()
+    .withMessage("Please enter user name")
+    .isLength({ min: 3, max: 50 })
+    .withMessage("Username must be between 3 to 50"),
+  body("email").trim().isEmail().withMessage("Please enter a valid email"),
   body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters long"),
+    .trim()
+    .notEmpty()
+    .withMessage("Please enter user name")
+    .isLength({ min: 6, max: 25 })
+    .withMessage("Password must be between 6 and 25 characters long"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -13,15 +24,35 @@ const validateLogin = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
-const allowedTypes = ["Novels", "Series"];
+const validateLogin = [
+  body("email").trim().isEmail().withMessage("Please enter a valid email"),
+  body("password")
+    .trim()
+    .notEmpty()
+    .withMessage("Please enter password")
+    .isLength({ min: 6, max: 25 })
+    .withMessage("Password must be between 6 and 25 characters long"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res
+        .status(400)
+        .json({ error: errors.array().map((error) => error.msg) });
+    }
+  },
+];
+
 const validateAddCategory = [
-  body("titles").notEmpty().withMessage("Title of category is required"),
+  body("titles").trim().notEmpty().withMessage("Title of category is required"),
   body("type")
+    .trim()
     .notEmpty()
     .withMessage("Type of category is required")
     .isIn(["Novels", "Series"])
@@ -33,13 +64,52 @@ const validateAddCategory = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
+    }
+  },
+];
+
+const validateIncreaseView = [
+  body("type")
+    .trim()
+    .notEmpty()
+    .withMessage("Type is required")
+    .isIn(allowedTypes)
+    .withMessage(`Type must be either ${allowedTypes.join(" or ")}`),
+  body("seriesId")
+    .trim()
+    .if(body("type").equals("Series"))
+    .notEmpty()
+    .withMessage("Series Id is required for type Series"),
+  body("episodeId")
+    .trim()
+    .if(body("type").equals("Series"))
+    .notEmpty()
+    .withMessage("Episode Id is required for type Series"),
+  body("novelId")
+    .trim()
+    .if(body("type").equals("Novel"))
+    .notEmpty()
+    .withMessage("Novel Id is required for type Novel"),
+  body("chapterId")
+    .trim()
+    .if(body("type").equals("Novel"))
+    .notEmpty()
+    .withMessage("Chapter Id is required for type Novel"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res
+        .status(400)
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateEditCategory = [
-  body("title").notEmpty().withMessage("Title of category is required"),
+  body("title").trim().notEmpty().withMessage("Title of category is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -47,19 +117,23 @@ const validateEditCategory = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddNovel = [
-  body("title").notEmpty().withMessage("Title of novel is required"),
-  body("category").notEmpty().withMessage("Category of novel is required"),
-  body("language").notEmpty().withMessage("Language is required"),
+  body("title").trim().notEmpty().withMessage("Title of novel is required"),
+  body("category")
+    .trim()
+    .notEmpty()
+    .withMessage("Category of novel is required"),
+  body("language").trim().notEmpty().withMessage("Language is required"),
   // body("publishDate").notEmpty().withMessage("Publish date is required"),
-  body("visibility").notEmpty().withMessage("Visibility is required"),
-  body("author").notEmpty().withMessage("Publish date is required"),
+  body("visibility").trim().notEmpty().withMessage("Visibility is required"),
+  body("author").trim().notEmpty().withMessage("Publish date is required"),
   body("description")
+    .trim()
     .notEmpty()
     .withMessage("Description is required")
     .isLength({ min: 5 })
@@ -73,15 +147,15 @@ const validateAddNovel = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddChapter = [
-  body("name").notEmpty().withMessage("Name of chapter is required"),
-  body("chapterNo").notEmpty().withMessage("Chapter no. is required"),
-  body("content").notEmpty().withMessage("Content is required"),
+  body("name").trim().notEmpty().withMessage("Name of chapter is required"),
+  body("chapterNo").trim().notEmpty().withMessage("Chapter no. is required"),
+  body("content").trim().notEmpty().withMessage("Content is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -89,14 +163,14 @@ const validateAddChapter = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddAuthor = [
-  body("name").notEmpty().withMessage("Name of author is required"),
-  body("gender").notEmpty().withMessage("Gender is required"),
+  body("name").trim().notEmpty().withMessage("Name of author is required"),
+  body("gender").trim().notEmpty().withMessage("Gender is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -104,17 +178,21 @@ const validateAddAuthor = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddSeries = [
-  body("title").notEmpty().withMessage("Title of series is required"),
-  body("category").notEmpty().withMessage("Category of series is required"),
-  body("visibility").notEmpty().withMessage("Visibility is required"),
+  body("title").trim().notEmpty().withMessage("Title of series is required"),
+  body("category")
+    .trim()
+    .notEmpty()
+    .withMessage("Category of series is required"),
+  body("visibility").trim().notEmpty().withMessage("Visibility is required"),
   // body("publishDate").notEmpty().withMessage("Publish date is required"),
   body("description")
+    .trim()
     .notEmpty()
     .withMessage("Description is required")
     .isLength({ min: 5 })
@@ -128,14 +206,17 @@ const validateAddSeries = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddEpisode = [
-  body("title").notEmpty().withMessage("Title of the episode is required"),
-  body("content").notEmpty().withMessage("Content is required"),
+  body("title")
+    .trim()
+    .notEmpty()
+    .withMessage("Title of the episode is required"),
+  body("content").trim().notEmpty().withMessage("Content is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -143,15 +224,15 @@ const validateAddEpisode = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddSubscription = [
-  body("plan").notEmpty().withMessage("Plan is required"),
-  body("price").notEmpty().withMessage("Price is required"),
-  body("description").notEmpty().withMessage("Description is required"),
+  body("plan").trim().notEmpty().withMessage("Plan is required"),
+  body("price").trim().notEmpty().withMessage("Price is required"),
+  body("description").trim().notEmpty().withMessage("Description is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -159,16 +240,16 @@ const validateAddSubscription = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAddCoinSubscription = [
-  body("price").notEmpty().withMessage("Price is required"),
-  body("coins").notEmpty().withMessage("Coins are required"),
-  body("discount").notEmpty().withMessage("Discount is required"),
-  body("bonus").notEmpty().withMessage("Bonus is required"),
+  body("price").trim().notEmpty().withMessage("Price is required"),
+  body("coins").trim().notEmpty().withMessage("Coins are required"),
+  body("discount").trim().notEmpty().withMessage("Discount is required"),
+  body("bonus").trim().notEmpty().withMessage("Bonus is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -176,14 +257,24 @@ const validateAddCoinSubscription = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateUpdatePassword = [
-  body("oldPassword").notEmpty().withMessage("Old password is required"),
-  body("newPassword").notEmpty().withMessage("New password is required"),
+  body("oldPassword")
+    .trim()
+    .notEmpty()
+    .withMessage("Please enter old password")
+    .isLength({ min: 6, max: 25 })
+    .withMessage("Old Password must be between 6 and 25 characters long"),
+  body("newPassword")
+    .trim()
+    .notEmpty()
+    .withMessage("Please enter new password")
+    .isLength({ min: 6, max: 25 })
+    .withMessage("New Password must be between 6 and 25 characters long"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -191,19 +282,38 @@ const validateUpdatePassword = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 const validateAdminUpdateProfile = [
-  body("firstName").notEmpty().withMessage("First name is required"),
-  body("lastName").notEmpty().withMessage("Last name is required"),
-  body("phoneNo").notEmpty().withMessage("Phone number is required"),
-  body("dateOfBirth").notEmpty().withMessage("Date of birth is required"),
-  body("emergencyContact")
+  body("firstName").trim().notEmpty().withMessage("First name is required"),
+  body("lastName").trim().notEmpty().withMessage("Last name is required"),
+  body("phoneNo")
+    .trim()
     .notEmpty()
-    .withMessage("Emergency contact is required"),
+    .withMessage("Phone number is required")
+    .isLength({ min: 10, max: 15 })
+    .withMessage("Phone number must be between 10 and 15 digits")
+    .matches(/^[0-9-\s+()]+$/)
+    .withMessage(
+      "Phone number must contain only digits, spaces, dashes, or parentheses"
+    ),
+  body("dateOfBirth")
+    .trim()
+    .notEmpty()
+    .withMessage("Date of birth is required"),
+  body("emergencyContact")
+    .trim()
+    .notEmpty()
+    .withMessage("Emergency contact is required")
+    .isLength({ min: 10, max: 15 })
+    .withMessage("Emergency contact must be between 10 and 15 digits")
+    .matches(/^[0-9-\s+()]+$/)
+    .withMessage(
+      "Emergency contact must contain only digits, spaces, dashes, or parentheses"
+    ),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -211,7 +321,7 @@ const validateAdminUpdateProfile = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -234,7 +344,7 @@ const validateAddReward = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
@@ -259,12 +369,13 @@ const validateRateNovel = [
     } else {
       return res
         .status(400)
-        .json({ errors: errors.array().map((error) => error.msg) });
+        .json({ error: errors.array().map((error) => error.msg) });
     }
   },
 ];
 
 module.exports = {
+  validateRegister,
   validateLogin,
   validateAddCategory,
   validateEditCategory,
@@ -279,4 +390,5 @@ module.exports = {
   validateAddReward,
   validateRateNovel,
   validateAddAuthor,
+  validateIncreaseView,
 };

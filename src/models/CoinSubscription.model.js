@@ -4,19 +4,19 @@ const coinSubscriptionSchema = new mongoose.Schema(
   {
     price: {
       type: Number,
-      required: true,
+      required: [true, "Price is required"],
     },
     coins: {
       type: Number,
-      required: true,
+      required: [true, "Coin is required"],
     },
     discount: {
       type: Number,
-      required: true,
+      required: [true, "Discount is required"],
     },
     bonus: {
       type: Number,
-      required: true,
+      required: [true, "Bonus is required"],
     },
   },
   {
