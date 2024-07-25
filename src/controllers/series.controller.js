@@ -632,6 +632,212 @@ const getTopRatedSeries = async (req, res) => {
   }
 };
 
+//All series by type
+const getDetailSeriesByType = async (req, res) => {
+  const { type, category, latest, day, page = 1, pageSize = 10 } = req.query;
+  const validTypes = ["Best", "Top", "TopRanked"];
+  if (!validTypes.includes(type)) {
+    return error400(
+      res,
+      "Invalid type parameter. Choose either Best, Top or TopRanked"
+    );
+  }
+  try {
+    if (type === "Best") {
+      let query = {
+        status: "Published",
+        visibility: "Public",
+        totalViews: { $gt: 500 },
+      };
+
+      //Filtering based on Category
+      if (category) {
+        const existCategory = await Category.findById(category);
+        if (!existCategory) {
+          return error409(res, "Category not found");
+        }
+        query.category = category;
+      }
+
+      // Pagination calculations
+      const currentPage = parseInt(page, 10) || 1;
+      const size = parseInt(pageSize, 10) || 10;
+      const totalSeriesCount = await Series.countDocuments(query);
+      const skip = (currentPage - 1) * size;
+      const limit = size;
+
+      const bestSeries = await Series.find(query)
+        .select("thumbnail.publicUrl title view type totalViews")
+        .sort({ totalViews: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "episodes",
+          select: "episodeVideo.publicUrl title content visibility description",
+          options: {
+            sort: {
+              createdAt: 1,
+            },
+            limit: 5,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        });
+
+      //To handle infinite scroll on frontend
+      const hasMore = skip + limit < totalSeriesCount;
+
+      const data = {
+        series: bestSeries,
+        hasMore,
+      };
+
+      return success(res, "200", "Success", data);
+    } else if (type === "Top") {
+      let query = {
+        status: "Published",
+        visibility: "Public",
+        totalViews: { $gt: 0, $lte: 500 },
+      };
+
+      //Filtering based on Category
+      if (category) {
+        const existCategory = await Category.findById(category);
+        if (!existCategory) {
+          return error409(res, "Category not found");
+        }
+        query.category = category;
+      }
+
+      // Pagination calculations
+      const currentPage = parseInt(page, 10) || 1;
+      const size = parseInt(pageSize, 10) || 10;
+      const totalSeriesCount = await Series.countDocuments(query);
+      const skip = (currentPage - 1) * size;
+      const limit = size;
+
+      const topSeries = await Series.find(query)
+        .select("thumbnail.publicUrl title type totalViews")
+        .sort({ totalViews: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "episodes",
+          select: "episodeVideo.publicUrl title content visibility description",
+          options: {
+            sort: {
+              createdAt: 1,
+            },
+            limit: 5,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        });
+
+      //To handle infinite scroll on frontend
+      const hasMore = skip + limit < totalSeriesCount;
+
+      const data = {
+        series: topSeries,
+        hasMore,
+      };
+
+      return success(res, "200", "Success", data);
+    } else if (type === "TopRanked") {
+      let query = {
+        status: "Published",
+        visibility: "Public",
+        seriesRating: { $gte: 1 },
+      };
+
+      //Filtering based on classifications
+      let sortOptions = {
+        seriesRating: -1,
+      };
+
+      if (latest) {
+        sortOptions.createdAt = -1;
+      }
+
+      if (category) {
+        const existCategory = await Category.findById(category);
+        if (!existCategory) {
+          return error409(res, "Category not found");
+        }
+        query.category = category;
+      }
+
+      // Pagination calculations
+      const currentPage = parseInt(page, 10) || 1;
+      const size = parseInt(pageSize, 10) || 10;
+      const totalSeriesCount = await Series.countDocuments(query);
+      const skip = (currentPage - 1) * size;
+      const limit = size;
+
+      //Filtering based on Day
+      if (day) {
+        const parsedDay = parseInt(day);
+        if (day === "Today") {
+          const today = new Date();
+          query.createdAt = {
+            $gte: new Date(today.setHours(0, 0, 0, 0)),
+            $lte: new Date(today.setHours(23, 59, 59, 999)),
+          };
+        } else if ([7, 14, 30].includes(parsedDay)) {
+          const today = new Date();
+          const startDate = new Date();
+          startDate.setDate(today.getDate() - parsedDay + 1);
+          query.createdAt = {
+            $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+            $lte: new Date(today.setHours(23, 59, 59, 999)),
+          };
+        } else {
+          return error400(
+            res,
+            "Invalid date parameter. Use 'Today', 7, 14, or 30"
+          );
+        }
+      }
+
+      const topRatedSeries = await Series.find(query)
+        .select("thumbnail.publicUrl title view type seriesRating")
+        .populate({
+          path: "episodes",
+          select: "episodeVideo.publicUrl title content visibility description",
+          options: {
+            sort: {
+              createdAt: 1,
+            },
+            limit: 5,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit);
+
+      //To handle infinite scroll on frontend
+      const hasMore = skip + limit < totalSeriesCount;
+
+      const data = {
+        series: topRatedSeries,
+        hasMore,
+      };
+
+      return success(res, "200", "Success", data);
+    }
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addSeries,
   addSeriesToDraft,
@@ -643,4 +849,5 @@ module.exports = {
   topSeries,
   getTopRatedSeries,
   getAllEpisodeOfSeries,
+  getDetailSeriesByType,
 };

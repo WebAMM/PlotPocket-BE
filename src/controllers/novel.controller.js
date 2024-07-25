@@ -830,6 +830,190 @@ const getTopRatedNovels = async (req, res) => {
   }
 };
 
+//All novels by type
+const getDetailNovelByType = async (req, res) => {
+  const { type, category, latest, day, page = 1, pageSize = 10 } = req.query;
+  const validTypes = ["Best", "Top", "TopRanked"];
+  if (!validTypes.includes(type)) {
+    return error400(
+      res,
+      "Invalid type parameter. Choose either Best, Top or TopRanked"
+    );
+  }
+
+  try {
+    if (type === "Best") {
+      const query = {
+        status: "Published",
+        visibility: "Public",
+        totalViews: { $gt: 500 },
+      };
+
+      //Filtering based on Category
+      if (category) {
+        const existCategory = await Category.findById(category);
+        if (!existCategory) {
+          return error409(res, "Category not found");
+        }
+        query.category = category;
+      }
+
+      // Pagination calculations
+      const currentPage = parseInt(page, 10) || 1;
+      const size = parseInt(pageSize, 10) || 10;
+      const totalNovelsCount = await Novel.countDocuments(query);
+      const skip = (currentPage - 1) * size;
+      const limit = size;
+
+      const bestNovels = await Novel.find(query)
+        .select("thumbnail.publicUrl title type averageRating")
+        .sort({ totalViews: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "chapters",
+          select: "chapterPdf.publicUrl name chapterNo content totalViews",
+          options: { sort: { createdAt: 1 }, limit: 5 },
+        });
+
+      //To handle infinite scroll on frontend
+      const hasMore = skip + limit < totalNovelsCount;
+      const data = {
+        novels: bestNovels,
+        hasMore,
+      };
+      return success(res, "200", "Success", data);
+    } else if (type === "Top") {
+      const query = {
+        status: "Published",
+        visibility: "Public",
+        totalViews: { $gt: 0, $lte: 500 },
+      };
+
+      if (category) {
+        const existCategory = await Category.findById(category);
+        if (!existCategory) {
+          return error409(res, "Category not found");
+        }
+        query.category = category;
+      }
+
+      // Pagination calculations
+      const currentPage = parseInt(page, 10) || 1;
+      const size = parseInt(pageSize, 10) || 10;
+      const totalNovelsCount = await Novel.countDocuments(query);
+      const skip = (currentPage - 1) * size;
+      const limit = size;
+
+      const topNovels = await Novel.find(query)
+        .select("thumbnail.publicUrl title type averageRating")
+        .sort({ totalViews: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "chapters",
+          select: "chapterPdf.publicUrl name chapterNo content totalViews",
+          options: { sort: { createdAt: 1 }, limit: 5 },
+        });
+
+      const hasMore = skip + limit < totalNovelsCount;
+
+      const data = {
+        novels: topNovels,
+        hasMore,
+      };
+      return success(res, "200", "Success", data);
+    } else if (type === "TopRanked") {
+      let query = {
+        status: "Published",
+        visibility: "Public",
+        averageRating: { $gte: 1 },
+      };
+
+      //Filtering based on classifications
+      let sortOptions = {
+        averageRating: -1,
+      };
+
+      if (latest) {
+        sortOptions.createdAt = -1;
+      }
+
+      //Filtering based on Category
+      if (category) {
+        const existCategory = await Category.findById(category);
+        if (!existCategory) {
+          return error409(res, "Category not found");
+        }
+        query.category = category;
+      }
+
+      //For Pagination
+      const currentPage = parseInt(page, 10) || 1;
+      const size = parseInt(pageSize, 10) || 10;
+      const totalNovelsCount = await Novel.countDocuments(query);
+      const skip = (currentPage - 1) * size;
+      const limit = size;
+
+      //Filtering based on Day
+      if (day) {
+        const parsedDay = parseInt(day);
+        if (day === "Today") {
+          const today = new Date();
+          query.createdAt = {
+            $gte: new Date(today.setHours(0, 0, 0, 0)),
+            $lte: new Date(today.setHours(23, 59, 59, 999)),
+          };
+        } else if ([7, 14, 30].includes(parsedDay)) {
+          const today = new Date();
+          const startDate = new Date();
+          startDate.setDate(today.getDate() - parsedDay + 1);
+          query.createdAt = {
+            $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+            $lte: new Date(today.setHours(23, 59, 59, 999)),
+          };
+        } else {
+          return error400(
+            res,
+            "Invalid date parameter. Use 'Today', 7, 14, or 30"
+          );
+        }
+      }
+
+      const topRatedNovel = await Novel.find(query)
+        .select("thumbnail.publicUrl title view type averageRating")
+        .populate({
+          path: "chapters",
+          select: "chapterPdf.publicUrl name chapterNo content totalViews",
+          options: { sort: { createdAt: 1 }, limit: 5 },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit);
+
+      //To handle infinite scroll on frontend
+      const hasMore = skip + limit < totalNovelsCount;
+
+      const data = {
+        novels: topRatedNovel,
+        hasMore,
+      };
+
+      return success(res, "200", "Success", data);
+    }
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addNovel,
   addNovelToDraft,
@@ -840,9 +1024,10 @@ module.exports = {
   getAuthorNovels,
   rateNovel,
   likeCommentOnNovel,
-  getTopRatedNovels,
   allReviewsOfNovels,
   allViewsOfNovels,
   bestNovels,
   topNovels,
+  getTopRatedNovels,
+  getDetailNovelByType,
 };
