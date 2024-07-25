@@ -431,6 +431,7 @@ const bestSeries = async (req, res) => {
 
   let query = {
     status: "Published",
+    visibility: "Public",
     totalViews: { $gt: 500 },
   };
 
@@ -491,6 +492,7 @@ const topSeries = async (req, res) => {
 
   let query = {
     status: "Published",
+    visibility: "Public",
     totalViews: { $gt: 0, $lte: 500 },
   };
 
@@ -551,6 +553,7 @@ const getTopRatedSeries = async (req, res) => {
   //Query's
   let query = {
     status: "Published",
+    visibility: "Public",
     seriesRating: { $gte: 1 },
   };
 

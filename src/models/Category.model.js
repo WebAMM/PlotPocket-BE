@@ -16,9 +16,29 @@ const categorySchema = new mongoose.Schema(
       enum: ["Active", "Inactive"],
       default: "Active",
     },
-    views: {
+    totalViews: {
       type: Number,
       default: 0,
+    },
+    views: {
+      type: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: [true, "User is required"],
+          },
+          view: {
+            type: Number,
+            default: 0,
+          },
+          date: {
+            type: Date,
+            required: [true, "Date of view is required"],
+          },
+        },
+      ],
+      default: [],
     },
   },
   {
