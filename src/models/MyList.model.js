@@ -2,17 +2,18 @@ const mongoose = require("mongoose");
 
 const myListSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "User is required"],
+    },
     episode: {
       type: mongoose.Schema.ObjectId,
       ref: "Episode",
     },
-    novel: {
+    chapter: {
       type: mongoose.Schema.ObjectId,
-      ref: "Novel",
-    },
-    user: {
-      type: mongoose.Schema.ObjectId,
-      ref: "User",
+      ref: "Chapter",
     },
   },
   {

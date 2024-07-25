@@ -5,6 +5,7 @@ const HistorySchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
+      required: [true, "User is required"],
     },
     series: {
       type: mongoose.Schema.ObjectId,
@@ -20,8 +21,5 @@ const HistorySchema = new mongoose.Schema(
   }
 );
 
-const History = mongoose.model(
-  "History",
-  HistorySchema
-);
+const History = mongoose.model("History", HistorySchema);
 module.exports = History;

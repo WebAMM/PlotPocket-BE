@@ -22,6 +22,7 @@ const addEpisode = async (req, res) => {
     const seriesExist = await Series.findOne({
       _id: id,
       status: "Published",
+      visibility: "Public",
     });
     if (!seriesExist) {
       return error404(res, "Series not found");
