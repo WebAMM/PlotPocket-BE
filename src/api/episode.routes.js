@@ -32,7 +32,7 @@ router.get(
   episodeController.episodesOfSeries
 );
 
-//[APP] All episode of series (id represents series id)
+//[APP] All episode of series with Pagination for listing
 router.get(
   "/app/all/:id",
   verifyToken,
