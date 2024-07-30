@@ -129,7 +129,7 @@ const mightLike = async (req, res) => {
       category: { $in: seriesCategories },
       _id: { $nin: historySeriesIds },
     })
-      .select("thumbnail.publicUrl title type seriesRating")
+      .select("thumbnail.publicUrl title type seriesRating totalViews")
       .populate({
         path: "category",
         select: "title",
@@ -139,7 +139,7 @@ const mightLike = async (req, res) => {
       category: { $in: novelCategories },
       _id: { $nin: historyNovelIds },
     })
-      .select("thumbnail.publicUrl title type totalViews")
+      .select("thumbnail.publicUrl title type averageRating totalViews")
       .populate({
         path: "category",
         select: "title",
@@ -154,11 +154,11 @@ const mightLike = async (req, res) => {
     );
     const startIndex = (page - 1) * pageSize;
     const endIndex = page * pageSize;
-    const seriesNovels = combinedData.slice(startIndex, endIndex);
+    const mightLiked = combinedData.slice(startIndex, endIndex);
     const hasMore = combinedData.length > endIndex;
 
     const data = {
-      seriesNovels,
+      mightLiked,
       hasMore,
     };
 
