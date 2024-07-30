@@ -114,23 +114,45 @@ const rateTheEpisode = async (req, res) => {
   }
 };
 
-// All Episode in app to view
+// All Episodes by Series
 const allEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
+  const { page = 1, pageSize = 10 } = req.query;
   try {
     const seriesExist = await Series.findById(id);
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
-    const allEpisodesOfSeries = await Episode.find({
+
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalEpisodeCount = await Episode.countDocuments();
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
+    const episodes = await Episode.find({
       series: id,
     })
-      .select("episodeVideo.publicUrl title _id totalViews")
+      .select(
+        "episodeVideo.publicUrl title _id totalViews content series createdAt description"
+      )
       .populate({
         path: "series",
         select: "thumbnail.publicUrl _id",
-      });
-    success(res, "200", "Success", allEpisodesOfSeries);
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalEpisodeCount;
+    const data = {
+      episodes,
+      hasMore,
+    };
+
+    success(res, "200", "Success", data);
   } catch (err) {
     error500(res, err);
   }

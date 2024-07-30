@@ -43,20 +43,20 @@ router.get(
   seriesController.getAllSeries
 );
 
+//[APP] All episode of series for the LIST on the Detailed Episode View
+router.get(
+  "/app/all-episodes/:id",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  seriesController.getAllEpisodeOfSeries
+);
+
 //[ADMIN] Delete series
 router.delete(
   "/admin/:id",
   verifyToken,
   verifyRole(["Admin"]),
   seriesController.deleteSeries
-);
-
-//[APP] Get episodes of series
-router.get(
-  "/app/all-episodes/:id",
-  verifyRole(["User", "Guest"]),
-  verifyToken,
-  seriesController.getAllEpisodeOfSeries
 );
 
 //[ADMIN] Get series views
