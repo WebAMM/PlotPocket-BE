@@ -1,5 +1,4 @@
 //Models
-const moment = require("moment");
 const Reward = require("../models/Rewards.model");
 const UserSteak = require("../models/UserSteak.model");
 //Response and errors
@@ -10,6 +9,7 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 const timeDiffChecker = require("../services/helpers/timeDiffChecker");
+const moment = require("moment");
 
 //Add Rewards
 const addReward = async (req, res) => {
