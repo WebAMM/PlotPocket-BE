@@ -108,6 +108,46 @@ const validateIncreaseView = [
   },
 ];
 
+
+const validateAddToHistory = [
+  body("type")
+    .trim()
+    .notEmpty()
+    .withMessage("Type is required")
+    .isIn(allowedTypes)
+    .withMessage(`Type must be either ${allowedTypes.join(" or ")}`),
+  body("seriesId")
+    .trim()
+    .if(body("type").equals("Series"))
+    .notEmpty()
+    .withMessage("Series Id is required for type Series"),
+  body("episodeId")
+    .trim()
+    .if(body("type").equals("Series"))
+    .notEmpty()
+    .withMessage("Episode Id is required for type Series"),
+  body("novelId")
+    .trim()
+    .if(body("type").equals("Novel"))
+    .notEmpty()
+    .withMessage("Novel Id is required for type Novel"),
+  body("chapterId")
+    .trim()
+    .if(body("type").equals("Novel"))
+    .notEmpty()
+    .withMessage("Chapter Id is required for type Novel"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res
+        .status(400)
+        .json({ error: errors.array().map((error) => error.msg) });
+    }
+  },
+];
+
 const validateEditCategory = [
   body("title").trim().notEmpty().withMessage("Title of category is required"),
   (req, res, next) => {
@@ -156,6 +196,14 @@ const validateAddChapter = [
   body("name").trim().notEmpty().withMessage("Name of chapter is required"),
   body("chapterNo").trim().notEmpty().withMessage("Chapter no. is required"),
   body("content").trim().notEmpty().withMessage("Content is required"),
+  body("description")
+    .trim()
+    .notEmpty()
+    .withMessage("Description is required")
+    .isLength({ min: 5 })
+    .withMessage("Description must be at least 5 characters long")
+    .isLength({ max: 400 })
+    .withMessage("Description cannot exceed 400 characters"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -217,6 +265,14 @@ const validateAddEpisode = [
     .notEmpty()
     .withMessage("Title of the episode is required"),
   body("content").trim().notEmpty().withMessage("Content is required"),
+  body("description")
+    .trim()
+    .notEmpty()
+    .withMessage("Description is required")
+    .isLength({ min: 5 })
+    .withMessage("Description must be at least 5 characters long")
+    .isLength({ max: 400 })
+    .withMessage("Description cannot exceed 400 characters"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -398,4 +454,5 @@ module.exports = {
   validateRateNovel,
   validateAddAuthor,
   validateIncreaseView,
+  validateAddToHistory
 };

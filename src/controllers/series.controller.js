@@ -20,7 +20,7 @@ const addSeries = async (req, res) => {
   try {
     const { title, category, draftId } = req.body;
     if (draftId) {
-      const draftSeries = await Series.findById({
+      const draftSeries = await Series.findOne({
         _id: draftId,
         status: "Draft",
       });
@@ -29,7 +29,7 @@ const addSeries = async (req, res) => {
         return error409(res, "Series not found in draft");
       }
 
-      const alreadyPublished = await Series.findById({
+      const alreadyPublished = await Series.findOne({
         _id: draftId,
         status: "Published",
       });

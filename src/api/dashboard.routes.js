@@ -21,12 +21,27 @@ router.get(
 );
 
 //[APP] 1st APP page in dashboard
-router.get("/app/main", verifyToken, dashboardController.appDashboard);
+router.get(
+  "/app/main",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  dashboardController.appDashboard
+);
 
 //[APP] Series in dashboard
-router.get("/app-series", verifyToken, dashboardController.dashboardSeries);
+router.get(
+  "/app-series",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  dashboardController.dashboardSeries
+);
 
 //[APP] Novels in dashboard
-router.get("/app-novels", verifyToken, dashboardController.dashboardNovels);
+router.get(
+  "/app-novels",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  dashboardController.dashboardNovels
+);
 
 module.exports = router;

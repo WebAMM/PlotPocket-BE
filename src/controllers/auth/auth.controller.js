@@ -11,22 +11,38 @@ const {
 const { status200, success } = require("../../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../../services/helpers/cloudinary").v2;
+const removeViews = require("../../services/helpers/removeViews");
 //imports
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 //config
 const config = require("../../config");
 const { v4: uuidv4 } = require("uuid");
+const myList = require("../../models/MyList.model");
+const SearchHistory = require("../../models/SearchHistory.model");
+const History = require("../../models/History.model");
+const Category = require("../../models/Category.model");
+const Episode = require("../../models/Episode.model");
+const Chapter = require("../../models/Chapter.model");
+const Series = require("../../models/Series.model");
+const Novel = require("../../models/Novel.model");
+const appendGuestUserRec = require("../../services/helpers/appendGuestRec");
 
 //Register User
 const registerUser = async (req, res) => {
   try {
     const { email, password, userName } = req.body;
+    const { guestId } = req.query;
+
     const existUser = await User.findOne({ email });
     if (existUser) {
       return error409(res, "User already exist");
     }
-    const userData = { userName, email, password };
+    // Hash the password
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(password, salt);
+
+    const userData = { userName, email, password: hashedPassword };
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "image",
@@ -42,9 +58,48 @@ const registerUser = async (req, res) => {
     }
     const newUser = new User(userData);
     await newUser.save();
-    status200(res, "User registered successfully");
+    if (guestId) {
+      const guestUser = await User.findOne({ _id: guestId });
+      if (guestUser) {
+        //If guestUser than append record to new user
+        await History.updateMany(
+          { user: guestUser._id },
+          {
+            $set: {
+              user: newUser._id,
+            },
+          }
+        );
+        await SearchHistory.updateMany(
+          {
+            user: guestUser._id,
+          },
+          {
+            $set: {
+              user: newUser._id,
+            },
+          }
+        );
+        await myList.updateMany(
+          {
+            user: guestUser._id,
+          },
+          {
+            $set: {
+              user: newUser._id,
+            },
+          }
+        );
+        const models = [Category, Series, Novel, Episode, Chapter];
+        for (const model of models) {
+          await appendGuestUserRec(model, guestUser._id, newUser._id);
+        }
+        await User.deleteOne({ _id: guestUser._id });
+      } else return error409(res, "No such guest exist");
+    }
+    return status200(res, "User registered successfully");
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -71,7 +126,7 @@ const loginUser = async (req, res) => {
         },
         secret,
         {
-          expiresIn: "48h",
+          expiresIn: "72h",
         }
       );
       const responseUser = {
@@ -81,17 +136,16 @@ const loginUser = async (req, res) => {
         role: user.role,
         profileImage: user.profileImage.publicUrl,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
       };
       return success(res, "200", "Login success", {
         token,
         user: responseUser,
       });
     } else {
-      customError(res, 401, "Invalid credentials");
+      return customError(res, 401, "Invalid credentials");
     }
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -113,7 +167,6 @@ const loginAdmin = async (req, res) => {
           name: user.userName,
           email: user.email,
           role: user.role,
-          profileImage: user.profileImage.publicUrl,
           createdAt: user.createdAt,
         },
         secret,
@@ -135,33 +188,55 @@ const loginAdmin = async (req, res) => {
         user: responseUser,
       });
     } else {
-      customError(res, 401, "Invalid credentials");
+      return customError(res, 401, "Invalid credentials");
     }
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
 //Guest Login
 const guestLogin = async (req, res) => {
   try {
-    const guestId = uuidv4();
-    const guestName = `Guest_${guestId.slice(0, 8)}`;
+    let guestUserNameId = uuidv4();
+    let guestUserName = `Guest_${guestUserNameId.slice(0, 8)}`;
+
+    const alreadyExistGuest = await User.findOne({ userName: guestUserName });
+
+    if (alreadyExistGuest) {
+      guestUserNameId = uuidv4();
+      guestUserName = `Guest_${guestUserNameId.slice(0, 8)}`;
+    }
+
+    const user = await User.create({
+      userName: guestUserName,
+      role: "Guest",
+      profileImage: {
+        publicUrl:
+          "http://res.cloudinary.com/djio34uft/image/upload/v1722259844/images_lmgsdd.jpg",
+        secureUrl:
+          "https://res.cloudinary.com/djio34uft/image/upload/v1722259844/images_lmgsdd.jpg",
+        publicId: "images_lmgsdd",
+        format: "jpg",
+      },
+    });
 
     const secret = config.jwtPrivateKey;
     const token = jwt.sign(
       {
-        _id: guestId,
-        name: guestName,
-        role: "Guest",
+        _id: user._id,
+        name: user.userName,
+        role: user.role,
+        createdAt: user.createdAt,
       },
       secret
     );
 
     const responseUser = {
-      _id: guestId,
-      userName: guestName,
-      role: "Guest",
+      _id: user._id,
+      userName: user.userName,
+      role: user.role,
+      createdAt: user.createdAt,
     };
 
     return success(res, "200", "Guest login success", {
@@ -169,7 +244,31 @@ const guestLogin = async (req, res) => {
       user: responseUser,
     });
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
+  }
+};
+
+//Guest Logout, Remove the record and views
+const guestLogout = async (req, res) => {
+  try {
+    const existUser = await User.findOne({
+      _id: req.user._id,
+      role: "Guest",
+    });
+
+    if (existUser) {
+      await History.deleteMany({ user: req.user._id });
+      await myList.deleteMany({ user: req.user._id });
+      await SearchHistory.deleteMany({ user: req.user._id });
+      const models = [Category, Series, Novel, Episode, Chapter];
+      for (const model of models) {
+        await removeViews(model, req.user._id);
+      }
+      await User.deleteOne({ _id: req.user._id });
+      return status200(res, "Guest user deleted successfully");
+    } else return error404(res, "User not found");
+  } catch (err) {
+    return error500(res, err);
   }
 };
 
@@ -182,135 +281,13 @@ const getUserProfile = async (req, res) => {
     if (!user) {
       return error404(res, "User not found!");
     }
-    success(res, "200", "User profile", user);
+    return success(res, "200", "User profile", user);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
-//Login with Facebook
-const loginWithFacebook = async (req, res) => {
-  try {
-    const { email, fbId } = req.body;
-    const checkUser = await User.findOne({
-      email: email,
-    });
-    if (checkUser) {
-      checkUser.password = "";
-      const secret = config.jwtPrivateKey;
-      const token = jwt.sign({ _id: checkUser._id }, secret, {
-        expiresIn: "24h",
-      });
-      success(res, "200", "Login success", {
-        token,
-        user: checkUser,
-      });
-    } else {
-      const newUser = await new User({
-        email: email,
-        password: fbId,
-      });
-      newUser.save();
-      const secret = config.jwtPrivateKey;
-      const token = jwt.sign({ _id: newUser._id }, secret, {
-        expiresIn: "24h",
-      });
-      success(res, "200", "Login success", {
-        token,
-        user: newUser,
-      });
-    }
-  } catch (err) {
-    error500(res, err);
-  }
-};
-
-//Login with Instagram
-const loginWithInstagram = async (req, res) => {
-  try {
-    const { email, instaId } = req.body;
-    const checkUser = await User.findOne({
-      email: email,
-    });
-    if (checkUser) {
-      checkUser.password = "";
-      const secret = config.jwtPrivateKey;
-      const token = jwt.sign({ _id: checkUser._id }, secret, {
-        expiresIn: "24h",
-      });
-      success(res, "200", "Login success", {
-        token,
-        user: checkUser,
-      });
-    } else {
-      const newUser = await new User({
-        email: email,
-        password: instaId,
-      });
-      newUser.save();
-      const secret = config.jwtPrivateKey;
-      const token = jwt.sign({ _id: newUser._id }, secret, {
-        expiresIn: "24h",
-      });
-      success(res, "200", "Login Success", {
-        token,
-        user: newUser,
-      });
-    }
-  } catch (err) {
-    error500(res, err);
-  }
-};
-
-//Generate reset password user email and OTP
-const generateResetPasswordEmailWithOTP = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      error404(res, "User not found, make sure you have an account.");
-    } else {
-      // Generate a 6-digit OTP
-      const otp = Math.floor(1000 + Math.random() * 900000);
-      // OTP expiration time in seconds
-      const otpExpirationTime = 15 * 60; // 15 minute multiply by 60 seconds
-      user.resetPassOtp = {
-        code: otp,
-        expiresAt: new Date(Date.now() + otpExpirationTime * 1000),
-      };
-      await user.save();
-      //sending reset password otp email
-      await sendOTPPasswordEmail(email, otp);
-      status200(res);
-    }
-  } catch (err) {
-    error500(res, err);
-  }
-};
-
-//Verify OTP of reset password email
-const verifyResetPasswordOTP = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    //Retrieve the user document from the db
-    const user = await User.findOne({ email });
-    if (
-      !user ||
-      !user.resetPassOtp ||
-      user.resetPassOtp.code !== otp ||
-      user.resetPassOtp.expiresAt < new Date()
-    ) {
-      error404(res, "Invalid OTP or expired!");
-    } else {
-      //clearing the OTP after successful otp verification
-      user.resetPassOtp = null;
-      await user.save();
-      success(res, "200", "OTP verified successfully", true);
-    }
-  } catch (err) {
-    error500(res, err);
-  }
-};
+//
 
 //Update User Password
 const updateUserPassword = async (req, res) => {
@@ -340,6 +317,7 @@ const updateUserPassword = async (req, res) => {
   }
 };
 
+//Get all the user in admin panel
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
@@ -349,6 +327,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+//Inactive/active user status
 const changeUserStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -363,6 +342,7 @@ const changeUserStatus = async (req, res) => {
   }
 };
 
+//Update admin profile
 const updateAdminProfile = async (req, res) => {
   try {
     const userExist = await User.findById(req.user._id);
@@ -380,6 +360,7 @@ const updateAdminProfile = async (req, res) => {
   }
 };
 
+//Update admin profile pic
 const updateAdminProfilePic = async (req, res) => {
   try {
     const userExist = await User.findById(req.user._id);
@@ -428,19 +409,68 @@ const updateAdminProfilePic = async (req, res) => {
   }
 };
 
+//Generate reset password user email and OTP
+// const generateResetPasswordEmailWithOTP = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     const user = await User.findOne({ email: email });
+//     if (!user) {
+//       error404(res, "User not found, make sure you have an account.");
+//     } else {
+//       // Generate a 6-digit OTP
+//       const otp = Math.floor(1000 + Math.random() * 900000);
+//       // OTP expiration time in seconds
+//       const otpExpirationTime = 15 * 60; // 15 minute multiply by 60 seconds
+//       user.resetPassOtp = {
+//         code: otp,
+//         expiresAt: new Date(Date.now() + otpExpirationTime * 1000),
+//       };
+//       await user.save();
+//       //sending reset password otp email
+//       await sendOTPPasswordEmail(email, otp);
+//       status200(res);
+//     }
+//   } catch (err) {
+//     error500(res, err);
+//   }
+// };
+
+// //Verify OTP of reset password email
+// const verifyResetPasswordOTP = async (req, res) => {
+//   try {
+//     const { email, otp } = req.body;
+//     //Retrieve the user document from the db
+//     const user = await User.findOne({ email });
+//     if (
+//       !user ||
+//       !user.resetPassOtp ||
+//       user.resetPassOtp.code !== otp ||
+//       user.resetPassOtp.expiresAt < new Date()
+//     ) {
+//       error404(res, "Invalid OTP or expired!");
+//     } else {
+//       //clearing the OTP after successful otp verification
+//       user.resetPassOtp = null;
+//       await user.save();
+//       success(res, "200", "OTP verified successfully", true);
+//     }
+//   } catch (err) {
+//     error500(res, err);
+//   }
+// };
+
 module.exports = {
   registerUser,
   loginUser,
   loginAdmin,
   guestLogin,
-  generateResetPasswordEmailWithOTP,
-  verifyResetPasswordOTP,
+  guestLogout,
   updateUserPassword,
-  loginWithFacebook,
-  loginWithInstagram,
   getUserProfile,
   getAllUsers,
   changeUserStatus,
   updateAdminProfile,
   updateAdminProfilePic,
+  // generateResetPasswordEmailWithOTP,
+  // verifyResetPasswordOTP,
 };

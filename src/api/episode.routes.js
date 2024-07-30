@@ -17,7 +17,12 @@ router.post(
 );
 
 //[APP] Rate the episode on episode view screen
-router.post("/app/rate/:id", verifyToken, episodeController.rateTheEpisode);
+router.post(
+  "/app/rate/:id",
+  verifyToken,
+  verifyRole(["User"]),
+  episodeController.rateTheEpisode
+);
 
 //[ADMIN] Series episodes
 router.get(
@@ -28,7 +33,12 @@ router.get(
 );
 
 //[APP] All episode of series (id represents series id)
-router.get("/app/all/:id", verifyToken, episodeController.allEpisodeOfSeries);
+router.get(
+  "/app/all/:id",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  episodeController.allEpisodeOfSeries
+);
 
 //[ADMIN] Delete episode based on series
 router.delete(

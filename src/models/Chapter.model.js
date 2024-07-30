@@ -11,6 +11,9 @@ const chapterSchema = new mongoose.Schema(
       type: String,
       required: [true, "Name is required"],
     },
+    description: {
+      type: String,
+    },
     chapterNo: {
       type: Number,
       required: [true, "Chapter no is required"],

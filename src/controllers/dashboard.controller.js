@@ -143,6 +143,11 @@ const appDashboard = async (req, res) => {
       })
       .sort({ createdAt: -1 })
       .limit(10);
+
+    const topHighlight = [...series, ...novels].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
     //Featured novel and series [Based on more views]
     const featuredSeries = await Series.find({
       ...query,
@@ -168,50 +173,52 @@ const appDashboard = async (req, res) => {
       })
       .sort({ totalViews: -1 })
       .limit(10);
+
+    const featured = [...featuredSeries, ...featuredNovels].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
     //Series + novels history based on logged in user
-    let watchedSeriesNovels;
-    if (req.user.role === "User") {
-      watchedSeriesNovels = await History.find({
-        user: req.user._id,
+    let history = await History.find({
+      user: req.user._id,
+    })
+      .populate({
+        path: "series",
+        select: "thumbnail.publicUrl type totalViews",
+        populate: [
+          {
+            path: "category",
+            select: "title",
+          },
+          {
+            path: "episodes",
+            select:
+              "episodeVideo.publicUrl title content visibility description",
+            options: { sort: { createdAt: 1 }, limit: 5 },
+          },
+        ],
       })
-        .populate({
-          path: "series",
-          select: "thumbnail.publicUrl type totalViews",
-          populate: [
-            {
-              path: "category",
-              select: "title",
-            },
-            {
-              path: "episodes",
-              select:
-                "episodeVideo.publicUrl title content visibility description",
-              options: { sort: { createdAt: 1 }, limit: 5 },
-            },
-          ],
-        })
-        .populate({
-          path: "novel",
-          select: "thumbnail.publicUrl title type totalViews",
-          populate: [
-            {
-              path: "category",
-              select: "title",
-            },
-            {
-              path: "chapters",
-              select: "chapterPdf.publicUrl name chapterNo content totalViews",
-              options: { sort: { createdAt: 1 }, limit: 5 },
-            },
-            {
-              path: "author",
-              select: "name",
-            },
-          ],
-        })
-        .sort({ createdAt: -1 })
-        .limit(10);
-    }
+      .populate({
+        path: "novel",
+        select: "thumbnail.publicUrl title type totalViews",
+        populate: [
+          {
+            path: "category",
+            select: "title",
+          },
+          {
+            path: "chapters",
+            select: "chapterPdf.publicUrl name chapterNo content totalViews",
+            options: { sort: { createdAt: 1 }, limit: 5 },
+          },
+          {
+            path: "author",
+            select: "name",
+          },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
     //Latest released novel and series [Based on latest created]
     const latestSeries = await Series.find(query)
       .select("thumbnail.publicUrl title type totalViews")
@@ -248,6 +255,11 @@ const appDashboard = async (req, res) => {
       })
       .sort({ createdAt: -1 })
       .limit(10);
+
+    const latest = [...latestSeries, ...latestNovels].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
     //Top Ranked [Based on ratings and reviews]
     const topRankedSeries = await Series.find({
       ...query,
@@ -297,17 +309,18 @@ const appDashboard = async (req, res) => {
         averageRating: -1,
       })
       .limit(10);
+
+    const topRanked = [...topRankedSeries, ...topRankedNovels].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
     //All record in response
     const data = {
-      series,
-      novels,
-      featuredSeries,
-      featuredNovels,
-      watchedSeriesNovels,
-      latestNovels,
-      latestSeries,
-      topRankedSeries,
-      topRankedNovels,
+      topHighlight,
+      featured,
+      history,
+      latest,
+      topRanked,
     };
     return success(res, "200", "Success", data);
   } catch (err) {
@@ -347,8 +360,8 @@ const dashboardSeries = async (req, res) => {
     };
   }
   try {
-    //Latest series
-    const series = await Series.find(query)
+    //TopHighlight series
+    const topHighlight = await Series.find(query)
       .select("thumbnail.publicUrl title type")
       .populate({
         path: "episodes",
@@ -358,7 +371,7 @@ const dashboardSeries = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(10);
     //Best series
-    const bestSeries = await Series.find({
+    const best = await Series.find({
       ...query,
       totalViews: { $gt: 500 },
     })
@@ -371,7 +384,7 @@ const dashboardSeries = async (req, res) => {
       .sort({ totalViews: -1 })
       .limit(10);
     //Top series
-    const topSeries = await Series.find({
+    const top = await Series.find({
       ...query,
       totalViews: { $gt: 0, $lte: 500 },
     })
@@ -393,7 +406,7 @@ const dashboardSeries = async (req, res) => {
       .sort({ totalViews: -1 })
       .limit(10);
     //Top Ranked [Based on ratings and reviews]
-    const topRankedSeries = await Series.find({
+    const topRanked = await Series.find({
       ...query,
       ...topRankQuery,
       seriesRating: { $gte: 1 },
@@ -419,10 +432,10 @@ const dashboardSeries = async (req, res) => {
       .limit(10);
     //All record in response
     const data = {
-      series,
-      bestSeries,
-      topSeries,
-      topRankedSeries,
+      topHighlight,
+      best,
+      top,
+      topRanked,
     };
     return success(res, "200", "Success", data);
   } catch (err) {
@@ -462,8 +475,8 @@ const dashboardNovels = async (req, res) => {
     };
   }
   try {
-    //Latest novels
-    const novels = await Novel.find(query)
+    //TopHighlight novels
+    const topHighlight = await Novel.find(query)
       .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
@@ -476,7 +489,7 @@ const dashboardNovels = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(10);
     //Best novels
-    const bestNovels = await Novel.find({
+    const best = await Novel.find({
       ...query,
       totalViews: { $gt: 500 },
     })
@@ -489,7 +502,7 @@ const dashboardNovels = async (req, res) => {
       .sort({ totalViews: -1 })
       .limit(10);
     //Top novels
-    const topNovels = await Novel.find({
+    const top = await Novel.find({
       ...query,
       totalViews: { $gt: 0, $lte: 500 },
     })
@@ -511,7 +524,7 @@ const dashboardNovels = async (req, res) => {
       .sort({ totalViews: -1 })
       .limit(10);
     //Top ranked novels
-    const topRankedNovels = await Novel.find({
+    const topRanked = await Novel.find({
       ...query,
       ...topRankQuery,
       averageRating: { $gte: 1 },
@@ -536,10 +549,10 @@ const dashboardNovels = async (req, res) => {
       .limit(10);
     //All record in response
     const data = {
-      novels,
-      bestNovels,
-      topNovels,
-      topRankedNovels,
+      topHighlight,
+      best,
+      top,
+      topRanked,
     };
     success(res, "200", "Success", data);
   } catch (err) {
