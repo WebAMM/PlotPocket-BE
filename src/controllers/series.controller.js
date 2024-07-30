@@ -634,7 +634,7 @@ const getTopRatedSeries = async (req, res) => {
 
 //All series by type
 const getDetailSeriesByType = async (req, res) => {
-  const { type, category, latest, day, page = 1, pageSize = 10 } = req.query;
+  const { type, category, day, page = 1, pageSize = 10 } = req.query;
   const validTypes = ["Best", "Top", "TopRanked"];
   if (!validTypes.includes(type)) {
     return error400(
@@ -758,10 +758,6 @@ const getDetailSeriesByType = async (req, res) => {
       let sortOptions = {
         seriesRating: -1,
       };
-
-      if (latest) {
-        sortOptions.createdAt = -1;
-      }
 
       if (category) {
         const existCategory = await Category.findById(category);
