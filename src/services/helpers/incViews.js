@@ -38,7 +38,10 @@ const updateViews = async (model, id, userId) => {
 };
 
 const updateCategoryViews = async (categoryId, userId) => {
-  const category = await Category.findById(categoryId);
+  const category = await Category.findOne({
+    _id: categoryId,
+    status: "Active",
+  });
   if (category) {
     const alreadyViewedCategory = category.views.find(
       (viewRec) => viewRec.user == userId
@@ -69,7 +72,7 @@ const updateCategoryViews = async (categoryId, userId) => {
         { runValidators: true }
       );
     }
-  }
+  } else return;
 };
 
 module.exports = { updateViews, updateCategoryViews };
