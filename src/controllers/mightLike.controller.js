@@ -1,12 +1,10 @@
 //Models
 const Novel = require("../models/Novel.model");
-const Episode = require("../models/Episode.model");
 const Series = require("../models/Series.model");
 const History = require("../models/History.model");
 //Responses and errors
 const { error500 } = require("../services/helpers/errors");
 const { success } = require("../services/helpers/response");
-const mongoose = require("mongoose");
 
 //Get User based like
 // const mightLike = async (req, res) => {

@@ -13,6 +13,7 @@ const {
   error400,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
+//helpers and functions
 const {
   updateViews,
   updateCategoryViews,
@@ -302,7 +303,7 @@ const combinedSeriesNovels = async (req, res) => {
         status: "Published",
         visibility: "Public",
       };
-      //Filtering based on Category
+      //Filtering based on category
       if (category) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {

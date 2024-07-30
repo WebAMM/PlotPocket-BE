@@ -1,5 +1,13 @@
 //Models
 const User = require("../../models/User.model");
+const myList = require("../../models/MyList.model");
+const SearchHistory = require("../../models/SearchHistory.model");
+const History = require("../../models/History.model");
+const Category = require("../../models/Category.model");
+const Episode = require("../../models/Episode.model");
+const Chapter = require("../../models/Chapter.model");
+const Series = require("../../models/Series.model");
+const Novel = require("../../models/Novel.model");
 //Responses and errors
 const {
   error500,
@@ -18,14 +26,7 @@ const jwt = require("jsonwebtoken");
 //config
 const config = require("../../config");
 const { v4: uuidv4 } = require("uuid");
-const myList = require("../../models/MyList.model");
-const SearchHistory = require("../../models/SearchHistory.model");
-const History = require("../../models/History.model");
-const Category = require("../../models/Category.model");
-const Episode = require("../../models/Episode.model");
-const Chapter = require("../../models/Chapter.model");
-const Series = require("../../models/Series.model");
-const Novel = require("../../models/Novel.model");
+
 const appendGuestUserRec = require("../../services/helpers/appendGuestRec");
 
 //Register User
