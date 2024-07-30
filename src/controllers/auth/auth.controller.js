@@ -122,7 +122,6 @@ const loginUser = async (req, res) => {
           name: user.userName,
           email: user.email,
           role: user.role,
-          profileImage: user.profileImage.publicUrl,
           createdAt: user.createdAt,
         },
         secret,
@@ -172,7 +171,7 @@ const loginAdmin = async (req, res) => {
         },
         secret,
         {
-          expiresIn: "48h",
+          expiresIn: "72h",
         }
       );
       const responseUser = {
@@ -182,7 +181,6 @@ const loginAdmin = async (req, res) => {
         role: user.role,
         profileImage: user.profileImage.publicUrl,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
       };
       return success(res, "200", "Login success", {
         token,
@@ -287,8 +285,6 @@ const getUserProfile = async (req, res) => {
     return error500(res, err);
   }
 };
-
-//
 
 //Update User Password
 const updateUserPassword = async (req, res) => {
