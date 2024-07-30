@@ -20,26 +20,26 @@ const getAllSearchHistory = async (req, res) => {
         {
           path: "series",
           select: "thumbnail.publicUrl type views title description",
-          populate: {
-            path: "episodes",
-            select:
-              "episodeVideo.publicUrl title content visibility description",
-            options: { sort: { createdAt: 1 }, limit: 1 },
-          },
+          // populate: {
+          //   path: "episodes",
+          //   select:
+          //     "episodeVideo.publicUrl title content visibility description",
+          //   options: { sort: { createdAt: 1 }, limit: 1 },
+          // },
         },
         {
           path: "novel",
           select: "thumbnail.publicUrl type views title description",
-          populate: {
-            path: "chapters",
-            select: "chapterPdf.publicUrl name chapterNo content views",
-            options: {
-              sort: {
-                createdAt: 1,
-              },
-              limit: 1,
-            },
-          },
+          // populate: {
+          //   path: "chapters",
+          //   select: "chapterPdf.publicUrl name chapterNo content views",
+          //   options: {
+          //     sort: {
+          //       createdAt: 1,
+          //     },
+          //     limit: 1,
+          //   },
+          // },
         },
       ]);
 

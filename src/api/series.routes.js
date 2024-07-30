@@ -54,6 +54,7 @@ router.delete(
 //[APP] Get episodes of series
 router.get(
   "/app/all-episodes/:id",
+  verifyRole(["User", "Guest"]),
   verifyToken,
   seriesController.getAllEpisodeOfSeries
 );
@@ -68,20 +69,35 @@ router.get(
 
 //Detailed pages of Dashboard
 //[APP] Get all best series
-router.get("/app/best", verifyToken, seriesController.bestSeries);
+router.get(
+  "/app/best",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  seriesController.bestSeries
+);
 
 //[APP] Get all top series
-router.get("/app/top", verifyToken, seriesController.topSeries);
+router.get(
+  "/app/top",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  seriesController.topSeries
+);
 
 //[APP] Get all top rated series
-router.get("/app/top-rated", verifyToken, seriesController.getTopRatedSeries);
+router.get(
+  "/app/top-rated",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  seriesController.getTopRatedSeries
+);
 
 //[APP] Get paginationated series by type
 router.get(
   "/app/all/by-type",
   verifyToken,
+  verifyRole(["User", "Guest"]),
   seriesController.getDetailSeriesByType
 );
-
 
 module.exports = router;

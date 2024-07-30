@@ -40,9 +40,19 @@ router.patch(
 );
 
 //[APP] Rewards for app
-router.get("/app/all", verifyToken, rewardController.getRewardsForUser);
+router.get(
+  "/app/all",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  rewardController.getRewardsForUser
+);
 
 //[APP] Update Reward
-router.post("/app/claim", verifyToken, rewardController.claimReward);
+router.post(
+  "/app/claim",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  rewardController.claimReward
+);
 
 module.exports = router;

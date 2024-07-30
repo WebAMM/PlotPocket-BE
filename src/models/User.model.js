@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const bcryptjs = require("bcryptjs");
 const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
@@ -9,15 +8,15 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, "Please enter your email"],
-      unique: true,
-      validate: [validator.isEmail, "Please enter a valid email"],
+      // required: [true, "Please enter your email"],
+      // unique: true,
+      // validate: [validator.isEmail, "Please enter a valid email"],
     },
     password: {
       type: String,
-      required: [true, "Please enter your password"],
-      minlength: [6, "Password must be at least 6 characters long"],
-      maxlength: [25, "Password can have a maximum length of 25 characters"],
+      // required: [true, "Please enter your password"],
+      // minlength: [6, "Password must be at least 6 characters long"],
+      // maxlength: [25, "Password can have a maximum length of 25 characters"],
     },
     status: {
       type: String,
@@ -42,6 +41,11 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
+    },
+    role: {
+      type: String,
+      enum: ["Admin", "User", "Guest"],
+      required: [true, "Please provide role"],
     },
     //For admin:
     firstName: {
@@ -71,27 +75,11 @@ const userSchema = new mongoose.Schema(
     zipCode: {
       type: String,
     },
-    role: {
-      type: String,
-      enum: ["Admin", "User", "Guest"],
-    },
   },
   {
     timestamps: true,
   }
 );
-
-//Password hash
-userSchema.pre("save", async function save(next) {
-  if (!this.isModified("password")) return next();
-  try {
-    const salt = 10;
-    this.password = bcryptjs.hashSync(this.password, salt);
-    return next();
-  } catch (err) {
-    return next(err);
-  }
-});
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;

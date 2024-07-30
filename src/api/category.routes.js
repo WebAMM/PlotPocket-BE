@@ -18,7 +18,7 @@ router.post(
 router.get(
   "/app/all",
   verifyToken,
-  verifyRole(["User"]),
+  verifyRole(["User", "Guest"]),
   categoryController.getAllCategories
 );
 
@@ -26,7 +26,7 @@ router.get(
 router.get(
   "/app/by-type",
   verifyToken,
-  verifyRole(["User"]),
+  verifyRole(["User", "Guest"]),
   categoryController.getCategoriesByType
 );
 
@@ -72,9 +72,9 @@ router.patch(
 );
 
 //[APP] Get all categories
-router.get("/all", verifyToken, categoryController.getAllCategories);
+// router.get("/all", verifyToken, categoryController.getAllCategories);
 
-//[APP] Get category by type
-router.get("/by-type", verifyToken, categoryController.getCategoriesByType);
+// //[APP] Get category by type
+// router.get("/by-type", verifyToken, categoryController.getCategoriesByType);
 
 module.exports = router;

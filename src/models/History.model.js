@@ -15,6 +15,14 @@ const HistorySchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "Novel",
     },
+    episode: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Episode",
+    },
+    chapter: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Chapter",
+    },
   },
   {
     timestamps: true,

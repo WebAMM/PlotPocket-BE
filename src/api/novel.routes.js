@@ -55,6 +55,7 @@ router.get(
 router.get(
   "/app/all-chapters/:id",
   verifyToken,
+  verifyRole(["User", "Guest"]),
   novelController.getAllChaptersOfNovel
 );
 
@@ -70,12 +71,18 @@ router.get(
 router.post(
   "/app/rate/:id",
   verifyToken,
+  verifyRole(["User"]),
   payloadValidator.validateRateNovel,
   novelController.rateNovel
 );
 
 //[APP] Like the user comment on novel
-router.post("/app/like", verifyToken, novelController.likeCommentOnNovel);
+router.post(
+  "/app/like",
+  verifyToken,
+  verifyRole(["User"]),
+  novelController.likeCommentOnNovel
+);
 
 //[ADMIN] Get all reviews of novels
 router.get(
@@ -95,18 +102,34 @@ router.get(
 
 //Detailed pages of Dashboard
 //[APP] Get all best novels
-router.get("/app/best", verifyToken, novelController.bestNovels);
+router.get(
+  "/app/best",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  novelController.bestNovels
+);
 
 //[APP] Get all top novels
-router.get("/app/top", verifyToken, novelController.topNovels);
+router.get(
+  "/app/top",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  novelController.topNovels
+);
 
 //[APP] Get all top ranked novels
-router.get("/app/top-ranked", verifyToken, novelController.getTopRatedNovels);
+router.get(
+  "/app/top-ranked",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  novelController.getTopRatedNovels
+);
 
 //[APP] Get paginationated novels by type
 router.get(
   "/app/all/by-type",
   verifyToken,
+  verifyRole(["User", "Guest"]),
   novelController.getDetailNovelByType
 );
 

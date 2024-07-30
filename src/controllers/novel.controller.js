@@ -21,7 +21,7 @@ const addNovel = async (req, res) => {
   try {
     const { title, category, author, draftId } = req.body;
     if (draftId) {
-      const draftNovel = await Novel.findById({
+      const draftNovel = await Novel.findOne({
         _id: draftId,
         status: "Draft",
       });
@@ -446,9 +446,7 @@ const rateNovel = async (req, res) => {
 const likeCommentOnNovel = async (req, res) => {
   const { novelId, reviewId } = req.body;
   try {
-    const novel = await Novel.findById({
-      _id: novelId,
-    });
+    const novel = await Novel.findById(novelId);
     if (!novel) {
       return error404(res, "Novel not found");
     }

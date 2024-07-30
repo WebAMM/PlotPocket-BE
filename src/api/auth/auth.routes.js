@@ -2,7 +2,10 @@ const router = require("express").Router();
 //controller
 const authController = require("../../controllers/auth/auth.controller");
 //middlewares
-const { verifyToken } = require("../../middlewares/auth.middleware");
+const {
+  verifyToken,
+  verifyRole,
+} = require("../../middlewares/auth.middleware");
 const payloadValidator = require("../../middlewares/payloadValidator");
 const { upload } = require("../../services/helpers/fileHelper");
 
@@ -27,10 +30,19 @@ router.post(
 //Login Guest
 router.post("/guest-login", authController.guestLogin);
 
+//Logout Guest
+router.post(
+  "/guest-logout",
+  verifyToken,
+  verifyRole(["Guest"]),
+  authController.guestLogout
+);
+
 //Admin updates password
 router.put(
   "/admin/update-password",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateUpdatePassword,
   authController.updateUserPassword
 );
@@ -39,6 +51,7 @@ router.put(
 router.put(
   "/admin/update-profile",
   verifyToken,
+  verifyRole(["Admin"]),
   payloadValidator.validateAdminUpdateProfile,
   authController.updateAdminProfile
 );
@@ -47,29 +60,24 @@ router.put(
 router.put(
   "/admin/update-pic",
   verifyToken,
+  verifyRole(["Admin"]),
   upload.single("profilePic"),
   authController.updateAdminProfilePic
 );
-
-//Login with facebook
-router.post("/login/facebook", authController.loginWithFacebook);
-
-//Login with instagram
-router.post("/login/instagram", authController.loginWithInstagram);
 
 //Get User Profile
 router.get("/profile", verifyToken, authController.getUserProfile);
 
 //generate reset password email and OTP
-router.post(
-  "/reset-password/email",
-  authController.generateResetPasswordEmailWithOTP
-);
+// router.post(
+//   "/reset-password/email",
+//   authController.generateResetPasswordEmailWithOTP
+// );
 
 //Verify otp of reset password email
-router.post(
-  "/reset-password/otp/verify",
-  authController.verifyResetPasswordOTP
-);
+// router.post(
+//   "/reset-password/otp/verify",
+//   authController.verifyResetPasswordOTP
+// );
 
 module.exports = router;
