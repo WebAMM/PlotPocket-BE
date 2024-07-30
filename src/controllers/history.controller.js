@@ -65,7 +65,7 @@ const allHistory = async (req, res) => {
     const userHistory = await History.find({
       user: req.user._id,
     })
-      .select("_id user createdAt")
+      .select("_id createdAt")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -76,7 +76,7 @@ const allHistory = async (req, res) => {
         },
         {
           path: "episode",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select: "episodeVideo.publicUrl title content visibility description createdAt",
         },
         {
           path: "novel",
@@ -84,7 +84,7 @@ const allHistory = async (req, res) => {
         },
         {
           path: "chapter",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews description",
+          select: "chapterPdf.publicUrl name chapterNo content totalViews description createdAt",
         },
       ]);
 

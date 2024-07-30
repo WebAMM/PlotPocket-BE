@@ -29,7 +29,7 @@ const addEpisodeToList = async (req, res) => {
         user: req.user._id,
       });
       if (alreadyExist) {
-        await MyLink.deleteOne({
+        await MyList.deleteOne({
           _id: alreadyExist._id,
         });
         return status200(res, "Episode removed from list");
@@ -48,7 +48,7 @@ const addEpisodeToList = async (req, res) => {
         user: req.user._id,
       });
       if (alreadyExist) {
-        await MyLink.deleteOne({
+        await MyList.deleteOne({
           _id: alreadyExist._id,
         });
         return status200(res, "Chapter removed from list");

@@ -4,6 +4,8 @@ const Series = require("../models/Series.model");
 const Episode = require("../models/Episode.model");
 const Chapter = require("../models/Chapter.model");
 const Category = require("../models/Category.model");
+const History = require("../models/History.model");
+
 //Responses and errors
 const {
   error500,
@@ -100,7 +102,6 @@ const increaseView = async (req, res) => {
 const singleDetailPage = async (req, res) => {
   const { id } = req.params;
   const { type } = req.query;
-
   let content;
   let mightLike;
 
@@ -192,10 +193,6 @@ const singleDetailPage = async (req, res) => {
           select: "name",
         });
     } else if (type === "Series") {
-      const totalEpisode = await Episode.find({
-        series: id,
-      }).countDocuments();
-
       content = await Series.findById(id)
         .select("thumbnail.publicUrl title description")
         .populate([
@@ -211,11 +208,22 @@ const singleDetailPage = async (req, res) => {
               sort: {
                 createdAt: 1,
               },
+              limit: 5,
             },
           },
         ])
         .lean();
+
+      if (!content) {
+        return error404(res, "Series not found");
+      }
+
+      const totalEpisode = await Episode.find({
+        series: id,
+      }).countDocuments();
+
       content = { ...content, totalEpisode };
+
       //For Might like
       const history = await History.find({ user: req.user._id }).populate(
         "series"
