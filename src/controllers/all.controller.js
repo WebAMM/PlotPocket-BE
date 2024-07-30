@@ -352,9 +352,11 @@ const combinedSeriesNovels = async (req, res) => {
       //Sorting Options
       let sortSeriesOptions = {
         seriesRating: -1,
+        createdAt: -1,
       };
       let sortNovelOptions = {
         averageRating: -1,
+        createdAt: -1,
       };
       //Filtering based on Day
       if (day) {
@@ -371,10 +373,10 @@ const combinedSeriesNovels = async (req, res) => {
         };
       }
       //New
-      if (latest) {
-        sortSeriesOptions.createdAt = -1;
-        sortNovelOptions.createdAt = -1;
-      }
+      // if (latest) {
+      //   sortSeriesOptions.createdAt = -1;
+      //   sortNovelOptions.createdAt = -1;
+      // }
       //Filtering based on Category
       if (category) {
         const existCategory = await Category.findById(category);
