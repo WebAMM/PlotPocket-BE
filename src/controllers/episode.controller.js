@@ -122,37 +122,53 @@ const allEpisodeOfSeries = async (req, res) => {
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
-    const allEpisodesOfSeries = await Episode.aggregate([
-      {
-        $match: {
-          series: new mongoose.Types.ObjectId(id),
-        },
-      },
-      {
-        $addFields: {
-          totalRating: {
-            $sum: "$ratings.rating",
-          },
-        },
-      },
-      {
-        $project: {
-          "episodeVideo.publicUrl": 1,
-          title: 1,
-          description: 1,
-          content: 1,
-          visibility: 1,
-          totalViews: 1,
-          totalRating: 1,
-          createdAt: 1,
-        },
-      },
-    ]);
-
+    const allEpisodesOfSeries = await Episode.find({
+      series: id,
+    })
+      .select("episodeVideo.publicUrl title _id totalViews")
+      .populate({
+        path: "series",
+        select: "thumbnail.publicUrl _id",
+      });
     success(res, "200", "Success", allEpisodesOfSeries);
   } catch (err) {
     error500(res, err);
   }
+  // try {
+  //   const seriesExist = await Series.findById(id);
+  //   if (!seriesExist) {
+  //     return error409(res, "Series not found");
+  //   }
+  //   const allEpisodesOfSeries = await Episode.aggregate([
+  //     {
+  //       $match: {
+  //         series: new mongoose.Types.ObjectId(id),
+  //       },
+  //     },
+  //     {
+  //       $addFields: {
+  //         totalRating: {
+  //           $sum: "$ratings.rating",
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         "episodeVideo.publicUrl": 1,
+  //         title: 1,
+  //         description: 1,
+  //         content: 1,
+  //         visibility: 1,
+  //         totalViews: 1,
+  //         totalRating: 1,
+  //         createdAt: 1,
+  //       },
+  //     },
+  //   ]);
+  //   success(res, "200", "Success", allEpisodesOfSeries);
+  // } catch (err) {
+  //   error500(res, err);
+  // }
 };
 
 // All episodes of series in admin panel
@@ -166,7 +182,9 @@ const episodesOfSeries = async (req, res) => {
     const allEpisodesOfSeries = await Episode.find({
       series: id,
     })
-      .select("episodeVideo.publicUrl totalViews createdAt content title description")
+      .select(
+        "episodeVideo.publicUrl totalViews createdAt content title description"
+      )
       .populate({
         path: "series",
         select: "thumbnail.publicUrl",
