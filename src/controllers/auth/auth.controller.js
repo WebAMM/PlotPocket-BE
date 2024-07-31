@@ -212,11 +212,11 @@ const guestLogin = async (req, res) => {
       role: "Guest",
       profileImage: {
         publicUrl:
-          "http://res.cloudinary.com/djio34uft/image/upload/v1722259844/images_lmgsdd.jpg",
+          "http://res.cloudinary.com/djio34uft/image/upload/v1722418079/guest_vxx3uh.png",
         secureUrl:
-          "https://res.cloudinary.com/djio34uft/image/upload/v1722259844/images_lmgsdd.jpg",
-        publicId: "images_lmgsdd",
-        format: "jpg",
+          "https://res.cloudinary.com/djio34uft/image/upload/v1722418079/guest_vxx3uh.png",
+        publicId: "guest_vxx3uh",
+        format: "png",
       },
     });
 
