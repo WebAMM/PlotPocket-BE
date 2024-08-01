@@ -13,6 +13,9 @@ const episodeSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    price: {
+      type: Number,
+    },
     //Cloudinary video links.
     episodeVideo: {
       publicUrl: {

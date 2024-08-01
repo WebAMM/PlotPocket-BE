@@ -288,7 +288,7 @@ const getAllEpisodeOfSeries = async (req, res) => {
       series: id,
     })
       .select(
-        "episodeVideo.publicUrl totalViews createdAt content title description"
+        "episodeVideo.publicUrl totalViews createdAt content title description price"
       )
       .populate({
         path: "series",
@@ -441,12 +441,12 @@ const bestSeries = async (req, res) => {
       .limit(limit)
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select: "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -502,12 +502,12 @@ const topSeries = async (req, res) => {
       .limit(limit)
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select: "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -584,12 +584,12 @@ const getTopRatedSeries = async (req, res) => {
       .select("thumbnail.publicUrl title view type seriesRating")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select: "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -655,12 +655,12 @@ const getDetailSeriesByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select: "episodeVideo.publicUrl title content visibility description price",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            // limit: 5,
           },
         })
         .populate({
@@ -707,12 +707,12 @@ const getDetailSeriesByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select: "episodeVideo.publicUrl title content visibility description price",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            // limit: 5,
           },
         })
         .populate({
@@ -785,12 +785,12 @@ const getDetailSeriesByType = async (req, res) => {
         .select("thumbnail.publicUrl title view type seriesRating")
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select: "episodeVideo.publicUrl title content visibility description price",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            // limit: 5,
           },
         })
         .populate({

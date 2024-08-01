@@ -1,5 +1,8 @@
 //Models
-const SearchHistorySchema = require("../models/SearchHistory.model");
+const Novel = require("../models/Novel.model");
+const SearchHistory = require("../models/SearchHistory.model");
+const Series = require("../models/Series.model");
+
 //Responses and errors
 const {
   error500,
@@ -9,41 +12,68 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 
-// Get All Categories
+// Get All SearchHistory
 const getAllSearchHistory = async (req, res) => {
   try {
-    const searchHistory = await SearchHistorySchema.find({
+    const searchHistoryRecords = await SearchHistory.find({
       user: req.user._id,
     })
       .sort({ createdAt: -1 })
       .populate([
         {
           path: "series",
-          select: "thumbnail.publicUrl type views title description",
-          // populate: {
-          //   path: "episodes",
-          //   select:
-          //     "episodeVideo.publicUrl title content visibility description",
-          //   options: { sort: { createdAt: 1 }, limit: 1 },
-          // },
+          select: "thumbnail.publicUrl type title description",
         },
         {
           path: "novel",
-          select: "thumbnail.publicUrl type views title description",
-          // populate: {
-          //   path: "chapters",
-          //   select: "chapterPdf.publicUrl name chapterNo content views",
-          //   options: {
-          //     sort: {
-          //       createdAt: 1,
-          //     },
-          //     limit: 1,
-          //   },
-          // },
+          select: "thumbnail.publicUrl type title description",
         },
       ]);
 
-    return success(res, "200", "All search history", searchHistory);
+    const searchHistory = searchHistoryRecords.map((record) => ({
+      _id: record._id,
+      title: record.series ? record.series.title : record.novel.title,
+    }));
+
+    const series = await Series.find({
+      status: "Published",
+      visibility: "Public",
+      seriesRating: { $gte: 1 },
+    })
+      .select("thumbnail.publicUrl title view type seriesRating")
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort({
+        seriesRating: -1,
+        createdAt: -1,
+      })
+      .limit(5);
+
+    const novels = await Novel.find({
+      status: "Published",
+      visibility: "Public",
+      averageRating: { $gte: 1 },
+    })
+      .select("thumbnail.publicUrl averageRating type title averageRating")
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .sort({
+        averageRating: -1,
+        createdAt: -1,
+      });
+
+    const mostPopular = [...series, ...novels];
+
+    const data = {
+      searchHistory,
+      mostPopular,
+    };
+
+    return success(res, "200", "All search history", data);
   } catch (err) {
     return error500(res, err);
   }
@@ -53,11 +83,11 @@ const getAllSearchHistory = async (req, res) => {
 const removeSearchHistory = async (req, res) => {
   const { id } = req.params;
   try {
-    const searchHistory = await SearchHistorySchema.findById(id);
+    const searchHistory = await SearchHistory.findById(id);
     if (!searchHistory) {
       return error404(res, "Search history not found");
     }
-    await SearchHistorySchema.deleteOne({ _id: id });
+    await SearchHistory.deleteOne({ _id: id });
     return status200(res, "Search history removed successfully");
   } catch (err) {
     return error500(res, err);

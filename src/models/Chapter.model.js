@@ -14,6 +14,9 @@ const chapterSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    price: {
+      type: Number,
+    },
     chapterNo: {
       type: Number,
       required: [true, "Chapter no is required"],

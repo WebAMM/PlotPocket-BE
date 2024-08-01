@@ -22,20 +22,21 @@ router.get(
   categoryController.getAllCategories
 );
 
-//[APP] Get categories by type
-router.get(
-  "/app/by-type",
-  verifyToken,
-  verifyRole(["User", "Guest"]),
-  categoryController.getCategoriesByType
-);
-
 //[ADMIN] Get all categories
 router.get(
   "/admin/all",
   verifyToken,
   verifyRole(["Admin"]),
   categoryController.getAllCategories
+);
+
+
+//[APP] Get categories by type
+router.get(
+  "/app/by-type",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  categoryController.getCategoriesByType
 );
 
 //[ADMIN] Get category by type
@@ -71,10 +72,5 @@ router.patch(
   categoryController.changeCategoryStatus
 );
 
-//[APP] Get all categories
-// router.get("/all", verifyToken, categoryController.getAllCategories);
-
-// //[APP] Get category by type
-// router.get("/by-type", verifyToken, categoryController.getCategoriesByType);
 
 module.exports = router;

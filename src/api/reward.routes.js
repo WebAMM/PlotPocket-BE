@@ -31,7 +31,7 @@ router.put(
   rewardController.editReward
 );
 
-//[ADMIN] Update Reward
+//[ADMIN] Update Reward Status
 router.patch(
   "/admin/update-status",
   verifyToken,
@@ -39,11 +39,11 @@ router.patch(
   rewardController.editRewardStatus
 );
 
-//[APP] Rewards for app
+//[APP] Check in steak of each user
 router.get(
-  "/app/all",
+  "/app/steak",
   verifyToken,
-  verifyRole(["User", "Guest"]),
+  verifyRole(["User"]),
   rewardController.getRewardsForUser
 );
 
@@ -51,7 +51,7 @@ router.get(
 router.post(
   "/app/claim",
   verifyToken,
-  verifyRole(["User", "Guest"]),
+  verifyRole(["User"]),
   rewardController.claimReward
 );
 

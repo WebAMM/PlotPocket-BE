@@ -135,7 +135,7 @@ const allEpisodeOfSeries = async (req, res) => {
       series: id,
     })
       .select(
-        "episodeVideo.publicUrl title _id totalViews content series createdAt description"
+        "episodeVideo.publicUrl title _id totalViews content series createdAt description price"
       )
       .populate({
         path: "series",
@@ -205,7 +205,7 @@ const episodesOfSeries = async (req, res) => {
       series: id,
     })
       .select(
-        "episodeVideo.publicUrl totalViews createdAt content title description"
+        "episodeVideo.publicUrl totalViews createdAt content title description price"
       )
       .populate({
         path: "series",

@@ -236,7 +236,7 @@ const getAllChaptersOfNovel = async (req, res) => {
       novel: id,
     })
       .select(
-        "chapterPdf.publicUrl totalViews createdAt content name chapterNo description"
+        "chapterPdf.publicUrl totalViews createdAt content name chapterNo description price"
       )
       .populate({
         path: "novel",
@@ -673,8 +673,11 @@ const bestNovels = async (req, res) => {
       .limit(limit)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       });
 
     //To handle infinite scroll on frontend
@@ -727,8 +730,11 @@ const topNovels = async (req, res) => {
       .limit(limit)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       });
 
     const hasMore = skip + limit < totalNovelsCount;
@@ -799,8 +805,11 @@ const getTopRatedNovels = async (req, res) => {
       .select("thumbnail.publicUrl title view type averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .populate({
         path: "category",
@@ -870,8 +879,11 @@ const getDetailNovelByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+          options: {
+            sort: { createdAt: 1 },
+            //  limit: 5
+          },
         });
 
       //To handle infinite scroll on frontend
@@ -910,8 +922,11 @@ const getDetailNovelByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+          options: {
+            sort: { createdAt: 1 },
+            //  limit: 5
+          },
         });
 
       const hasMore = skip + limit < totalNovelsCount;
@@ -982,8 +997,11 @@ const getDetailNovelByType = async (req, res) => {
         .select("thumbnail.publicUrl title view type averageRating")
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+          options: {
+            sort: { createdAt: 1 },
+            // limit: 5
+          },
         })
         .populate({
           path: "category",
