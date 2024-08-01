@@ -123,10 +123,11 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title type")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: { createdAt: 1 },
-          limit: 5,
+          // limit: 5,
         },
       })
       .sort({ createdAt: -1 })
@@ -135,10 +136,10 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title type")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content",
+        select: "chapterPdf.publicUrl name chapterNo content price",
         options: {
           sort: { createdAt: 1 },
-          limit: 5,
+          // limit: 5,
         },
       })
       .sort({ createdAt: -1 })
@@ -156,8 +157,12 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title type seriesRating")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .sort({ totalViews: -1 })
       .limit(10);
@@ -168,8 +173,11 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .sort({ totalViews: -1 })
       .limit(10);
@@ -193,8 +201,11 @@ const appDashboard = async (req, res) => {
           {
             path: "episodes",
             select:
-              "episodeVideo.publicUrl title content visibility description",
-            options: { sort: { createdAt: 1 }, limit: 5 },
+              "episodeVideo.publicUrl title content visibility description price",
+            options: {
+              sort: { createdAt: 1 },
+              //  limit: 5
+            },
           },
         ],
       })
@@ -208,8 +219,12 @@ const appDashboard = async (req, res) => {
           },
           {
             path: "chapters",
-            select: "chapterPdf.publicUrl name chapterNo content totalViews",
-            options: { sort: { createdAt: 1 }, limit: 5 },
+            select:
+              "chapterPdf.publicUrl name chapterNo content totalViews price",
+            options: {
+              sort: { createdAt: 1 },
+              //  limit: 5
+            },
           },
           {
             path: "author",
@@ -224,12 +239,13 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title type totalViews")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -242,8 +258,11 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title type totalViews")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .populate({
         path: "category",
@@ -269,12 +288,13 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl title totalViews type seriesRating")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -294,8 +314,11 @@ const appDashboard = async (req, res) => {
       .select("thumbnail.publicUrl type title averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          //  limit: 5
+        },
       })
       .populate({
         path: "category",
@@ -365,8 +388,12 @@ const dashboardSeries = async (req, res) => {
       .select("thumbnail.publicUrl title type")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .sort({ createdAt: -1 })
       .limit(10);
@@ -378,8 +405,12 @@ const dashboardSeries = async (req, res) => {
       .select("thumbnail.publicUrl title type")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .sort({ totalViews: -1 })
       .limit(10);
@@ -391,12 +422,13 @@ const dashboardSeries = async (req, res) => {
       .select("thumbnail.publicUrl title type totalViews")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -414,12 +446,13 @@ const dashboardSeries = async (req, res) => {
       .select("thumbnail.publicUrl title totalViews type")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -480,10 +513,10 @@ const dashboardNovels = async (req, res) => {
       .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
         options: {
           sort: { createdAt: 1 },
-          limit: 5,
+          // limit: 5,
         },
       })
       .sort({ createdAt: -1 })
@@ -496,8 +529,11 @@ const dashboardNovels = async (req, res) => {
       .select("thumbnail.publicUrl title type averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .sort({ totalViews: -1 })
       .limit(10);
@@ -509,12 +545,12 @@ const dashboardNovels = async (req, res) => {
       .select("thumbnail.publicUrl title type totalViews")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          // limit: 5,
         },
       })
       .populate({
@@ -532,8 +568,11 @@ const dashboardNovels = async (req, res) => {
       .select("thumbnail.publicUrl averageRating type title averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
-        options: { sort: { createdAt: 1 }, limit: 5 },
+        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        options: {
+          sort: { createdAt: 1 },
+          // limit: 5
+        },
       })
       .populate({
         path: "category",

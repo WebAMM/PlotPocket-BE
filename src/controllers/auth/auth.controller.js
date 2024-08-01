@@ -32,8 +32,7 @@ const appendGuestUserRec = require("../../services/helpers/appendGuestRec");
 //Register User
 const registerUser = async (req, res) => {
   try {
-    const { email, password, userName } = req.body;
-    const { guestId } = req.query;
+    const { email, password, userName, guestId } = req.body;
 
     const existUser = await User.findOne({ email });
     if (existUser) {

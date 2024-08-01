@@ -14,10 +14,22 @@ const addSubscription = async (req, res) => {
   }
 };
 
-// Get All Subscriptions
-const getAllSubscriptions = async (req, res) => {
+// Get All Subscriptions for Admin
+const getAllAdminSubscriptions = async (req, res) => {
   try {
-    const subscriptions = await Subscription.find();
+    const subscriptions = await Subscription.find().sort({ createdAt: -1 });
+    return success(res, "200", "Success", subscriptions);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+// Get All Subscriptions for App
+const getAllAppSubscriptions = async (req, res) => {
+  try {
+    const subscriptions = await Subscription.find()
+      .select("plan price description createdAt")
+      .sort({ createdAt: -1 });
     return success(res, "200", "Success", subscriptions);
   } catch (err) {
     error500(res, err);
@@ -72,7 +84,8 @@ const deleteSubscription = async (req, res) => {
 
 module.exports = {
   addSubscription,
-  getAllSubscriptions,
+  getAllAdminSubscriptions,
+  getAllAppSubscriptions,
   editSubscription,
   deleteSubscription,
   // getSubscriptionByPlan,

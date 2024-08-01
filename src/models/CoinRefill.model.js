@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const coinSubscriptionSchema = new mongoose.Schema(
+const coinRefillSchema = new mongoose.Schema(
   {
     price: {
       type: Number,
@@ -18,14 +18,15 @@ const coinSubscriptionSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Bonus is required"],
     },
+    description: {
+      type: String,
+      required: [true, "Description is required"],
+    },
   },
   {
     timestamps: true,
   }
 );
 
-const CoinSubscription = mongoose.model(
-  "CoinSubscription",
-  coinSubscriptionSchema
-);
-module.exports = CoinSubscription;
+const CoinRefill = mongoose.model("CoinRefill", coinRefillSchema);
+module.exports = CoinRefill;

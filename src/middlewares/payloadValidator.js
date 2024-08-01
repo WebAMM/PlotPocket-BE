@@ -108,7 +108,6 @@ const validateIncreaseView = [
   },
 ];
 
-
 const validateAddToHistory = [
   body("type")
     .trim()
@@ -162,6 +161,25 @@ const validateEditCategory = [
   },
 ];
 
+const validateGetUserCoinDetails = [
+  body("type")
+    .trim()
+    .notEmpty()
+    .withMessage("Type is required")
+    .isIn(["Episode", "Chapter"])
+    .withMessage(`Type must be either ${allowedTypes.join(" or ")}`),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      next();
+    } else {
+      return res
+        .status(400)
+        .json({ error: errors.array().map((error) => error.msg) });
+    }
+  },
+];
+
 const validateAddNovel = [
   body("title").trim().notEmpty().withMessage("Title of novel is required"),
   body("category")
@@ -195,7 +213,25 @@ const validateAddNovel = [
 const validateAddChapter = [
   body("name").trim().notEmpty().withMessage("Name of chapter is required"),
   body("chapterNo").trim().notEmpty().withMessage("Chapter no. is required"),
-  body("content").trim().notEmpty().withMessage("Content is required"),
+  body("content")
+    .trim()
+    .notEmpty()
+    .withMessage("Content is required")
+    .custom((value, { req }) => {
+      if (value === "Paid") {
+        if (!req.body.price) {
+          throw new Error("Price is required for paid content");
+        }
+        if (req.body.price <= 0) {
+          throw new Error("Price must be a positive number");
+        }
+      } else if (value === "Free") {
+        if (req.body.price) {
+          throw new Error("Price should not be provided for free content");
+        }
+      }
+      return true;
+    }),
   body("description")
     .trim()
     .notEmpty()
@@ -264,7 +300,25 @@ const validateAddEpisode = [
     .trim()
     .notEmpty()
     .withMessage("Title of the episode is required"),
-  body("content").trim().notEmpty().withMessage("Content is required"),
+  body("content")
+    .trim()
+    .notEmpty()
+    .withMessage("Content is required")
+    .custom((value, { req }) => {
+      if (value === "Paid") {
+        if (!req.body.price) {
+          throw new Error("Price is required for paid content");
+        }
+        if (req.body.price <= 0) {
+          throw new Error("Price must be a positive number");
+        }
+      } else if (value === "Free") {
+        if (req.body.price) {
+          throw new Error("Price should not be provided for free content");
+        }
+      }
+      return true;
+    }),
   body("description")
     .trim()
     .notEmpty()
@@ -308,11 +362,12 @@ const validateAddSubscription = [
   },
 ];
 
-const validateAddCoinSubscription = [
+const validateAddCoinRefill = [
   body("price").trim().notEmpty().withMessage("Price is required"),
   body("coins").trim().notEmpty().withMessage("Coins are required"),
   body("discount").trim().notEmpty().withMessage("Discount is required"),
   body("bonus").trim().notEmpty().withMessage("Bonus is required"),
+  body("description").trim().notEmpty().withMessage("Description is required"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
@@ -447,12 +502,13 @@ module.exports = {
   validateAddSeries,
   validateAddEpisode,
   validateAddSubscription,
-  validateAddCoinSubscription,
+  validateAddCoinRefill,
   validateUpdatePassword,
   validateAdminUpdateProfile,
   validateAddReward,
   validateRateNovel,
   validateAddAuthor,
   validateIncreaseView,
-  validateAddToHistory
+  validateAddToHistory,
+  validateGetUserCoinDetails,
 };

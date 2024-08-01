@@ -78,7 +78,7 @@ const allMyLists = async (req, res) => {
     })
       .populate({
         path: "episode",
-        select: "title series totalViews",
+        select: "title series totalViews price",
         populate: {
           path: "series",
           select: "title type",
@@ -90,7 +90,7 @@ const allMyLists = async (req, res) => {
       })
       .populate({
         path: "chapter",
-        select: "name chapterNo totalViews novel",
+        select: "name chapterNo totalViews novel price",
         populate: {
           path: "novel",
           select: "title type",

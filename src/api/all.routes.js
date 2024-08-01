@@ -5,13 +5,20 @@ const allController = require("../controllers/all.controller");
 const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//[APP] Increase View
-router.post(
-  "/app/view",
+//[APP] Featured + Latest + Top Ranked Detail
+router.get(
+  "/app/all-detail",
   verifyToken,
   verifyRole(["User", "Guest"]),
-  payloadValidator.validateIncreaseView,
-  allController.increaseView
+  allController.combinedSeriesNovels
+);
+
+//[APP] Single Novel/Series detail
+router.get(
+  "/app/single/:id",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  allController.singleDetailPage
 );
 
 //[APP] Search All Novels + Series
@@ -22,21 +29,13 @@ router.get(
   allController.globalSearch
 );
 
-//Series + Novels
-//[APP] Single Novel/Series detail
-router.get(
-  "/app/single/:id",
+//[APP] Increase View
+router.post(
+  "/app/view",
   verifyToken,
   verifyRole(["User", "Guest"]),
-  allController.singleDetailPage
-);
-
-//[APP] Featured + Latest + Top Ranked
-router.get(
-  "/app/all",
-  verifyToken,
-  verifyRole(["User", "Guest"]),
-  allController.combinedSeriesNovels
+  payloadValidator.validateIncreaseView,
+  allController.increaseView
 );
 
 //For Dashboard Detail Flows

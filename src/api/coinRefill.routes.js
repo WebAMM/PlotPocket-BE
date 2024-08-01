@@ -1,42 +1,50 @@
 const router = require("express").Router();
 //controllers
-const coinSubscription = require("../controllers/coinSubscription.controller");
+const coinRefill = require("../controllers/coinRefill.controller");
 //middlewares
 const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const payloadValidator = require("../middlewares/payloadValidator");
 
-//[ADMIN] Add coin subscription
+//[ADMIN] Add coin refill
 router.post(
   "/admin/add",
   verifyToken,
   verifyRole(["Admin"]),
-  payloadValidator.validateAddCoinSubscription,
-  coinSubscription.addCoinSubscription
+  payloadValidator.validateAddCoinRefill,
+  coinRefill.addCoinRefill
 );
 
-//[ADMIN] All coin subscriptions
+//[ADMIN] All coin refill
 router.get(
   "/admin/all",
   verifyToken,
   verifyRole(["Admin"]),
-  coinSubscription.getAllCoinSubscriptions
+  coinRefill.getAllAdminCoinRefill
 );
 
-//[ADMIN] Edit coin subscriptions
+//[APP] All coin refills
+router.get(
+  "/app/all",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  coinRefill.getAllAppCoinRefill
+);
+
+//[ADMIN] Edit coin refill
 router.put(
   "/admin/:id",
   verifyToken,
   verifyRole(["Admin"]),
-  payloadValidator.validateAddCoinSubscription,
-  coinSubscription.editCoinSubscription
+  payloadValidator.validateAddCoinRefill,
+  coinRefill.editCoinRefill
 );
 
-//[ADMIN] Delete coin subscriptions
+//[ADMIN] Delete coin refill
 router.delete(
   "/admin/:id",
   verifyToken,
   verifyRole(["Admin"]),
-  coinSubscription.deleteCoinSubscription
+  coinRefill.deleteCoinRefill
 );
 
 //[ADMIN] Get coin subscription by plan

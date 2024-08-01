@@ -19,7 +19,15 @@ router.get(
   "/admin/all",
   verifyToken,
   verifyRole(["Admin"]),
-  subscriptionController.getAllSubscriptions
+  subscriptionController.getAllAdminSubscriptions
+);
+
+//[APP] All subscriptions for App
+router.get(
+  "/app/all",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  subscriptionController.getAllAppSubscriptions
 );
 
 //[ADMIN] Edit subscriptions
