@@ -57,7 +57,7 @@ router.put(
   episodeController.updateEpisode
 );
 
-//[APP] View Episode
+//[APP] View Episode Next/Prev or Current
 router.get(
   "/app/view/:id",
   verifyToken,

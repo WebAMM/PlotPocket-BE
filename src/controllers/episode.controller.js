@@ -14,6 +14,7 @@ const { status200, success } = require("../services/helpers/response");
 const { default: mongoose } = require("mongoose");
 const UserPurchases = require("../models/UserPurchases.model");
 const UserCoin = require("../models/UserCoin.model");
+const myList = require("../models/MyList.model");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
@@ -81,7 +82,10 @@ const rateTheEpisode = async (req, res) => {
     if (userHasRated) {
       await Episode.updateOne(
         { _id: id },
-        { $pull: { ratings: { user: req.user._id } } }
+        {
+          $pull: { ratings: { user: req.user._id } },
+          $inc: { episodeRating: -1 },
+        }
       );
       await Series.updateOne(
         {
@@ -97,7 +101,10 @@ const rateTheEpisode = async (req, res) => {
     } else {
       await Episode.updateOne(
         { _id: id },
-        { $push: { ratings: { user: req.user._id, rating: 1 } } }
+        {
+          $push: { ratings: { user: req.user._id, rating: 1 } },
+          $inc: { episodeRating: 1 },
+        }
       );
       await Series.updateOne(
         {
@@ -282,12 +289,20 @@ const viewEpisode = async (req, res) => {
   const { autoUnlock } = req.body;
 
   try {
-    const currentEpisode = await Episode.findById(id);
+    const currentEpisode = await Episode.findById(id)
+      .select(
+        "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating ratings"
+      )
+      .populate({
+        path: "series",
+        select: "thumbnail.publicUrl title content visibility description coin",
+      });
+
     if (!currentEpisode) {
       return error404(res, "Episode not found");
     }
 
-    if ((down && up) || (!down && !up)) {
+    if (down && up) {
       return error400(res, "Query must be either up or down");
     }
 
@@ -296,11 +311,14 @@ const viewEpisode = async (req, res) => {
         series: new mongoose.Types.ObjectId(currentEpisode.series),
         createdAt: { $gt: currentEpisode.createdAt },
       })
+        .select(
+          "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating ratings"
+        )
         .sort({ createdAt: 1 })
         .populate({
           path: "series",
           select:
-            "episodeVideo.publicUrl title content visibility description coin",
+            "thumbnail.publicUrl title content visibility description coin",
         });
 
       if (!nextEpisode) {
@@ -308,7 +326,22 @@ const viewEpisode = async (req, res) => {
       }
 
       if (nextEpisode.content === "Free" && nextEpisode.coins === 0) {
-        return success(res, "200", "Success", nextEpisode);
+        const hasRated = nextEpisode.ratings.some(
+          (rating) => rating.user.toString() === req.user._id.toString()
+        );
+
+        const hasBookmarked = await myList.exists({
+          user: req.user._id,
+          episode: nextEpisode._id,
+        });
+
+        const data = {
+          episode: nextEpisode,
+          hasBookmarked,
+          hasRated,
+        };
+
+        return success(res, "200", "Success", data);
       }
 
       if (nextEpisode.content === "Paid" && nextEpisode.coins > 0) {
@@ -324,7 +357,22 @@ const viewEpisode = async (req, res) => {
         }
 
         if (userPurchasedEpisode) {
-          return success(res, "200", "Success", nextEpisode);
+          const hasRated = nextEpisode.ratings.some(
+            (rating) => rating.user.toString() === req.user._id.toString()
+          );
+
+          const hasBookmarked = await myList.exists({
+            user: req.user._id,
+            // episode: nextEpisode._id,
+          });
+
+          const data = {
+            episode: nextEpisode,
+            hasBookmarked,
+            hasRated,
+          };
+
+          return success(res, "200", "Success", data);
         } else {
           if (autoUnlock) {
             const userCoins = await UserCoin.findOne({ user: req.user._id });
@@ -383,7 +431,22 @@ const viewEpisode = async (req, res) => {
 
             await userCoins.save();
 
-            return success(res, "200", "Success", nextEpisode);
+            const hasRated = nextEpisode.ratings.some(
+              (rating) => rating.user.toString() === req.user._id.toString()
+            );
+
+            const hasBookmarked = await myList.exists({
+              user: req.user._id,
+              episode: nextEpisode._id,
+            });
+
+            const data = {
+              episode: nextEpisode,
+              hasBookmarked,
+              hasRated,
+            };
+
+            return success(res, "200", "Success", data);
           } else {
             return customError(res, 403, "Use coin to unlock episode");
           }
@@ -394,11 +457,14 @@ const viewEpisode = async (req, res) => {
         series: new mongoose.Types.ObjectId(currentEpisode.series),
         createdAt: { $lt: currentEpisode.createdAt },
       })
+        .select(
+          "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating ratings"
+        )
         .sort({ createdAt: -1 })
         .populate({
           path: "series",
           select:
-            "episodeVideo.publicUrl title content visibility description coin",
+            "thumbnail.publicUrl title content visibility description coin",
         });
 
       if (!prevEpisode) {
@@ -406,7 +472,22 @@ const viewEpisode = async (req, res) => {
       }
 
       if (prevEpisode.content === "Free" && prevEpisode.coins === 0) {
-        return success(res, "200", "Success", prevEpisode);
+        const hasRated = prevEpisode.ratings.some(
+          (rating) => rating.user.toString() === req.user._id.toString()
+        );
+
+        const hasBookmarked = await myList.exists({
+          user: req.user._id,
+          episode: prevEpisode._id,
+        });
+
+        const data = {
+          episode: prevEpisode,
+          hasRated,
+          hasBookmarked,
+        };
+
+        return success(res, "200", "Success", data);
       }
 
       if (prevEpisode.content === "Paid" && prevEpisode.coins > 0) {
@@ -422,11 +503,43 @@ const viewEpisode = async (req, res) => {
         }
 
         if (userPurchasedEpisode) {
-          return success(res, "200", "Success", prevEpisode);
+          const hasRated = prevEpisode.ratings.some(
+            (rating) => rating.user.toString() === req.user._id.toString()
+          );
+
+          const hasBookmarked = await myList.exists({
+            user: req.user._id,
+            episode: prevEpisode._id,
+          });
+
+          const data = {
+            episode: prevEpisode,
+            hasRated,
+            hasBookmarked,
+          };
+
+          return success(res, "200", "Success", data);
         } else {
           return customError(res, 403, "Episode not found in user purchases");
         }
       }
+    } else {
+      const hasRated = currentEpisode.ratings.some(
+        (rating) => rating.user.toString() === req.user._id.toString()
+      );
+
+      const hasBookmarked = await myList.exists({
+        user: req.user._id,
+        episode: currentEpisode._id,
+      });
+
+      const data = {
+        episode: currentEpisode,
+        hasBookmarked,
+        hasRated,
+      };
+
+      return success(res, "200", "Success", data);
     }
   } catch (err) {
     return error500(res, err);

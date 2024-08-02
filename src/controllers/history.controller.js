@@ -97,7 +97,7 @@ const allHistory = async (req, res) => {
         {
           path: "episode",
           select:
-            "episodeVideo.publicUrl title content visibility description createdAt",
+            "episodeVideo.publicUrl title content visibility description createdAt coins",
         },
         {
           path: "novel",
@@ -106,7 +106,7 @@ const allHistory = async (req, res) => {
         {
           path: "chapter",
           select:
-            "chapterPdf.publicUrl name chapterNo content totalViews description createdAt",
+            "chapterPdf.publicUrl name chapterNo content totalViews description createdAt coins",
         },
       ]);
 
