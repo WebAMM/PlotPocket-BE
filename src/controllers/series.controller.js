@@ -14,6 +14,7 @@ const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
+const UserPurchases = require("../models/UserPurchases.model");
 
 //Publish the series
 const addSeries = async (req, res) => {
@@ -275,31 +276,107 @@ const getAllSeries = async (req, res) => {
   }
 };
 
-// Get All Episode Of Series
+// All Episodes by Series
 const getAllEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
+  const { page = 1, pageSize = 10 } = req.query;
   try {
     const seriesExist = await Series.findById(id);
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
 
-    const episodes = await Episode.find({
+    // Pagination calculations
+    const currentPage = parseInt(page, 10) || 1;
+    const size = parseInt(pageSize, 10) || 10;
+    const totalEpisodeCount = await Episode.countDocuments();
+    const skip = (currentPage - 1) * size;
+    const limit = size;
+
+    const allSeriesEpisodes = await Episode.find({
       series: id,
     })
       .select(
-        "episodeVideo.publicUrl totalViews createdAt content title description"
+        "episodeVideo.publicUrl title _id totalViews content series createdAt description coins"
       )
       .populate({
         path: "series",
-        select: "thumbnail.publicUrl",
+        select: "thumbnail.publicUrl _id",
       })
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    return success(res, "200", "Success", episodes);
+    //Fetch user purchases
+    const userPurchases = await UserPurchases.findOne(
+      {
+        user: req.user._id,
+      },
+      {
+        episodes: 1,
+        _id: 0,
+      }
+    ).lean();
+
+    const purchasedEpisodeIds = new Set(
+      userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
+    );
+
+    const episodes = allSeriesEpisodes.map((episode) => ({
+      ...episode._doc,
+      content:
+        episode.content === "Paid" &&
+        purchasedEpisodeIds.has(episode._id.toString())
+          ? "Free"
+          : episode.content,
+    }));
+
+    //To handle infinite scroll on frontend
+    const hasMore = skip + limit < totalEpisodeCount;
+    const data = {
+      episodes,
+      hasMore,
+    };
+
+    success(res, "200", "Success", data);
   } catch (err) {
-    return error500(res, err);
+    error500(res, err);
   }
+  // try {
+  //   const seriesExist = await Series.findById(id);
+  //   if (!seriesExist) {
+  //     return error409(res, "Series not found");
+  //   }
+  //   const allEpisodesOfSeries = await Episode.aggregate([
+  //     {
+  //       $match: {
+  //         series: new mongoose.Types.ObjectId(id),
+  //       },
+  //     },
+  //     {
+  //       $addFields: {
+  //         totalRating: {
+  //           $sum: "$ratings.rating",
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         "episodeVideo.publicUrl": 1,
+  //         title: 1,
+  //         description: 1,
+  //         content: 1,
+  //         visibility: 1,
+  //         totalViews: 1,
+  //         totalRating: 1,
+  //         createdAt: 1,
+  //       },
+  //     },
+  //   ]);
+  //   success(res, "200", "Success", allEpisodesOfSeries);
+  // } catch (err) {
+  //   error500(res, err);
+  // }
 };
 
 // Delete Series
@@ -441,12 +518,13 @@ const bestSeries = async (req, res) => {
       .limit(limit)
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description coins",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          limit: 1,
         },
       })
       .populate({
@@ -502,12 +580,13 @@ const topSeries = async (req, res) => {
       .limit(limit)
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description coins",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          limit: 1,
         },
       })
       .populate({
@@ -584,12 +663,13 @@ const getTopRatedSeries = async (req, res) => {
       .select("thumbnail.publicUrl title view type seriesRating")
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description coins",
         options: {
           sort: {
             createdAt: 1,
           },
-          limit: 5,
+          limit: 1,
         },
       })
       .populate({
@@ -655,12 +735,13 @@ const getDetailSeriesByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            limit: 1,
           },
         })
         .populate({
@@ -707,12 +788,13 @@ const getDetailSeriesByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            limit: 1,
           },
         })
         .populate({
@@ -785,12 +867,13 @@ const getDetailSeriesByType = async (req, res) => {
         .select("thumbnail.publicUrl title view type seriesRating")
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            limit: 1,
           },
         })
         .populate({

@@ -22,7 +22,7 @@ router.get(
 
 //[APP] 1st APP page in dashboard
 router.get(
-  "/app/main",
+  "/app/all",
   verifyToken,
   verifyRole(["User", "Guest"]),
   dashboardController.appDashboard

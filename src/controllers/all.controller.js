@@ -5,7 +5,7 @@ const Episode = require("../models/Episode.model");
 const Chapter = require("../models/Chapter.model");
 const Category = require("../models/Category.model");
 const History = require("../models/History.model");
-
+const SearchHistory = require("../models/SearchHistory.model");
 //Responses and errors
 const {
   error500,
@@ -25,6 +25,9 @@ const {
 const globalSearch = async (req, res) => {
   const { title } = req.query;
   try {
+    if (!title) {
+      return error400(res, "Title is required");
+    }
     const regex = new RegExp(`.*${title}.*`, "i");
     const novels = await Novel.find({
       status: "Published",
@@ -38,10 +41,10 @@ const globalSearch = async (req, res) => {
       .limit(10)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
         options: {
           sort: { createdAt: 1 },
-          limit: 5,
+          limit: 1,
         },
       });
     const series = await Series.find({
@@ -56,10 +59,11 @@ const globalSearch = async (req, res) => {
       .limit(10)
       .populate({
         path: "episodes",
-        select: "episodeVideo.publicUrl title content visibility description",
+        select:
+          "episodeVideo.publicUrl title content visibility description coins",
         options: {
           sort: { createdAt: 1 },
-          limit: 5,
+          limit: 1,
         },
       });
 
@@ -72,7 +76,6 @@ const globalSearch = async (req, res) => {
 
 const increaseView = async (req, res) => {
   const { type, seriesId, episodeId, chapterId, novelId } = req.body;
-
   if (type === "Series") {
     const series = await updateViews(Series, seriesId, req.user._id);
     if (!series) {
@@ -102,6 +105,7 @@ const increaseView = async (req, res) => {
 const singleDetailPage = async (req, res) => {
   const { id } = req.params;
   const { type } = req.query;
+  const { fromSearch } = req.body;
   let content;
   let mightLike;
 
@@ -124,7 +128,7 @@ const singleDetailPage = async (req, res) => {
               "chapterPdf.publicUrl chapterNo content totalViews createdAt",
             options: {
               sort: { createdAt: 1 },
-              limit: 5,
+              limit: 1,
             },
           },
           {
@@ -181,8 +185,12 @@ const singleDetailPage = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1
+          },
         })
         .populate({
           path: "category",
@@ -192,6 +200,19 @@ const singleDetailPage = async (req, res) => {
           path: "author",
           select: "name",
         });
+
+      if (fromSearch) {
+        const existSearchHistory = await SearchHistory.findOne({
+          user: req.user._id,
+          novel: content._id,
+        });
+        if (!existSearchHistory) {
+          await SearchHistory.create({
+            user: req.user._id,
+            novel: content._id,
+          });
+        }
+      }
     } else if (type === "Series") {
       content = await Series.findById(id)
         .select("thumbnail.publicUrl title description")
@@ -208,7 +229,7 @@ const singleDetailPage = async (req, res) => {
               sort: {
                 createdAt: 1,
               },
-              limit: 5,
+              limit: 1,
             },
           },
         ])
@@ -245,13 +266,30 @@ const singleDetailPage = async (req, res) => {
         .select("thumbnail.publicUrl title type seriesRating")
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1
+          },
         })
         .populate({
           path: "category",
           select: "title",
         });
+
+      if (fromSearch) {
+        const existSearchHistory = await SearchHistory.findOne({
+          user: req.user._id,
+          series: content._id,
+        });
+        if (!existSearchHistory) {
+          await SearchHistory.create({
+            user: req.user._id,
+            series: content._id,
+          });
+        }
+      }
     }
 
     const data = {
@@ -265,7 +303,7 @@ const singleDetailPage = async (req, res) => {
 };
 
 const combinedSeriesNovels = async (req, res) => {
-  const { type, category, pageSize = 10, page = 1, latest, day } = req.query;
+  const { type, category, pageSize = 10, page = 1, day } = req.query;
   let series = [];
   let novels = [];
 
@@ -294,16 +332,24 @@ const combinedSeriesNovels = async (req, res) => {
         .sort({ totalViews: -1 })
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1
+          },
         });
       novels = await Novel.find(query)
         .select("thumbnail.publicUrl title type averageRating totalViews")
         .sort({ totalViews: -1 })
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          options: {
+            sort: { createdAt: 1 },
+             limit: 1
+          },
         });
     } else if (type === "Latest") {
       //Query
@@ -324,12 +370,13 @@ const combinedSeriesNovels = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            limit: 1,
           },
         })
         .populate({
@@ -341,8 +388,12 @@ const combinedSeriesNovels = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1
+          },
         })
         .populate({
           path: "category",
@@ -402,12 +453,13 @@ const combinedSeriesNovels = async (req, res) => {
         .select("thumbnail.publicUrl title view type seriesRating")
         .populate({
           path: "episodes",
-          select: "episodeVideo.publicUrl title content visibility description",
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            limit: 5,
+            limit: 1,
           },
         })
         .populate({
@@ -422,8 +474,12 @@ const combinedSeriesNovels = async (req, res) => {
         .select("thumbnail.publicUrl averageRating type title averageRating")
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews",
-          options: { sort: { createdAt: 1 }, limit: 5 },
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          options: {
+            sort: { createdAt: 1 },
+             limit: 1
+          },
         })
         .populate({
           path: "category",
@@ -458,17 +514,14 @@ const combinedSeriesNovels = async (req, res) => {
 // All featured series and novel
 // const featuredSeriesNovels = async (req, res) => {
 //   const { category, pageSize = 10, page = 1 } = req.query;
-
 //   const limit = Math.floor(pageSize / 2);
 //   const skip = (page - 1) * limit;
-
 //   // Query
 //   let query = {
 //     status: "Published",
 //     visibility: "Public",
 //     totalViews: { $gte: 10 },
 //   };
-
 //   try {
 //     // Filtering based on category
 //     if (category) {
@@ -478,60 +531,50 @@ const combinedSeriesNovels = async (req, res) => {
 //       }
 //       query.category = category;
 //     }
-
 //     // Fetch Series and Novels
 //     const featuredSeries = await Series.find(query)
 //       .select("thumbnail.publicUrl title type seriesRating")
 //       .sort({ totalViews: -1 })
 //       .populate({
 //         path: "episodes",
-//         select: "episodeVideo.publicUrl title content visibility description",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "episodeVideo.publicUrl title content visibility description coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .skip(skip)
 //       .limit(limit);
-
 //     const featuredNovels = await Novel.find(query)
 //       .select("thumbnail.publicUrl title type averageRating")
 //       .sort({ totalViews: -1 })
 //       .populate({
 //         path: "chapters",
-//         select: "chapterPdf.publicUrl name chapterNo content totalViews",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .skip(skip)
 //       .limit(limit);
-
 //     const seriesAndNovels = [...featuredSeries, ...featuredNovels].sort(
 //       (a, b) => b.createdAt - a.createdAt
 //     );
-
 //     // Check if there are more results to fetch
 //     const hasMore = page * pageSize < totalItems;
-
 //     const data = {
 //       seriesAndNovels,
 //       hasMore,
 //     };
-
 //     return success(res, "200", "Success", data);
 //   } catch (err) {
 //     return error500(res, err);
 //   }
 // };
-
 // const latestSeriesNovels = async (req, res) => {
 //   const { category, page = 1, pageSize = 10 } = req.query;
-
 //   const limit = Math.floor(pageSize / 2);
 //   const skip = (page - 1) * limit;
-
 //   //Query's
 //   let query = {
 //     status: "Published",
 //     visibility: "Public",
 //   };
-
 //   //Filtering based on Category
 //   if (category) {
 //     const existCategory = await Category.findById(category);
@@ -546,12 +589,12 @@ const combinedSeriesNovels = async (req, res) => {
 //       .sort({ createdAt: -1 })
 //       .populate({
 //         path: "episodes",
-//         select: "episodeVideo.publicUrl title content visibility description",
+//         select: "episodeVideo.publicUrl title content visibility description coins",
 //         options: {
 //           sort: {
 //             createdAt: 1,
 //           },
-//           limit: 5,
+//           limit: 1,
 //         },
 //       })
 //       .populate({
@@ -560,7 +603,6 @@ const combinedSeriesNovels = async (req, res) => {
 //       })
 //       .skip(skip)
 //       .limit(limit);
-
 //     const latestNovels = await Novel.find(query)
 //       .select("thumbnail.publicUrl title type totalViews")
 //       .sort({ createdAt: -1 })
@@ -568,8 +610,8 @@ const combinedSeriesNovels = async (req, res) => {
 //       .limit(limit)
 //       .populate({
 //         path: "chapters",
-//         select: "chapterPdf.publicUrl name chapterNo content totalViews",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .populate({
 //         path: "category",
@@ -579,29 +621,23 @@ const combinedSeriesNovels = async (req, res) => {
 //         path: "author",
 //         select: "name",
 //       });
-
 //     const seriesAndNovels = [...latestSeries, ...latestNovels].sort(
 //       (a, b) => b.createdAt - a.createdAt
 //     );
 //     const hasMore = page * pageSize < totalItems;
-
 //     const data = {
 //       seriesAndNovels,
 //       hasMore,
 //     };
-
 //     return success(res, "200", "Success", data);
 //   } catch (err) {
 //     return error500(res, err);
 //   }
 // };
-
 // const topRankedSeriesNovel = async (req, res) => {
 //   const { category, latest, day, page = 1, pageSize = 10 } = req.query;
-
 //   const limit = Math.floor(pageSize / 2);
 //   const skip = (page - 1) * limit;
-
 //   let query = {
 //     status: "Published",
 //     visibility: "Public",
@@ -612,7 +648,6 @@ const combinedSeriesNovels = async (req, res) => {
 //   let sortNovelOptions = {
 //     averageRating: -1,
 //   };
-
 //   //Filtering based on Day
 //   if (day) {
 //     const parsedDay = parseInt(day);
@@ -648,12 +683,12 @@ const combinedSeriesNovels = async (req, res) => {
 //       .select("thumbnail.publicUrl title view type seriesRating")
 //       .populate({
 //         path: "episodes",
-//         select: "episodeVideo.publicUrl title content visibility description",
+//         select: "episodeVideo.publicUrl title content visibility description coins",
 //         options: {
 //           sort: {
 //             createdAt: 1,
 //           },
-//           limit: 5,
+//           limit: 1,
 //         },
 //       })
 //       .populate({
@@ -663,7 +698,6 @@ const combinedSeriesNovels = async (req, res) => {
 //       .sort(sortSeriesOptions)
 //       .skip(skip)
 //       .limit(limit);
-
 //     //Top ranked novels
 //     const topRankedNovels = await Novel.find({
 //       ...query,
@@ -672,8 +706,8 @@ const combinedSeriesNovels = async (req, res) => {
 //       .select("thumbnail.publicUrl averageRating type title averageRating")
 //       .populate({
 //         path: "chapters",
-//         select: "chapterPdf.publicUrl name chapterNo content totalViews",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .populate({
 //         path: "category",
@@ -686,18 +720,14 @@ const combinedSeriesNovels = async (req, res) => {
 //       .sort(sortNovelOptions)
 //       .skip(skip)
 //       .limit(limit);
-
 //     const seriesAndNovels = [...topRankedSeries, ...topRankedNovels].sort(
 //       (a, b) => b.createdAt - a.createdAt
 //     );
-
 //     const hasMore = page * pageSize < totalItems;
-
 //     const data = {
 //       seriesAndNovels,
 //       hasMore,
 //     };
-
 //     return success(res, "200", "Success", data);
 //   } catch (err) {
 //     return error500(res, err);

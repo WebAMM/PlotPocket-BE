@@ -41,4 +41,12 @@ router.put(
   chapterController.updateChapter
 );
 
+//[APP] View chapter
+router.get(
+  "/app/view/:id",
+  verifyToken,
+  verifyRole(["Guest", "User"]),
+  chapterController.viewChapter
+);
+
 module.exports = router;

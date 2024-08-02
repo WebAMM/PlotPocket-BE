@@ -8,6 +8,9 @@ const Episode = require("../../models/Episode.model");
 const Chapter = require("../../models/Chapter.model");
 const Series = require("../../models/Series.model");
 const Novel = require("../../models/Novel.model");
+const UserCoin = require("../../models/UserCoin.model");
+const UserSteak = require("../../models/UserSteak.model");
+const UserPurchases = require("../../models/UserPurchases.model");
 //Responses and errors
 const {
   error500,
@@ -26,14 +29,12 @@ const jwt = require("jsonwebtoken");
 //config
 const config = require("../../config");
 const { v4: uuidv4 } = require("uuid");
-
 const appendGuestUserRec = require("../../services/helpers/appendGuestRec");
 
 //Register User
 const registerUser = async (req, res) => {
   try {
-    const { email, password, userName } = req.body;
-    const { guestId } = req.query;
+    const { email, password, userName, guestId } = req.body;
 
     const existUser = await User.findOne({ email });
     if (existUser) {
@@ -82,6 +83,36 @@ const registerUser = async (req, res) => {
           }
         );
         await myList.updateMany(
+          {
+            user: guestUser._id,
+          },
+          {
+            $set: {
+              user: newUser._id,
+            },
+          }
+        );
+        await UserCoin.updateMany(
+          {
+            user: guestUser._id,
+          },
+          {
+            $set: {
+              user: newUser._id,
+            },
+          }
+        );
+        await UserSteak.updateMany(
+          {
+            user: guestUser._id,
+          },
+          {
+            $set: {
+              user: newUser._id,
+            },
+          }
+        );
+        await UserPurchases.updateMany(
           {
             user: guestUser._id,
           },
@@ -212,11 +243,11 @@ const guestLogin = async (req, res) => {
       role: "Guest",
       profileImage: {
         publicUrl:
-          "http://res.cloudinary.com/djio34uft/image/upload/v1722259844/images_lmgsdd.jpg",
+          "http://res.cloudinary.com/djio34uft/image/upload/v1722418079/guest_vxx3uh.png",
         secureUrl:
-          "https://res.cloudinary.com/djio34uft/image/upload/v1722259844/images_lmgsdd.jpg",
-        publicId: "images_lmgsdd",
-        format: "jpg",
+          "https://res.cloudinary.com/djio34uft/image/upload/v1722418079/guest_vxx3uh.png",
+        publicId: "guest_vxx3uh",
+        format: "png",
       },
     });
 
@@ -259,12 +290,17 @@ const guestLogout = async (req, res) => {
       await History.deleteMany({ user: req.user._id });
       await myList.deleteMany({ user: req.user._id });
       await SearchHistory.deleteMany({ user: req.user._id });
+      await UserSteak.deleteMany({ user: req.user._id });
+      await UserCoin.deleteOne({ user: req.user._id });
+      await UserPurchases.deleteOne({
+        user: req.user._id,
+      });
       const models = [Category, Series, Novel, Episode, Chapter];
       for (const model of models) {
         await removeViews(model, req.user._id);
       }
       await User.deleteOne({ _id: req.user._id });
-      return status200(res, "Guest user deleted successfully");
+      return status200(res, "Guest user removed");
     } else return error404(res, "User not found");
   } catch (err) {
     return error500(res, err);

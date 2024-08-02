@@ -20,4 +20,21 @@ router.patch(
   userController.changeUserStatus
 );
 
+//[APP] Get user coins info
+router.get(
+  "/app/coins-detail/:id",
+  verifyToken,
+  verifyRole(["User"]),
+  userController.getUserCoinsDetail
+);
+
+//[APP] Add to user purchases
+// router.post(
+//   "/app/purchase",
+//   verifyToken,
+//   verifyRole(["User"]),
+//   userController.addToUserPurchase
+// );
+
+
 module.exports = router;

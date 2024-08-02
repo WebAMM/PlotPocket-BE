@@ -3,8 +3,11 @@ const moment = require("moment");
 const timeDiffChecker = (userClaimedDate) => {
   const now = moment();
   const lastClaimedDate = moment(userClaimedDate);
-  const timeDiff = now.diff(lastClaimedDate, "hours");
-  return timeDiff;
+  
+  // Check if the current date is different from the last claimed date
+  const isNextDay = now.isAfter(lastClaimedDate, 'day');
+
+  return isNextDay;
 };
 
 module.exports = timeDiffChecker;

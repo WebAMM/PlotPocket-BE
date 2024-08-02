@@ -14,6 +14,10 @@ const chapterSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    coins: {
+      type: Number,
+      default: 0,
+    },
     chapterNo: {
       type: Number,
       required: [true, "Chapter no is required"],

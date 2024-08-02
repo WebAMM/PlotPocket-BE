@@ -1,16 +1,20 @@
 //Models
 const Chapter = require("../models/Chapter.model");
 const Novel = require("../models/Novel.model");
+const UserCoin = require("../models/UserCoin.model");
+const UserPurchases = require("../models/UserPurchases.model");
 //Responses and errors
 const {
   error500,
   error409,
   error404,
   error400,
+  customError,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
+const { default: mongoose } = require("mongoose");
 
 //Add Chapter
 const addChapter = async (req, res) => {
@@ -72,7 +76,7 @@ const getAllChaptersByNovel = async (req, res) => {
       novel: id,
     })
       .select(
-        "chapterPdf.publicUrl chapterPdf.format totalViews content name chapterNo createdAt"
+        "chapterPdf.publicUrl chapterPdf.format totalViews content name chapterNo createdAt coins"
       )
       .populate({
         path: "novel",
@@ -169,9 +173,167 @@ const updateChapter = async (req, res) => {
   }
 };
 
+//View Chapter
+const viewChapter = async (req, res) => {
+  const { id } = req.params;
+  const { up, down } = req.query;
+  const { autoUnlock } = req.body;
+
+  try {
+    const currentChapter = await Chapter.findById(id);
+    if (!currentChapter) {
+      return error404(res, "Chapter not found");
+    }
+
+    if ((down && up) || (!down && !up)) {
+      return error400(res, "Query must be either up or down");
+    }
+
+    if (down) {
+      const nextChapter = await Chapter.findOne({
+        novel: new mongoose.Types.ObjectId(currentChapter.novel),
+        createdAt: { $gt: currentChapter.createdAt },
+      })
+        .sort({
+          createdAt: 1,
+        })
+        .populate({
+          path: "novel",
+          // select: ""
+        });
+
+      if (!nextChapter) {
+        return error404(res, "No more chapter of novel");
+      }
+
+      if (nextChapter.content === "Free" && nextChapter.coins === 0) {
+        return success(res, "200", "FreeSuccess", nextChapter);
+      }
+
+      if (nextChapter.content === "Paid" && nextChapter.coins > 0) {
+        let userPurchasedChapter;
+        const userPurchases = await UserPurchases.findOne({
+          user: req.user._id,
+        });
+        //Check only if user have any purchases before
+        if (userPurchases) {
+          userPurchasedChapter = userPurchases.chapters.includes(
+            nextChapter._id
+          );
+        }
+
+        if (userPurchasedChapter) {
+          console.log("Purchased");
+          return success(res, "200", "Success", nextChapter);
+        } else {
+          if (autoUnlock) {
+            const userCoins = await UserCoin.findOne({ user: req.user._id });
+            if (!userCoins) {
+              return error404(res, "User has no coins");
+            }
+
+            let { totalCoins, refillCoins, bonusCoins } = userCoins;
+
+            if (totalCoins < nextChapter.coins) {
+              return error400(
+                res,
+                "Insufficient total coins to purchase chapter"
+              );
+            }
+
+            // Deduct refill coins first
+            let remainingCoins = nextChapter.coins;
+            if (refillCoins >= remainingCoins) {
+              refillCoins -= remainingCoins;
+              remainingCoins = 0;
+            } else {
+              remainingCoins -= refillCoins;
+              refillCoins = 0;
+            }
+
+            if (remainingCoins > 0) {
+              if (bonusCoins >= remainingCoins) {
+                bonusCoins -= remainingCoins;
+                remainingCoins = 0;
+              } else {
+                remainingCoins -= bonusCoins;
+                bonusCoins = 0;
+              }
+            }
+
+            // Deduct the remaining cost from total coins
+            if (remainingCoins > 0) {
+              totalCoins -= remainingCoins;
+            }
+
+            if (!userPurchases) {
+              const newUserPurchases = new UserPurchases({
+                user: req.user._id,
+                chapters: [nextChapter._id],
+              });
+              await newUserPurchases.save();
+            } else {
+              userPurchases.chapters.push(nextChapter._id);
+              await userPurchases.save();
+            }
+
+            userCoins.totalCoins = totalCoins;
+            userCoins.refillCoins = refillCoins;
+            userCoins.bonusCoins = bonusCoins;
+
+            await userCoins.save();
+            return success(res, "200", "Success", nextChapter);
+          } else {
+            return customError(res, 403, "Use coins to unlock chapter");
+          }
+        }
+      }
+    } else if (up) {
+      const prevChapter = await Chapter.findOne({
+        novel: new mongoose.Types.ObjectId(currentChapter.novel),
+        createdAt: { $lt: currentChapter.createdAt },
+      })
+        .sort({ createdAt: -1 })
+        .populate({
+          path: "novel",
+        });
+
+      if (!prevChapter) {
+        return error404(res, "No previous chapter found");
+      }
+
+      if (prevChapter.content === "Free" && prevChapter.coins === 0) {
+        return success(res, "200", "Success", prevChapter);
+      }
+
+      if (prevChapter.content === "Paid" && prevChapter.coins > 0) {
+        let userPurchasedChapter;
+        const userPurchases = await UserPurchases.findOne({
+          user: req.user._id,
+        });
+        // Check only if user have any purchases before
+        if (userPurchases) {
+          userPurchasedChapter = userPurchases.chapters.includes(
+            prevChapter._id
+          );
+        }
+
+        if (userPurchasedChapter) {
+          return success(res, "200", "Success", prevChapter);
+        } else {
+          return customError(res, 403, "Chapter not found in user purchases");
+        }
+      }
+    }
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addChapter,
   getAllChaptersByNovel,
   deleteChapter,
   updateChapter,
+  viewChapter,
 };

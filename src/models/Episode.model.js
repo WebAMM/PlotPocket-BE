@@ -13,6 +13,10 @@ const episodeSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    coins: {
+      type: Number,
+      default: 0,
+    },
     //Cloudinary video links.
     episodeVideo: {
       publicUrl: {
