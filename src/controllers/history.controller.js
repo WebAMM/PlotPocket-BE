@@ -25,12 +25,23 @@ const addToHistory = async (req, res) => {
     if (!episode) {
       return error409(res, "Episode not found");
     }
+
+    const existHistory = await History.findOne({
+      user: req.user._id,
+      series: seriesId,
+    });
+
+    if (existHistory) {
+      existHistory.episode = episodeId;
+      await existHistory.save();
+      return status200(res, "Episode of series added to history");
+    }
     await History.create({
       user: req.user._id,
       series: seriesId,
       episode: episodeId,
     });
-    return status200(res, "Series and episode added to history");
+    return status200(res, "Episode of series added to history");
   } else if (type === "Novels") {
     const novel = await Novel.findById(novelId);
     if (!novel) {
@@ -40,12 +51,21 @@ const addToHistory = async (req, res) => {
     if (!chapter) {
       return error409(res, "Chapter not found");
     }
+    const existHistory = await History.findOne({
+      user: req.user._id,
+      novel: novelId,
+    });
+    if (existHistory) {
+      existHistory.chapter = chapterId;
+      await existHistory.save();
+      return status200(res, "Chapter of novel added to history");
+    }
     await History.create({
       user: req.user._id,
       novel: novelId,
       chapter: chapterId,
     });
-    return status200(res, "Novel and chapters added to history");
+    return status200(res, "Chapter of novel added to history");
   }
 };
 
@@ -76,7 +96,8 @@ const allHistory = async (req, res) => {
         },
         {
           path: "episode",
-          select: "episodeVideo.publicUrl title content visibility description createdAt",
+          select:
+            "episodeVideo.publicUrl title content visibility description createdAt",
         },
         {
           path: "novel",
@@ -84,7 +105,8 @@ const allHistory = async (req, res) => {
         },
         {
           path: "chapter",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews description createdAt",
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews description createdAt",
         },
       ]);
 

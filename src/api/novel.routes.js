@@ -51,7 +51,7 @@ router.get(
   novelController.getAllNovels
 );
 
-//[ADMIN] Get chapters of novels
+//[APP] Get chapters of novels
 router.get(
   "/app/all-chapters/:id",
   verifyToken,

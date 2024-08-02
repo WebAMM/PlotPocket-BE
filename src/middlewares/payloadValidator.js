@@ -219,15 +219,15 @@ const validateAddChapter = [
     .withMessage("Content is required")
     .custom((value, { req }) => {
       if (value === "Paid") {
-        if (!req.body.price) {
-          throw new Error("Price is required for paid content");
+        if (typeof req.body.coins === "undefined") {
+          throw new Error("Coins are required for paid content");
         }
-        if (req.body.price <= 0) {
-          throw new Error("Price must be a positive number");
+        if (req.body.coins <= 0) {
+          throw new Error("Coins must be a positive number for paid content");
         }
       } else if (value === "Free") {
-        if (req.body.price) {
-          throw new Error("Price should not be provided for free content");
+        if (typeof req.body.coins == "undefined" || req.body.coins != 0) {
+          throw new Error("Coins must be 0 for free content");
         }
       }
       return true;
@@ -306,15 +306,15 @@ const validateAddEpisode = [
     .withMessage("Content is required")
     .custom((value, { req }) => {
       if (value === "Paid") {
-        if (!req.body.price) {
-          throw new Error("Price is required for paid content");
+        if (typeof req.body.coins === "undefined") {
+          throw new Error("Coins are required for paid content");
         }
-        if (req.body.price <= 0) {
-          throw new Error("Price must be a positive number");
+        if (req.body.coins <= 0) {
+          throw new Error("Coins must be a positive number for paid content");
         }
       } else if (value === "Free") {
-        if (req.body.price) {
-          throw new Error("Price should not be provided for free content");
+        if (typeof req.body.coins == "undefined" || req.body.coins != 0) {
+          throw new Error("Coins must be 0 for free content");
         }
       }
       return true;

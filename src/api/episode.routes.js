@@ -32,7 +32,7 @@ router.get(
   episodeController.episodesOfSeries
 );
 
-//[APP] All episode of series with Pagination for listing
+//[APP] All episode of series in List Box
 router.get(
   "/app/all/:id",
   verifyToken,
@@ -57,4 +57,11 @@ router.put(
   episodeController.updateEpisode
 );
 
+//[APP] View Episode
+router.get(
+  "/app/view/:id",
+  verifyToken,
+  verifyRole(["Guest", "User"]),
+  episodeController.viewEpisode
+);
 module.exports = router;

@@ -41,10 +41,10 @@ const globalSearch = async (req, res) => {
       .limit(10)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
         options: {
           sort: { createdAt: 1 },
-          // limit: 5,
+          limit: 1,
         },
       });
     const series = await Series.find({
@@ -60,10 +60,10 @@ const globalSearch = async (req, res) => {
       .populate({
         path: "episodes",
         select:
-          "episodeVideo.publicUrl title content visibility description price",
+          "episodeVideo.publicUrl title content visibility description coins",
         options: {
           sort: { createdAt: 1 },
-          // limit: 5,
+          limit: 1,
         },
       });
 
@@ -128,7 +128,7 @@ const singleDetailPage = async (req, res) => {
               "chapterPdf.publicUrl chapterNo content totalViews createdAt",
             options: {
               sort: { createdAt: 1 },
-              // limit: 5,
+              limit: 1,
             },
           },
           {
@@ -186,10 +186,10 @@ const singleDetailPage = async (req, res) => {
         .populate({
           path: "chapters",
           select:
-            "chapterPdf.publicUrl name chapterNo content totalViews price",
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            // limit: 5
+            limit: 1
           },
         })
         .populate({
@@ -229,7 +229,7 @@ const singleDetailPage = async (req, res) => {
               sort: {
                 createdAt: 1,
               },
-              // limit: 5,
+              limit: 1,
             },
           },
         ])
@@ -267,10 +267,10 @@ const singleDetailPage = async (req, res) => {
         .populate({
           path: "episodes",
           select:
-            "episodeVideo.publicUrl title content visibility description price",
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: { createdAt: 1 },
-            // limit: 5
+            limit: 1
           },
         })
         .populate({
@@ -333,10 +333,10 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "episodes",
           select:
-            "episodeVideo.publicUrl title content visibility description price",
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: { createdAt: 1 },
-            // limit: 5
+            limit: 1
           },
         });
       novels = await Novel.find(query)
@@ -345,10 +345,10 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "chapters",
           select:
-            "chapterPdf.publicUrl name chapterNo content totalViews price",
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            //  limit: 5
+             limit: 1
           },
         });
     } else if (type === "Latest") {
@@ -371,12 +371,12 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "episodes",
           select:
-            "episodeVideo.publicUrl title content visibility description price",
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            // limit: 5,
+            limit: 1,
           },
         })
         .populate({
@@ -389,10 +389,10 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "chapters",
           select:
-            "chapterPdf.publicUrl name chapterNo content totalViews price",
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            // limit: 5
+            limit: 1
           },
         })
         .populate({
@@ -454,12 +454,12 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "episodes",
           select:
-            "episodeVideo.publicUrl title content visibility description price",
+            "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: {
               createdAt: 1,
             },
-            // limit: 5,
+            limit: 1,
           },
         })
         .populate({
@@ -475,10 +475,10 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "chapters",
           select:
-            "chapterPdf.publicUrl name chapterNo content totalViews price",
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            //  limit: 5
+             limit: 1
           },
         })
         .populate({
@@ -537,8 +537,8 @@ const combinedSeriesNovels = async (req, res) => {
 //       .sort({ totalViews: -1 })
 //       .populate({
 //         path: "episodes",
-//         select: "episodeVideo.publicUrl title content visibility description price",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "episodeVideo.publicUrl title content visibility description coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .skip(skip)
 //       .limit(limit);
@@ -547,8 +547,8 @@ const combinedSeriesNovels = async (req, res) => {
 //       .sort({ totalViews: -1 })
 //       .populate({
 //         path: "chapters",
-//         select: "chapterPdf.publicUrl name chapterNo content totalViews price",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .skip(skip)
 //       .limit(limit);
@@ -589,12 +589,12 @@ const combinedSeriesNovels = async (req, res) => {
 //       .sort({ createdAt: -1 })
 //       .populate({
 //         path: "episodes",
-//         select: "episodeVideo.publicUrl title content visibility description price",
+//         select: "episodeVideo.publicUrl title content visibility description coins",
 //         options: {
 //           sort: {
 //             createdAt: 1,
 //           },
-//           limit: 5,
+//           limit: 1,
 //         },
 //       })
 //       .populate({
@@ -610,8 +610,8 @@ const combinedSeriesNovels = async (req, res) => {
 //       .limit(limit)
 //       .populate({
 //         path: "chapters",
-//         select: "chapterPdf.publicUrl name chapterNo content totalViews price",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .populate({
 //         path: "category",
@@ -683,12 +683,12 @@ const combinedSeriesNovels = async (req, res) => {
 //       .select("thumbnail.publicUrl title view type seriesRating")
 //       .populate({
 //         path: "episodes",
-//         select: "episodeVideo.publicUrl title content visibility description price",
+//         select: "episodeVideo.publicUrl title content visibility description coins",
 //         options: {
 //           sort: {
 //             createdAt: 1,
 //           },
-//           limit: 5,
+//           limit: 1,
 //         },
 //       })
 //       .populate({
@@ -706,8 +706,8 @@ const combinedSeriesNovels = async (req, res) => {
 //       .select("thumbnail.publicUrl averageRating type title averageRating")
 //       .populate({
 //         path: "chapters",
-//         select: "chapterPdf.publicUrl name chapterNo content totalViews price",
-//         options: { sort: { createdAt: 1 }, limit: 5 },
+//         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
+//         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
 //       .populate({
 //         path: "category",
