@@ -44,6 +44,10 @@ const episodeSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    episodeRating: {
+      type: Number,
+      default: 0,
+    },
     views: {
       type: [
         {

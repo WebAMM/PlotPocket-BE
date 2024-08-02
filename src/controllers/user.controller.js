@@ -68,8 +68,9 @@ const getUserCoinsDetail = async (req, res) => {
     }
 
     const data = {
-      coinBalance: coinDetails,
       price: price - coinDetails.totalCoins,
+      coinBalance: coinDetails,
+      // price: price,
     };
 
     return success(res, "200", "Success", data);

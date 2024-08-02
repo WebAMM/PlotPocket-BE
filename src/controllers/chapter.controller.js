@@ -80,7 +80,7 @@ const getAllChaptersByNovel = async (req, res) => {
       )
       .populate({
         path: "novel",
-        select: "thumbnail.publicUrl ",
+        select: "thumbnail.publicUrl",
       });
     success(res, "200", "Success", chapters);
   } catch (err) {
@@ -194,12 +194,15 @@ const viewChapter = async (req, res) => {
         novel: new mongoose.Types.ObjectId(currentChapter.novel),
         createdAt: { $gt: currentChapter.createdAt },
       })
+        .select(
+          "chapterPdf.publicUrl chapterPdf.format coins createdAt totalViews content chapterNo name"
+        )
         .sort({
           createdAt: 1,
         })
         .populate({
           path: "novel",
-          // select: ""
+          select: "thumbnail.publicUrl title type totalViews",
         });
 
       if (!nextChapter) {
@@ -223,7 +226,6 @@ const viewChapter = async (req, res) => {
         }
 
         if (userPurchasedChapter) {
-          console.log("Purchased");
           return success(res, "200", "Success", nextChapter);
         } else {
           if (autoUnlock) {
@@ -293,9 +295,13 @@ const viewChapter = async (req, res) => {
         novel: new mongoose.Types.ObjectId(currentChapter.novel),
         createdAt: { $lt: currentChapter.createdAt },
       })
+        .select(
+          "chapterPdf.publicUrl chapterPdf.format coins createdAt totalViews content chapterNo name"
+        )
         .sort({ createdAt: -1 })
         .populate({
           path: "novel",
+          select: "thumbnail.publicUrl title type totalViews",
         });
 
       if (!prevChapter) {

@@ -125,7 +125,7 @@ const singleDetailPage = async (req, res) => {
           {
             path: "chapters",
             select:
-              "chapterPdf.publicUrl chapterNo content totalViews createdAt",
+              "chapterPdf.publicUrl chapterNo content totalViews createdAt coins",
             options: {
               sort: { createdAt: 1 },
               limit: 1,
@@ -189,7 +189,7 @@ const singleDetailPage = async (req, res) => {
             "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            limit: 1
+            limit: 1,
           },
         })
         .populate({
@@ -224,7 +224,7 @@ const singleDetailPage = async (req, res) => {
           {
             path: "episodes",
             select:
-              "episodeVideo.publicUrl title content visibility description",
+              "episodeVideo.publicUrl title content visibility description coins",
             options: {
               sort: {
                 createdAt: 1,
@@ -270,7 +270,7 @@ const singleDetailPage = async (req, res) => {
             "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: { createdAt: 1 },
-            limit: 1
+            limit: 1,
           },
         })
         .populate({
@@ -336,7 +336,7 @@ const combinedSeriesNovels = async (req, res) => {
             "episodeVideo.publicUrl title content visibility description coins",
           options: {
             sort: { createdAt: 1 },
-            limit: 1
+            limit: 1,
           },
         });
       novels = await Novel.find(query)
@@ -348,7 +348,7 @@ const combinedSeriesNovels = async (req, res) => {
             "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-             limit: 1
+            limit: 1,
           },
         });
     } else if (type === "Latest") {
@@ -392,7 +392,7 @@ const combinedSeriesNovels = async (req, res) => {
             "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            limit: 1
+            limit: 1,
           },
         })
         .populate({
@@ -478,7 +478,7 @@ const combinedSeriesNovels = async (req, res) => {
             "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-             limit: 1
+            limit: 1,
           },
         })
         .populate({

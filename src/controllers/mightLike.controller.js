@@ -105,7 +105,7 @@ const { success } = require("../services/helpers/response");
 const mightLike = async (req, res) => {
   const { page = 1, pageSize = 10 } = req.query;
   try {
-    //user history
+    //User history
     const history = await History.find({ user: req.user._id })
       .populate("series")
       .populate("novel");
@@ -133,6 +133,15 @@ const mightLike = async (req, res) => {
       .populate({
         path: "category",
         select: "title",
+      })
+      .populate({
+        path: "episodes",
+        select:
+          "episodeVideo.publicUrl title content visibility description coins",
+        options: {
+          sort: { createdAt: 1 },
+          limit: 1,
+        },
       });
 
     const mightLikeNovels = await Novel.find({
@@ -140,6 +149,14 @@ const mightLike = async (req, res) => {
       _id: { $nin: historyNovelIds },
     })
       .select("thumbnail.publicUrl title type averageRating totalViews")
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name chapterNo content coins",
+        options: {
+          sort: { createdAt: 1 },
+          limit: 1,
+        },
+      })
       .populate({
         path: "category",
         select: "title",
