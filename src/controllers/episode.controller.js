@@ -8,9 +8,12 @@ const {
   error409,
   error404,
   error400,
+  customError,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 const { default: mongoose } = require("mongoose");
+const UserPurchases = require("../models/UserPurchases.model");
+const UserCoin = require("../models/UserCoin.model");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 
@@ -114,83 +117,52 @@ const rateTheEpisode = async (req, res) => {
   }
 };
 
-// All Episodes by Series
+// Get All Episode Of Series
 const allEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
-  const { page = 1, pageSize = 10 } = req.query;
   try {
     const seriesExist = await Series.findById(id);
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
 
-    // Pagination calculations
-    const currentPage = parseInt(page, 10) || 1;
-    const size = parseInt(pageSize, 10) || 10;
-    const totalEpisodeCount = await Episode.countDocuments();
-    const skip = (currentPage - 1) * size;
-    const limit = size;
+    //Fetch user purchases
+    const userPurchases = await UserPurchases.findOne(
+      {
+        user: req.user._id,
+      },
+      { episodes: 1, _id: 0 }
+    ).lean();
 
-    const episodes = await Episode.find({
+    const allSeriesEpisodes = await Episode.find({
       series: id,
     })
       .select(
-        "episodeVideo.publicUrl title _id totalViews content series createdAt description price"
+        "episodeVideo.publicUrl totalViews createdAt content title description coins"
       )
       .populate({
         path: "series",
-        select: "thumbnail.publicUrl _id",
+        select: "thumbnail.publicUrl title",
       })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: 1 });
 
-    //To handle infinite scroll on frontend
-    const hasMore = skip + limit < totalEpisodeCount;
-    const data = {
-      episodes,
-      hasMore,
-    };
+    const purchasedEpisodeIds = new Set(
+      userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
+    );
 
-    success(res, "200", "Success", data);
+    const episodes = allSeriesEpisodes.map((episode) => ({
+      ...episode._doc,
+      content:
+        episode.content === "Paid" &&
+        purchasedEpisodeIds.has(episode._id.toString())
+          ? "Free"
+          : episode.content,
+    }));
+
+    return success(res, "200", "Success", episodes);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
-  // try {
-  //   const seriesExist = await Series.findById(id);
-  //   if (!seriesExist) {
-  //     return error409(res, "Series not found");
-  //   }
-  //   const allEpisodesOfSeries = await Episode.aggregate([
-  //     {
-  //       $match: {
-  //         series: new mongoose.Types.ObjectId(id),
-  //       },
-  //     },
-  //     {
-  //       $addFields: {
-  //         totalRating: {
-  //           $sum: "$ratings.rating",
-  //         },
-  //       },
-  //     },
-  //     {
-  //       $project: {
-  //         "episodeVideo.publicUrl": 1,
-  //         title: 1,
-  //         description: 1,
-  //         content: 1,
-  //         visibility: 1,
-  //         totalViews: 1,
-  //         totalRating: 1,
-  //         createdAt: 1,
-  //       },
-  //     },
-  //   ]);
-  //   success(res, "200", "Success", allEpisodesOfSeries);
-  // } catch (err) {
-  //   error500(res, err);
-  // }
 };
 
 // All episodes of series in admin panel
@@ -205,7 +177,7 @@ const episodesOfSeries = async (req, res) => {
       series: id,
     })
       .select(
-        "episodeVideo.publicUrl totalViews createdAt content title description price"
+        "episodeVideo.publicUrl totalViews createdAt content title description coins"
       )
       .populate({
         path: "series",
@@ -303,6 +275,164 @@ const updateEpisode = async (req, res) => {
   }
 };
 
+// View Episode
+const viewEpisode = async (req, res) => {
+  const { id } = req.params;
+  const { up, down } = req.query;
+  const { autoUnlock } = req.body;
+
+  try {
+    const currentEpisode = await Episode.findById(id);
+    if (!currentEpisode) {
+      return error404(res, "Episode not found");
+    }
+
+    if ((down && up) || (!down && !up)) {
+      return error400(res, "Query must be either up or down");
+    }
+
+    if (down) {
+      const nextEpisode = await Episode.findOne({
+        series: new mongoose.Types.ObjectId(currentEpisode.series),
+        createdAt: { $gt: currentEpisode.createdAt },
+      })
+        .sort({ createdAt: 1 })
+        .populate({
+          path: "series",
+          select:
+            "episodeVideo.publicUrl title content visibility description coin",
+        });
+
+      if (!nextEpisode) {
+        return error404(res, "No more episode of series");
+      }
+
+      if (nextEpisode.content === "Free" && nextEpisode.coins === 0) {
+        return success(res, "200", "Success", nextEpisode);
+      }
+
+      if (nextEpisode.content === "Paid" && nextEpisode.coins > 0) {
+        let userPurchasedEpisode;
+        const userPurchases = await UserPurchases.findOne({
+          user: req.user._id,
+        });
+        //Check only if user have any purchases before
+        if (userPurchases) {
+          userPurchasedEpisode = userPurchases.episodes.includes(
+            nextEpisode._id
+          );
+        }
+
+        if (userPurchasedEpisode) {
+          return success(res, "200", "Success", nextEpisode);
+        } else {
+          if (autoUnlock) {
+            const userCoins = await UserCoin.findOne({ user: req.user._id });
+            if (!userCoins) {
+              return error404(res, "User has no coins");
+            }
+
+            let { totalCoins, refillCoins, bonusCoins } = userCoins;
+
+            if (totalCoins < nextEpisode.coins) {
+              return error400(
+                res,
+                "Insufficient total coins to purchase episode"
+              );
+            }
+
+            // Deduct refill coins first
+            let remainingCoins = nextEpisode.coins;
+            if (refillCoins >= remainingCoins) {
+              refillCoins -= remainingCoins;
+              remainingCoins = 0;
+            } else {
+              remainingCoins -= refillCoins;
+              refillCoins = 0;
+            }
+
+            if (remainingCoins > 0) {
+              if (bonusCoins >= remainingCoins) {
+                bonusCoins -= remainingCoins;
+                remainingCoins = 0;
+              } else {
+                remainingCoins -= bonusCoins;
+                bonusCoins = 0;
+              }
+            }
+
+            // Deduct the remaining cost from total coins
+            if (remainingCoins > 0) {
+              totalCoins -= remainingCoins;
+            }
+
+            if (!userPurchases) {
+              const newUserPurchases = new UserPurchases({
+                user: req.user._id,
+                episodes: [nextEpisode._id],
+              });
+              await newUserPurchases.save();
+            } else {
+              userPurchases.episodes.push(nextEpisode._id);
+              await userPurchases.save();
+            }
+
+            userCoins.totalCoins = totalCoins;
+            userCoins.refillCoins = refillCoins;
+            userCoins.bonusCoins = bonusCoins;
+
+            await userCoins.save();
+
+            return success(res, "200", "Success", nextEpisode);
+          } else {
+            return customError(res, 403, "Use coin to unlock episode");
+          }
+        }
+      }
+    } else if (up) {
+      const prevEpisode = await Episode.findOne({
+        series: new mongoose.Types.ObjectId(currentEpisode.series),
+        createdAt: { $lt: currentEpisode.createdAt },
+      })
+        .sort({ createdAt: -1 })
+        .populate({
+          path: "series",
+          select:
+            "episodeVideo.publicUrl title content visibility description coin",
+        });
+
+      if (!prevEpisode) {
+        return error404(res, "No previous episode found");
+      }
+
+      if (prevEpisode.content === "Free" && prevEpisode.coins === 0) {
+        return success(res, "200", "Success", prevEpisode);
+      }
+
+      if (prevEpisode.content === "Paid" && prevEpisode.coins > 0) {
+        let userPurchasedEpisode;
+        const userPurchases = await UserPurchases.findOne({
+          user: req.user._id,
+        });
+        // Check only if user have any purchases before
+        if (userPurchases) {
+          userPurchasedEpisode = userPurchases.episodes.includes(
+            prevEpisode._id
+          );
+        }
+
+        if (userPurchasedEpisode) {
+          return success(res, "200", "Success", prevEpisode);
+        } else {
+          return customError(res, 403, "Episode not found in user purchases");
+        }
+      }
+    }
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addEpisode,
   rateTheEpisode,
@@ -310,4 +440,5 @@ module.exports = {
   episodesOfSeries,
   deleteEpisode,
   updateEpisode,
+  viewEpisode,
 };

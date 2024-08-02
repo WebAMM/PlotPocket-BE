@@ -3,7 +3,6 @@ const router = require("express").Router();
 const userController = require("../controllers/user.controller");
 //middlewares
 const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
-const payloadValidator = require("../middlewares/payloadValidator");
 
 //[ADMIN] Get all users
 router.get(
@@ -28,5 +27,14 @@ router.get(
   verifyRole(["User"]),
   userController.getUserCoinsDetail
 );
+
+//[APP] Add to user purchases
+// router.post(
+//   "/app/purchase",
+//   verifyToken,
+//   verifyRole(["User"]),
+//   userController.addToUserPurchase
+// );
+
 
 module.exports = router;

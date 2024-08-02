@@ -43,15 +43,15 @@ router.patch(
 router.get(
   "/app/steak",
   verifyToken,
-  verifyRole(["User"]),
+  verifyRole(["User", "Guest"]),
   rewardController.getRewardsForUser
 );
 
-//[APP] Update Reward
+//[APP] Claim the reward from check in steak
 router.post(
   "/app/claim",
   verifyToken,
-  verifyRole(["User"]),
+  verifyRole(["User", "Guest"]),
   rewardController.claimReward
 );
 

@@ -15,6 +15,7 @@ const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
+const UserPurchases = require("../models/UserPurchases.model");
 
 //Publish the novel
 const addNovel = async (req, res) => {
@@ -232,11 +233,11 @@ const getAllChaptersOfNovel = async (req, res) => {
     const skip = (currentPage - 1) * size;
     const limit = size;
 
-    const chapters = await Chapter.find({
+    const allNovelChapters = await Chapter.find({
       novel: id,
     })
       .select(
-        "chapterPdf.publicUrl totalViews createdAt content name chapterNo description price"
+        "chapterPdf.publicUrl totalViews createdAt content name chapterNo description coins"
       )
       .populate({
         path: "novel",
@@ -246,9 +247,32 @@ const getAllChaptersOfNovel = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    //Fetch user purchases
+    const userPurchases = await UserPurchases.findOne(
+      {
+        user: req.user._id,
+      },
+      {
+        chapters: 1,
+        _id: 0,
+      }
+    ).lean();
+
+    const purchasedChapterIds = new Set(
+      userPurchases ? userPurchases.chapters.map((e) => e.toString()) : []
+    );
+
+    const chapters = allNovelChapters.map((chapter) => ({
+      ...chapter._docs,
+      content:
+        chapter.content === "Paid" &&
+        purchasedChapterIds.has(chapter._id.toString())
+          ? "Free"
+          : chapter.content,
+    }));
+
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalChaptersCount;
-
     const data = {
       chapters,
       hasMore,
@@ -673,10 +697,10 @@ const bestNovels = async (req, res) => {
       .limit(limit)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
         options: {
           sort: { createdAt: 1 },
-          // limit: 5
+          limit: 1,
         },
       });
 
@@ -730,10 +754,10 @@ const topNovels = async (req, res) => {
       .limit(limit)
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
         options: {
           sort: { createdAt: 1 },
-          // limit: 5
+          limit: 1,
         },
       });
 
@@ -805,10 +829,10 @@ const getTopRatedNovels = async (req, res) => {
       .select("thumbnail.publicUrl title view type averageRating")
       .populate({
         path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+        select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
         options: {
           sort: { createdAt: 1 },
-          // limit: 5
+          limit: 1,
         },
       })
       .populate({
@@ -879,10 +903,11 @@ const getDetailNovelByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            //  limit: 5
+            limit: 1,
           },
         });
 
@@ -922,10 +947,11 @@ const getDetailNovelByType = async (req, res) => {
         .limit(limit)
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            //  limit: 5
+            limit: 1,
           },
         });
 
@@ -997,10 +1023,11 @@ const getDetailNovelByType = async (req, res) => {
         .select("thumbnail.publicUrl title view type averageRating")
         .populate({
           path: "chapters",
-          select: "chapterPdf.publicUrl name chapterNo content totalViews price",
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
           options: {
             sort: { createdAt: 1 },
-            // limit: 5
+            limit: 1,
           },
         })
         .populate({

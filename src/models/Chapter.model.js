@@ -14,8 +14,9 @@ const chapterSchema = new mongoose.Schema(
     description: {
       type: String,
     },
-    price: {
+    coins: {
       type: Number,
+      default: 0,
     },
     chapterNo: {
       type: Number,

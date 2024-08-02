@@ -31,7 +31,7 @@ router.get(
 
 //[APP] Increase View
 router.post(
-  "/app/view",
+  "/app/inc-view",
   verifyToken,
   verifyRole(["User", "Guest"]),
   payloadValidator.validateIncreaseView,
