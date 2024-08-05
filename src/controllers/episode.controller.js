@@ -157,14 +157,30 @@ const allEpisodeOfSeries = async (req, res) => {
       userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
     );
 
-    const episodes = allSeriesEpisodes.map((episode) => ({
-      ...episode._doc,
-      content:
-        episode.content === "Paid" &&
-        purchasedEpisodeIds.has(episode._id.toString())
-          ? "Free"
-          : episode.content,
-    }));
+    let firstPaidEpisode = false;
+
+    const episodes = allSeriesEpisodes.map((episode) => {
+      const isPurchased = purchasedEpisodeIds.has(episode._id.toString());
+
+      contentStatus = episode.content;
+
+      if (episode.content === "Paid" && isPurchased) {
+        contentStatus = "Free";
+      }
+
+      // Set canUnlock flag for the first paid episode
+      let canUnlock = false;
+      if (!firstPaidEpisode && contentStatus === "Paid") {
+        firstPaidEpisode = true;
+        canUnlock = true;
+      }
+
+      return {
+        ...episode._doc,
+        content: contentStatus,
+        canUnlock,
+      };
+    });
 
     return success(res, "200", "Success", episodes);
   } catch (err) {
@@ -283,10 +299,384 @@ const updateEpisode = async (req, res) => {
 };
 
 // View Episode
+// const viewEpisode = async (req, res) => {
+//   const { id } = req.params;
+//   const { up, down } = req.query;
+//   const { autoUnlock, unlockNow } = req.body;
+
+//   try {
+//     const currentEpisode = await Episode.findById(id)
+//       .select(
+//         "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating"
+//       )
+//       .populate({
+//         path: "series",
+//         select: "thumbnail.publicUrl title content visibility description coin",
+//       });
+
+//     if (!currentEpisode) {
+//       return error404(res, "Episode not found");
+//     }
+
+//     if (down && up) {
+//       return error400(res, "Query must be either up or down");
+//     }
+
+//     if (down) {
+//       const nextEpisode = await Episode.findOne({
+//         series: new mongoose.Types.ObjectId(currentEpisode.series),
+//         createdAt: { $gt: currentEpisode.createdAt },
+//       })
+//         .select(
+//           "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating"
+//         )
+//         .sort({ createdAt: 1 })
+//         .populate({
+//           path: "series",
+//           select:
+//             "thumbnail.publicUrl title content visibility description coin",
+//         });
+
+//       if (!nextEpisode) {
+//         return error404(res, "No more episode of series");
+//       }
+
+//       if (nextEpisode.content === "Free" && nextEpisode.coins === 0) {
+//         const isRated = nextEpisode.ratings.some(
+//           (rating) => rating.user.toString() === req.user._id.toString()
+//         );
+
+//         const isBookmarked = await myList.exists({
+//           user: req.user._id,
+//           episode: nextEpisode._id,
+//         });
+
+//         const data = {
+//           episode: nextEpisode,
+//           isBookmarked,
+//           isRated,
+//         };
+
+//         return success(res, "200", "Success", data);
+//       }
+
+//       if (nextEpisode.content === "Paid" && nextEpisode.coins > 0) {
+//         let userPurchasedEpisode;
+//         const userPurchases = await UserPurchases.findOne({
+//           user: req.user._id,
+//         });
+//         //Check only if user have any purchases before
+//         if (userPurchases) {
+//           userPurchasedEpisode = userPurchases.episodes.includes(
+//             nextEpisode._id
+//           );
+//         }
+
+//         if (userPurchasedEpisode) {
+//           const isRated = nextEpisode.ratings.some(
+//             (rating) => rating.user.toString() === req.user._id.toString()
+//           );
+
+//           const isBookmarked = await myList.exists({
+//             user: req.user._id,
+//             // episode: nextEpisode._id,
+//           });
+
+//           const data = {
+//             episode: nextEpisode,
+//             isBookmarked,
+//             isRated,
+//           };
+
+//           return success(res, "200", "Success", data);
+//         } else {
+//           if (autoUnlock) {
+//             const userCoins = await UserCoin.findOne({ user: req.user._id });
+//             if (!userCoins) {
+//               return error404(res, "User has no coins");
+//             }
+
+//             let { totalCoins, refillCoins, bonusCoins } = userCoins;
+
+//             if (totalCoins < nextEpisode.coins) {
+//               return error400(
+//                 res,
+//                 "Insufficient total coins to purchase episode"
+//               );
+//             }
+
+//             // Deduct refill coins first
+//             let remainingCoins = nextEpisode.coins;
+//             if (refillCoins >= remainingCoins) {
+//               refillCoins -= remainingCoins;
+//               remainingCoins = 0;
+//             } else {
+//               remainingCoins -= refillCoins;
+//               refillCoins = 0;
+//             }
+
+//             if (remainingCoins > 0) {
+//               if (bonusCoins >= remainingCoins) {
+//                 bonusCoins -= remainingCoins;
+//                 remainingCoins = 0;
+//               } else {
+//                 remainingCoins -= bonusCoins;
+//                 bonusCoins = 0;
+//               }
+//             }
+
+//             // Deduct the remaining cost from total coins
+//             if (remainingCoins > 0) {
+//               totalCoins -= remainingCoins;
+//             }
+
+//             if (!userPurchases) {
+//               const newUserPurchases = new UserPurchases({
+//                 user: req.user._id,
+//                 episodes: [nextEpisode._id],
+//               });
+//               await newUserPurchases.save();
+//             } else {
+//               userPurchases.episodes.push(nextEpisode._id);
+//               await userPurchases.save();
+//             }
+
+//             userCoins.totalCoins = totalCoins;
+//             userCoins.refillCoins = refillCoins;
+//             userCoins.bonusCoins = bonusCoins;
+
+//             await userCoins.save();
+
+//             const isRated = nextEpisode.ratings.some(
+//               (rating) => rating.user.toString() === req.user._id.toString()
+//             );
+
+//             const isBookmarked = await myList.exists({
+//               user: req.user._id,
+//               episode: nextEpisode._id,
+//             });
+
+//             const data = {
+//               episode: nextEpisode,
+//               isBookmarked,
+//               isRated,
+//             };
+
+//             return success(res, "200", "Success", data);
+//           } else {
+//             return customError(res, 403, "Use coin to unlock episode");
+//           }
+//         }
+//       }
+//     } else if (up) {
+//       const prevEpisode = await Episode.findOne({
+//         series: new mongoose.Types.ObjectId(currentEpisode.series),
+//         createdAt: { $lt: currentEpisode.createdAt },
+//       })
+//         .select(
+//           "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating"
+//         )
+//         .sort({ createdAt: -1 })
+//         .populate({
+//           path: "series",
+//           select:
+//             "thumbnail.publicUrl title content visibility description coin",
+//         });
+
+//       if (!prevEpisode) {
+//         return error404(res, "No previous episode found");
+//       }
+
+//       if (prevEpisode.content === "Free" && prevEpisode.coins === 0) {
+//         const isRated = prevEpisode.ratings.some(
+//           (rating) => rating.user.toString() === req.user._id.toString()
+//         );
+
+//         const isBookmarked = await myList.exists({
+//           user: req.user._id,
+//           episode: prevEpisode._id,
+//         });
+
+//         const data = {
+//           episode: prevEpisode,
+//           isRated,
+//           isBookmarked,
+//         };
+
+//         return success(res, "200", "Success", data);
+//       }
+
+//       if (prevEpisode.content === "Paid" && prevEpisode.coins > 0) {
+//         let userPurchasedEpisode;
+//         const userPurchases = await UserPurchases.findOne({
+//           user: req.user._id,
+//         });
+//         // Check only if user have any purchases before
+//         if (userPurchases) {
+//           userPurchasedEpisode = userPurchases.episodes.includes(
+//             prevEpisode._id
+//           );
+//         }
+
+//         if (userPurchasedEpisode) {
+//           const isRated = prevEpisode.ratings.some(
+//             (rating) => rating.user.toString() === req.user._id.toString()
+//           );
+
+//           const isBookmarked = await myList.exists({
+//             user: req.user._id,
+//             episode: prevEpisode._id,
+//           });
+
+//           const data = {
+//             episode: prevEpisode,
+//             isRated,
+//             isBookmarked,
+//           };
+
+//           return success(res, "200", "Success", data);
+//         } else {
+//           return customError(res, 403, "Episode not found in user purchases");
+//         }
+//       }
+//     } else {
+//       if (currentEpisode.content === "Free") {
+//         const isRated = currentEpisode.ratings.some(
+//           (rating) => rating.user.toString() === req.user._id.toString()
+//         );
+
+//         const isBookmarked = await myList.exists({
+//           user: req.user._id,
+//           episode: currentEpisode._id,
+//         });
+
+//         const data = {
+//           episode: currentEpisode,
+//           isBookmarked,
+//           isRated,
+//         };
+
+//         return success(res, "200", "Success", data);
+//       }
+
+//       if (currentEpisode.content === "Paid" && currentEpisode.coins > 0) {
+//         let userPurchasedEpisode;
+//         const userPurchases = await UserPurchases.findOne({
+//           user: req.user._id,
+//         });
+//         if (userPurchases) {
+//           userPurchasedEpisode = userPurchases.episodes.includes(
+//             currentEpisode._id
+//           );
+//         }
+
+//         if (userPurchasedEpisode) {
+//           const isRated = currentEpisode.ratings.some(
+//             (rating) => rating.user.toString() === req.user._id.toString()
+//           );
+
+//           const isBookmarked = await myList.exists({
+//             user: req.user._id,
+//             episode: currentEpisode._id,
+//           });
+
+//           const data = {
+//             episode: nextEpisode,
+//             isBookmarked,
+//             isRated,
+//           };
+
+//           return success(res, "200", "Success", data);
+//         } else {
+//           if (unlockNow) {
+//             const userCoins = await UserCoin.findOne({ user: req.user._id });
+//             if (!userCoins) {
+//               return error404(res, "User has no coins");
+//             }
+
+//             let { totalCoins, refillCoins, bonusCoins } = userCoins;
+
+//             if (totalCoins < currentEpisode.coins) {
+//               return error400(
+//                 res,
+//                 "Insufficient total coins to purchase episode"
+//               );
+//             }
+
+//             // Deduct refill coins first
+//             let remainingCoins = currentEpisode.coins;
+//             if (refillCoins >= remainingCoins) {
+//               refillCoins -= remainingCoins;
+//               remainingCoins = 0;
+//             } else {
+//               remainingCoins -= refillCoins;
+//               refillCoins = 0;
+//             }
+
+//             if (remainingCoins > 0) {
+//               if (bonusCoins >= remainingCoins) {
+//                 bonusCoins -= remainingCoins;
+//                 remainingCoins = 0;
+//               } else {
+//                 remainingCoins -= bonusCoins;
+//                 bonusCoins = 0;
+//               }
+//             }
+
+//             // Deduct the remaining cost from total coins
+//             if (remainingCoins > 0) {
+//               totalCoins -= remainingCoins;
+//             }
+
+//             if (!userPurchases) {
+//               const newUserPurchases = new UserPurchases({
+//                 user: req.user._id,
+//                 episodes: [currentEpisode._id],
+//               });
+//               await newUserPurchases.save();
+//             } else {
+//               userPurchases.episodes.push(currentEpisode._id);
+//               await userPurchases.save();
+//             }
+
+//             userCoins.totalCoins = totalCoins;
+//             userCoins.refillCoins = refillCoins;
+//             userCoins.bonusCoins = bonusCoins;
+
+//             await userCoins.save();
+
+//             const isRated = currentEpisode.ratings.some(
+//               (rating) => rating.user.toString() === req.user._id.toString()
+//             );
+
+//             const isBookmarked = await myList.exists({
+//               user: req.user._id,
+//               episode: currentEpisode._id,
+//             });
+
+//             const data = {
+//               episode: nextEpisode,
+//               isBookmarked,
+//               isRated,
+//             };
+
+//             return success(res, "200", "Success", data);
+//           } else {
+//             return customError(res, 403, "Use coin to unlock episode");
+//           }
+//         }
+//       }
+//     }
+//   } catch (err) {
+//     return error500(res, err);
+//   }
+// };
+
+//View Episode
 const viewEpisode = async (req, res) => {
   const { id } = req.params;
   const { up, down } = req.query;
-  const { autoUnlock } = req.body;
+  const { autoUnlock, unlockNow } = req.body;
 
   try {
     const currentEpisode = await Episode.findById(id)
@@ -306,240 +696,184 @@ const viewEpisode = async (req, res) => {
       return error400(res, "Query must be either up or down");
     }
 
-    if (down) {
-      const nextEpisode = await Episode.findOne({
-        series: new mongoose.Types.ObjectId(currentEpisode.series),
-        createdAt: { $gt: currentEpisode.createdAt },
-      })
+    const findEpisode = async (condition, sort) => {
+      return Episode.findOne(condition)
         .select(
           "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating ratings"
         )
-        .sort({ createdAt: 1 })
+        .sort(sort)
         .populate({
           path: "series",
-          select:
-            "thumbnail.publicUrl title content visibility description coin",
+          select: "thumbnail.publicUrl title visibility description",
         });
+    };
+
+    const checkUserPurchases = async (userId, episodeId) => {
+      const userPurchases = await UserPurchases.findOne({ user: userId });
+      if (userPurchases) {
+        return userPurchases.episodes.includes(episodeId);
+      }
+      return false;
+    };
+
+    const handleResponse = async (episode) => {
+      const isRated = episode.ratings.some(
+        (rating) => rating.user.toString() === req.user._id.toString()
+      );
+
+      const isBookmarked = await myList.exists({
+        user: req.user._id,
+        episode: episode._id,
+      });
+
+      const data = {
+        episode,
+        isBookmarked: isBookmarked || false,
+        isRated,
+      };
+
+      return success(res, "200", "Success", data);
+    };
+
+    const handleCoinDeduction = async (userCoins, episodeCoins) => {
+      let { totalCoins, refillCoins, bonusCoins } = userCoins;
+      let remainingCoins = episodeCoins;
+
+      if (totalCoins < episodeCoins) {
+        return { error: "Insufficient total coins to purchase episode" };
+      }
+
+      // Deduct refill coins first
+      if (refillCoins >= remainingCoins) {
+        refillCoins -= remainingCoins;
+        remainingCoins = 0;
+      } else {
+        remainingCoins -= refillCoins;
+        refillCoins = 0;
+      }
+
+      if (remainingCoins > 0) {
+        if (bonusCoins >= remainingCoins) {
+          bonusCoins -= remainingCoins;
+          remainingCoins = 0;
+        } else {
+          remainingCoins -= bonusCoins;
+          bonusCoins = 0;
+        }
+      }
+
+      // Deduct the remaining cost from total coins
+      if (remainingCoins > 0) {
+        totalCoins -= remainingCoins;
+      }
+
+      return { totalCoins, refillCoins, bonusCoins };
+    };
+
+    const handleUnlock = async (episode, userCoins) => {
+      const { totalCoins, refillCoins, bonusCoins } = await handleCoinDeduction(
+        userCoins,
+        episode.coins
+      );
+
+      userCoins.totalCoins = totalCoins;
+      userCoins.refillCoins = refillCoins;
+      userCoins.bonusCoins = bonusCoins;
+      await userCoins.save();
+
+      const userPurchases = await UserPurchases.findOne({ user: req.user._id });
+      if (!userPurchases) {
+        const newUserPurchases = new UserPurchases({
+          user: req.user._id,
+          episodes: [episode._id],
+        });
+        await newUserPurchases.save();
+      } else {
+        userPurchases.episodes.push(episode._id);
+        await userPurchases.save();
+      }
+
+      return handleResponse(episode);
+    };
+
+    if (down) {
+      const nextEpisode = await findEpisode(
+        {
+          series: new mongoose.Types.ObjectId(currentEpisode.series),
+          createdAt: { $gt: currentEpisode.createdAt },
+        },
+        { createdAt: 1 }
+      );
 
       if (!nextEpisode) {
-        return error404(res, "No more episode of series");
+        return error404(res, "No more episodes of series");
       }
 
       if (nextEpisode.content === "Free" && nextEpisode.coins === 0) {
-        const hasRated = nextEpisode.ratings.some(
-          (rating) => rating.user.toString() === req.user._id.toString()
-        );
-
-        const hasBookmarked = await myList.exists({
-          user: req.user._id,
-          episode: nextEpisode._id,
-        });
-
-        const data = {
-          episode: nextEpisode,
-          hasBookmarked,
-          hasRated,
-        };
-
-        return success(res, "200", "Success", data);
+        return handleResponse(nextEpisode);
       }
 
       if (nextEpisode.content === "Paid" && nextEpisode.coins > 0) {
-        let userPurchasedEpisode;
-        const userPurchases = await UserPurchases.findOne({
-          user: req.user._id,
-        });
-        //Check only if user have any purchases before
-        if (userPurchases) {
-          userPurchasedEpisode = userPurchases.episodes.includes(
-            nextEpisode._id
-          );
+        if (await checkUserPurchases(req.user._id, nextEpisode._id)) {
+          return handleResponse(nextEpisode);
         }
 
-        if (userPurchasedEpisode) {
-          const hasRated = nextEpisode.ratings.some(
-            (rating) => rating.user.toString() === req.user._id.toString()
-          );
-
-          const hasBookmarked = await myList.exists({
-            user: req.user._id,
-            // episode: nextEpisode._id,
-          });
-
-          const data = {
-            episode: nextEpisode,
-            hasBookmarked,
-            hasRated,
-          };
-
-          return success(res, "200", "Success", data);
-        } else {
-          if (autoUnlock) {
-            const userCoins = await UserCoin.findOne({ user: req.user._id });
-            if (!userCoins) {
-              return error404(res, "User has no coins");
-            }
-
-            let { totalCoins, refillCoins, bonusCoins } = userCoins;
-
-            if (totalCoins < nextEpisode.coins) {
-              return error400(
-                res,
-                "Insufficient total coins to purchase episode"
-              );
-            }
-
-            // Deduct refill coins first
-            let remainingCoins = nextEpisode.coins;
-            if (refillCoins >= remainingCoins) {
-              refillCoins -= remainingCoins;
-              remainingCoins = 0;
-            } else {
-              remainingCoins -= refillCoins;
-              refillCoins = 0;
-            }
-
-            if (remainingCoins > 0) {
-              if (bonusCoins >= remainingCoins) {
-                bonusCoins -= remainingCoins;
-                remainingCoins = 0;
-              } else {
-                remainingCoins -= bonusCoins;
-                bonusCoins = 0;
-              }
-            }
-
-            // Deduct the remaining cost from total coins
-            if (remainingCoins > 0) {
-              totalCoins -= remainingCoins;
-            }
-
-            if (!userPurchases) {
-              const newUserPurchases = new UserPurchases({
-                user: req.user._id,
-                episodes: [nextEpisode._id],
-              });
-              await newUserPurchases.save();
-            } else {
-              userPurchases.episodes.push(nextEpisode._id);
-              await userPurchases.save();
-            }
-
-            userCoins.totalCoins = totalCoins;
-            userCoins.refillCoins = refillCoins;
-            userCoins.bonusCoins = bonusCoins;
-
-            await userCoins.save();
-
-            const hasRated = nextEpisode.ratings.some(
-              (rating) => rating.user.toString() === req.user._id.toString()
-            );
-
-            const hasBookmarked = await myList.exists({
-              user: req.user._id,
-              episode: nextEpisode._id,
-            });
-
-            const data = {
-              episode: nextEpisode,
-              hasBookmarked,
-              hasRated,
-            };
-
-            return success(res, "200", "Success", data);
-          } else {
-            return customError(res, 403, "Use coin to unlock episode");
+        if (autoUnlock) {
+          const userCoins = await UserCoin.findOne({ user: req.user._id });
+          if (!userCoins) {
+            return error404(res, "User has no coins");
           }
+
+          return handleUnlock(nextEpisode, userCoins);
+        } else {
+          return customError(res, 403, "Use coin to unlock episode");
         }
       }
     } else if (up) {
-      const prevEpisode = await Episode.findOne({
-        series: new mongoose.Types.ObjectId(currentEpisode.series),
-        createdAt: { $lt: currentEpisode.createdAt },
-      })
-        .select(
-          "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating ratings"
-        )
-        .sort({ createdAt: -1 })
-        .populate({
-          path: "series",
-          select:
-            "thumbnail.publicUrl title content visibility description coin",
-        });
+      const prevEpisode = await findEpisode(
+        {
+          series: new mongoose.Types.ObjectId(currentEpisode.series),
+          createdAt: { $lt: currentEpisode.createdAt },
+        },
+        { createdAt: -1 }
+      );
 
       if (!prevEpisode) {
         return error404(res, "No previous episode found");
       }
 
       if (prevEpisode.content === "Free" && prevEpisode.coins === 0) {
-        const hasRated = prevEpisode.ratings.some(
-          (rating) => rating.user.toString() === req.user._id.toString()
-        );
-
-        const hasBookmarked = await myList.exists({
-          user: req.user._id,
-          episode: prevEpisode._id,
-        });
-
-        const data = {
-          episode: prevEpisode,
-          hasRated,
-          hasBookmarked,
-        };
-
-        return success(res, "200", "Success", data);
+        return handleResponse(prevEpisode);
       }
 
       if (prevEpisode.content === "Paid" && prevEpisode.coins > 0) {
-        let userPurchasedEpisode;
-        const userPurchases = await UserPurchases.findOne({
-          user: req.user._id,
-        });
-        // Check only if user have any purchases before
-        if (userPurchases) {
-          userPurchasedEpisode = userPurchases.episodes.includes(
-            prevEpisode._id
-          );
-        }
-
-        if (userPurchasedEpisode) {
-          const hasRated = prevEpisode.ratings.some(
-            (rating) => rating.user.toString() === req.user._id.toString()
-          );
-
-          const hasBookmarked = await myList.exists({
-            user: req.user._id,
-            episode: prevEpisode._id,
-          });
-
-          const data = {
-            episode: prevEpisode,
-            hasRated,
-            hasBookmarked,
-          };
-
-          return success(res, "200", "Success", data);
+        if (await checkUserPurchases(req.user._id, prevEpisode._id)) {
+          return handleResponse(prevEpisode);
         } else {
           return customError(res, 403, "Episode not found in user purchases");
         }
       }
     } else {
-      const hasRated = currentEpisode.ratings.some(
-        (rating) => rating.user.toString() === req.user._id.toString()
-      );
+      if (currentEpisode.content === "Free") {
+        return handleResponse(currentEpisode);
+      }
 
-      const hasBookmarked = await myList.exists({
-        user: req.user._id,
-        episode: currentEpisode._id,
-      });
+      if (currentEpisode.content === "Paid" && currentEpisode.coins > 0) {
+        if (await checkUserPurchases(req.user._id, currentEpisode._id)) {
+          return handleResponse(currentEpisode);
+        }
 
-      const data = {
-        episode: currentEpisode,
-        hasBookmarked,
-        hasRated,
-      };
+        if (unlockNow) {
+          const userCoins = await UserCoin.findOne({ user: req.user._id });
+          if (!userCoins) {
+            return error404(res, "User has no coins");
+          }
 
-      return success(res, "200", "Success", data);
+          return handleUnlock(currentEpisode, userCoins);
+        } else {
+          return customError(res, 403, "Use coin to unlock episode");
+        }
+      }
     }
   } catch (err) {
     return error500(res, err);
