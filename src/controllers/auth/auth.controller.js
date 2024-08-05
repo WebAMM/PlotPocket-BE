@@ -255,12 +255,12 @@ const guestLogin = async (req, res) => {
     const user = await User.create({
       userName: guestUserName,
       role: "Guest",
-      profileImage: {
-        publicUrl:
-          "https://plotpocket.s3.us-east-2.amazonaws.com/user/1722865699996_guest.png",
-        publicId: "user/1722865699996_guest.png",
-        format: "png",
-      },
+      // profileImage: {
+      //   publicUrl:
+      //     "https://plotpocket.s3.us-east-2.amazonaws.com/user/1722865699996_guest.png",
+      //   publicId: "user/1722865699996_guest.png",
+      //   format: "png",
+      // },
     });
 
     const secret = config.jwtPrivateKey;
