@@ -334,6 +334,22 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+//Get User Profile By Id
+const getUserProfileById = async (req, res) => {
+  const { id } = req.body;
+  try {
+    const user = await User.findById(id).select(
+      "_id userName email profileImage.publicUrl status createdAt"
+    );
+    if (!user) {
+      return error404(res, "User not found!");
+    }
+    return success(res, "200", "User profile", user);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 //Update User Password
 const updateUserPassword = async (req, res) => {
   try {
@@ -525,6 +541,7 @@ module.exports = {
   changeUserStatus,
   updateAdminProfile,
   updateAdminProfilePic,
+  getUserProfileById,
   // generateResetPasswordEmailWithOTP,
   // verifyResetPasswordOTP,
 };
