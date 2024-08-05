@@ -69,7 +69,7 @@ router.put(
 router.get("/profile", verifyToken, authController.getUserProfile);
 
 //[APP] Get User Profile By Id
-router.get("/user-profile", authController.getUserProfileById);
+router.get("/user-profile/:id", authController.getUserProfileById);
 
 //generate reset password email and OTP
 // router.post(

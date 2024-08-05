@@ -336,7 +336,7 @@ const getUserProfile = async (req, res) => {
 
 //Get User Profile By Id
 const getUserProfileById = async (req, res) => {
-  const { id } = req.body;
+  const { id } = req.params;
   try {
     const user = await User.findById(id).select(
       "_id userName email profileImage.publicUrl status createdAt"
