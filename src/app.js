@@ -33,6 +33,7 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ status: "500", message: err.message });
   }
+  console.log("The error", err);
   res.status(500).json({
     status: "500",
     message: `Unexpected Error: ${err}`,
