@@ -12,9 +12,14 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
 const UserPurchases = require("../models/UserPurchases.model");
+const extractFormat = require("../services/helpers/extractFormat");
+const {
+  uploadFileToS3,
+  deleteFileFromBucket,
+} = require("../services/helpers/awsConfig");
+const fs = require("fs");
 
 //Publish the series
 const addSeries = async (req, res) => {
@@ -58,10 +63,19 @@ const addSeries = async (req, res) => {
         );
         return status200(res, "Series published successfully");
       } else if (req.file) {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          resource_type: "image",
-          folder: "series",
-        });
+        const file = req.file;
+        const fileFormat = extractFormat(file.mimetype);
+
+        //Upload file to S3
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: `series/${Date.now()}_${file.originalname}`,
+          Body: fs.createReadStream(req.file.path),
+          ContentType: fileFormat,
+        };
+
+        const uploadResult = await uploadFileToS3(params);
+
         await Series.updateOne(
           {
             _id: draftId,
@@ -69,10 +83,9 @@ const addSeries = async (req, res) => {
           {
             ...req.body,
             thumbnail: {
-              publicUrl: result.url,
-              secureUrl: result.secure_url,
-              publicId: result.public_id,
-              format: result.format,
+              publicUrl: uploadResult.Location,
+              publicId: uploadResult.Key,
+              format: fileFormat,
             },
             status: "Published",
           }
@@ -94,18 +107,26 @@ const addSeries = async (req, res) => {
         return error400(res, "Category type don't belong to series");
       }
       if (req.file) {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          resource_type: "image",
-          folder: "series",
-        });
+        const file = req.file;
+        const fileFormat = extractFormat(file.mimetype);
+
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: `series/${Date.now()}_${file.originalname}`,
+          Body: fs.createReadStream(req.file.path),
+          ContentType: fileFormat,
+        };
+
+        //Upload file to S3
+        const uploadResult = await uploadFileToS3(params);
+
         await Series.create({
           ...req.body,
           status: "Published",
           thumbnail: {
-            publicUrl: result.url,
-            secureUrl: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
+            publicUrl: uploadResult.Location,
+            publicId: uploadResult.Key,
+            format: fileFormat,
           },
         });
         return status200(res, "Series published successfully");
@@ -140,17 +161,25 @@ const addSeriesToDraft = async (req, res) => {
     }
 
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "series",
-      });
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `series/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        contentType: fileFormat,
+      };
+
+      //Upload file to S3
+      const uploadResult = await uploadFileToS3(params);
+
       await Series.create({
         ...req.body,
         thumbnail: {
-          publicUrl: result.url,
-          secureUrl: result.secure_url,
-          publicId: result.public_id,
-          format: result.format,
+          publicUrl: uploadResult.Location,
+          publicId: uploadResult.Key,
+          format: fileFormat,
         },
         status: "Draft",
       });
@@ -159,7 +188,6 @@ const addSeriesToDraft = async (req, res) => {
         ...req.body,
         thumbnail: {
           publicUrl: "",
-          secureUrl: "",
           publicId: "",
           format: "",
         },
@@ -192,16 +220,26 @@ const editSeries = async (req, res) => {
       }
     }
     if (req.file) {
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
       if (seriesExist.thumbnail && seriesExist.thumbnail.publicId) {
-        await cloudinary.uploader.destroy(seriesExist.thumbnail.publicId, {
-          resource_type: "image",
-          folder: "series",
-        });
+        const deleteParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: seriesExist.thumbnail.publicId,
+        };
+        await deleteFileFromBucket(deleteParams);
       }
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "series",
-      });
+
+      //Upload file to bucket
+      const uploadParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `series/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(uploadParams);
       const updatedSeries = await Series.findByIdAndUpdate(
         {
           _id: id,
@@ -209,10 +247,9 @@ const editSeries = async (req, res) => {
         {
           ...req.body,
           thumbnail: {
-            publicUrl: result.url,
-            secureUrl: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
+            publicUrl: uploadResult.Location,
+            publicId: uploadResult.Key,
+            format: fileFormat,
           },
         },
         {
@@ -392,19 +429,21 @@ const deleteSeries = async (req, res) => {
     if (seriesEpisode.length) {
       for (const episode of seriesEpisode) {
         if (episode.episodeVideo && episode.episodeVideo.publicId) {
-          await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
-            resource_type: "image",
-            folder: "series",
-          });
+          const deleteParams = {
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: episode.episodeVideo.publicId,
+          };
+          await deleteFileFromBucket(deleteParams);
         }
         await Episode.deleteOne(episode._id);
       }
     }
     if (series.thumbnail && series.thumbnail.publicId) {
-      await cloudinary.uploader.destroy(series.thumbnail.publicId, {
-        resource_type: "image",
-        folder: "series",
-      });
+      const deleteParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: series.thumbnail.publicId,
+      };
+      await deleteFileFromBucket(deleteParams);
     }
     await Series.deleteOne({ _id: id });
     return status200(res, "Series deleted successfully with all episodes");

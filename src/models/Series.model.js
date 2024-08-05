@@ -31,13 +31,8 @@ const seriesSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    //Cloudinary images
     thumbnail: {
       publicUrl: {
-        type: String,
-        default: "",
-      },
-      secureUrl: {
         type: String,
         default: "",
       },

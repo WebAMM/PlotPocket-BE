@@ -5,15 +5,8 @@ const User = require("../models/User.model");
 const Category = require("../models/Category.model");
 const History = require("../models/History.model");
 //Responses and errors
-const {
-  error500,
-  error409,
-  error404,
-  customError,
-  error400,
-} = require("../services/helpers/errors");
+const { error500, error409, error400 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
-const mongoose = require("mongoose");
 const moment = require("moment");
 
 // Admin dashboard insights

@@ -17,13 +17,8 @@ const episodeSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    //Cloudinary video links.
     episodeVideo: {
       publicUrl: {
-        type: String,
-        default: "",
-      },
-      secureUrl: {
         type: String,
         default: "",
       },

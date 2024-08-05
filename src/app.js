@@ -26,6 +26,19 @@ app.use((req, res) => {
   });
 });
 
+app.use((err, req, res, next) => {
+  if (err.code === "UNSUPPORTED_FILE_TYPE") {
+    return res.status(400).json({ status: "400", message: err.message });
+  }
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ status: "500", message: err.message });
+  }
+  res.status(500).json({
+    status: "500",
+    message: `Unexpected Error: ${err}`,
+  });
+});
+
 //Starting server
 async function startServer() {
   app

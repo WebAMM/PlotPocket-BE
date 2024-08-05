@@ -3,7 +3,6 @@ const User = require("../models/User.model");
 const Episode = require("../models/Episode.model");
 const Chapter = require("../models/Chapter.model");
 const UserCoin = require("../models/UserCoin.model");
-const UserPurchases = require("../models/UserPurchases.model");
 //Responses and errors
 const {
   error500,
@@ -70,7 +69,6 @@ const getUserCoinsDetail = async (req, res) => {
     const data = {
       price: price - coinDetails.totalCoins,
       coinBalance: coinDetails,
-      // price: price,
     };
 
     return success(res, "200", "Success", data);

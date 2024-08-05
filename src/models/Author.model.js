@@ -16,10 +16,6 @@ const authorSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
-      secureUrl: {
-        type: String,
-        default: "",
-      },
       publicId: {
         type: String,
         default: "",

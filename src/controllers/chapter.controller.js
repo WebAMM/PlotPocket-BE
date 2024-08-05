@@ -4,7 +4,6 @@ const Novel = require("../models/Novel.model");
 const UserCoin = require("../models/UserCoin.model");
 const UserPurchases = require("../models/UserPurchases.model");
 const myList = require("../models/MyList.model");
-
 //Responses and errors
 const {
   error500,
@@ -15,8 +14,13 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
 const { default: mongoose } = require("mongoose");
+const {
+  uploadFileToS3,
+  deleteFileFromBucket,
+} = require("../services/helpers/awsConfig");
+const extractFormat = require("../services/helpers/extractFormat");
+const fs = require("fs");
 
 //Add Chapter
 const addChapter = async (req, res) => {
@@ -36,18 +40,26 @@ const addChapter = async (req, res) => {
     //   return error409(res, "Chapter Already Exist");
     // }
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "raw",
-        folder: "chapter",
-      });
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      //Upload file to S3
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `chapter/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(params);
+
       const newChapter = await Chapter.create({
         ...req.body,
         novel: novelExist._id,
         chapterPdf: {
-          publicUrl: result.url,
-          secureUrl: result.secure_url,
-          publicId: result.public_id,
-          format: result.format,
+          publicUrl: uploadResult.Location,
+          publicId: uploadResult.Key,
+          format: fileFormat,
         },
       });
       await Novel.updateOne(
@@ -113,10 +125,12 @@ const deleteChapter = async (req, res) => {
       }
     );
     if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
-      await cloudinary.uploader.destroy(chapter.chapterPdf.publicId, {
-        resource_type: "raw",
-        folder: "chapter",
-      });
+      //Delete from bucket
+      const deleteParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: chapter.chapterPdf.publicId,
+      };
+      await deleteFileFromBucket(deleteParams);
     }
     await Chapter.deleteOne({ _id: id });
     return status200(res, "Chapter removed successfully");
@@ -134,16 +148,27 @@ const updateChapter = async (req, res) => {
       return error404(res, "Chapter not found");
     }
     if (req.file) {
-      if (chapter.episodeVideo && chapter.episodeVideo.publicId) {
-        await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
-          resource_type: "raw",
-          folder: "chapter",
-        });
+      if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
+        //Delete from bucket
+        const deleteParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: chapter.chapterPdf.publicId,
+        };
+        await deleteFileFromBucket(deleteParams);
       }
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "raw",
-        folder: "chapter",
-      });
+
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      //Upload to Bucket
+      const uploadParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `chapter/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+      const uploadResult = await uploadFileToS3(uploadParams);
+
       await Chapter.updateOne(
         {
           _id: id,
@@ -151,10 +176,9 @@ const updateChapter = async (req, res) => {
         {
           ...req.body,
           thumbnail: {
-            publicUrl: result.url,
-            secureUrl: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
+            publicUrl: uploadResult.Location,
+            publicId: uploadResult.Key,
+            format: fileFormat,
           },
         }
       );
@@ -354,7 +378,7 @@ const viewChapter = async (req, res) => {
   try {
     const currentChapter = await Chapter.findById(id)
       .select(
-        "novel name description coins totalViews chapterPdf.publicUrl format"
+        "chapterPdf.publicUrl chapterPdf.format novel name description coins totalViews content chapterNo createdAt"
       )
       .populate({
         path: "novel",
@@ -373,12 +397,23 @@ const viewChapter = async (req, res) => {
       return error400(res, "Query must be either up or down");
     }
 
-    const findChapter = async (condition, sortOrder) => {
-      return await Chapter.findOne(condition)
+    // if (up && autoUnlock) {
+    //   return error400(res, "Auto unlock should not be true with down");
+    // }
+
+    // if ((down || up) && unlockNow === "true") {
+    //   return error400(
+    //     res,
+    //     "UnlockNow should not be true when using up or down"
+    //   );
+    // }
+
+    const findChapter = async (condition, sort) => {
+      return Chapter.findOne(condition)
         .select(
-          "chapterPdf.publicUrl chapterPdf.format coins createdAt totalViews content chapterNo name"
+          "chapterPdf.publicUrl chapterPdf.format novel coins createdAt totalViews content chapterNo name"
         )
-        .sort({ createdAt: sortOrder })
+        .sort(sort)
         .populate({
           path: "novel",
           select: "thumbnail.publicUrl title type totalViews description",
@@ -474,10 +509,10 @@ const viewChapter = async (req, res) => {
     if (down) {
       const nextChapter = await findChapter(
         {
-          novel: new mongoose.Types.ObjectId(currentChapter.novel),
+          novel: new mongoose.Types.ObjectId(currentChapter.novel._id),
           createdAt: { $gt: currentChapter.createdAt },
         },
-        1
+        { createdAt: 1 }
       );
 
       if (!nextChapter) {
@@ -507,10 +542,10 @@ const viewChapter = async (req, res) => {
     } else if (up) {
       const prevChapter = await findChapter(
         {
-          novel: new mongoose.Types.ObjectId(currentChapter.novel),
+          novel: new mongoose.Types.ObjectId(currentChapter.novel._id),
           createdAt: { $lt: currentChapter.createdAt },
         },
-        -1
+        { createdAt: -1 }
       );
 
       if (!prevChapter) {
@@ -543,7 +578,6 @@ const viewChapter = async (req, res) => {
           if (!userCoins) {
             return error404(res, "User has no coins");
           }
-
           return handleUnlock(currentChapter, userCoins);
         } else {
           return customError(res, 403, "Use coins to unlock chapter");

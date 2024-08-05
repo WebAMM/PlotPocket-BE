@@ -106,13 +106,8 @@ const novelSchema = new mongoose.Schema(
         ref: "Chapter",
       },
     ],
-    //Cloudinary images
     thumbnail: {
       publicUrl: {
-        type: String,
-        default: "",
-      },
-      secureUrl: {
         type: String,
         default: "",
       },

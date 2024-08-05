@@ -1,7 +1,9 @@
 //Models
 const Episode = require("../models/Episode.model");
 const Series = require("../models/Series.model");
-const History = require("../models/History.model");
+const UserPurchases = require("../models/UserPurchases.model");
+const UserCoin = require("../models/UserCoin.model");
+const myList = require("../models/MyList.model");
 //Responses and errors
 const {
   error500,
@@ -11,12 +13,14 @@ const {
   customError,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
-const { default: mongoose } = require("mongoose");
-const UserPurchases = require("../models/UserPurchases.model");
-const UserCoin = require("../models/UserCoin.model");
-const myList = require("../models/MyList.model");
 //helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
+const { default: mongoose } = require("mongoose");
+const {
+  uploadFileToS3,
+  deleteFileFromBucket,
+} = require("../services/helpers/awsConfig");
+const extractFormat = require("../services/helpers/extractFormat");
+const fs = require("fs");
 
 //Add Episode
 const addEpisode = async (req, res) => {
@@ -36,20 +40,26 @@ const addEpisode = async (req, res) => {
     //   return error409(res, "Episode Already Exist");
     // }
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "video",
-        folder: "episode",
-        eager: [{ format: "mp4" }],
-      });
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      //Upload file to S3
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `episode/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        Content: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(params);
+
       const newEpisode = await Episode.create({
         ...req.body,
         series: seriesExist._id,
         episodeVideo: {
-          publicUrl: result.url,
-          secureUrl: result.secure_url,
-          publicId: result.public_id,
-          duration: result.duration,
-          format: "mp4",
+          publicUrl: uploadResult.Location,
+          publicId: uploadResult.Key,
+          format: fileFormat,
         },
       });
       await Series.updateOne(
@@ -235,10 +245,12 @@ const deleteEpisode = async (req, res) => {
       }
     );
     if (episode.episodeVideo && episode.episodeVideo.publicId) {
-      await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
-        resource_type: "video",
-        folder: "episode",
-      });
+      //Delete from bucket
+      const deleteParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: episode.episodeVideo.publicId,
+      };
+      await deleteFileFromBucket(deleteParams);
     }
     await Episode.deleteOne({ _id: id });
     return status200(res, "Episode removed successfully");
@@ -256,17 +268,28 @@ const updateEpisode = async (req, res) => {
       return error404(res, "Episode not found");
     }
     if (req.file) {
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
       if (episode.episodeVideo && episode.episodeVideo.publicId) {
-        await cloudinary.uploader.destroy(episode.episodeVideo.publicId, {
-          resource_type: "video",
-          folder: "episode",
-        });
+        //Delete from bucket
+        const deleteParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: episode.episodeVideo.publicId,
+        };
+        await deleteFileFromBucket(deleteParams);
       }
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "video",
-        folder: "episode",
-        eager: [{ format: "mp4" }],
-      });
+
+      //Upload to bucket
+      const uploadParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `episode/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(uploadParams);
+
       await Episode.updateOne(
         {
           _id: id,
@@ -274,10 +297,9 @@ const updateEpisode = async (req, res) => {
         {
           ...req.body,
           thumbnail: {
-            publicUrl: result.url,
-            secureUrl: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
+            publicUrl: uploadResult.Location,
+            publicId: uploadResult.Key,
+            format: fileFormat,
           },
         }
       );
@@ -675,8 +697,7 @@ const updateEpisode = async (req, res) => {
 //View Episode
 const viewEpisode = async (req, res) => {
   const { id } = req.params;
-  const { up, down } = req.query;
-  const { autoUnlock, unlockNow } = req.body;
+  const { up, down, autoUnlock, unlockNow } = req.query;
 
   try {
     const currentEpisode = await Episode.findById(id)
@@ -686,6 +707,7 @@ const viewEpisode = async (req, res) => {
       .populate({
         path: "series",
         select: "thumbnail.publicUrl title content visibility description coin",
+        populate: [{ path: "category", select: "title" }],
       });
 
     if (!currentEpisode) {
@@ -696,6 +718,17 @@ const viewEpisode = async (req, res) => {
       return error400(res, "Query must be either up or down");
     }
 
+    // if (up && autoUnlock) {
+    //   return error400(res, "Auto unlock should not be true with down");
+    // }
+
+    // if ((down || up) && unlockNow === "true") {
+    //   return error400(
+    //     res,
+    //     "UnlockNow should not be true when using up or down"
+    //   );
+    // }
+
     const findEpisode = async (condition, sort) => {
       return Episode.findOne(condition)
         .select(
@@ -705,6 +738,12 @@ const viewEpisode = async (req, res) => {
         .populate({
           path: "series",
           select: "thumbnail.publicUrl title visibility description",
+          populate: [
+            {
+              path: "category",
+              select: "title",
+            },
+          ],
         });
     };
 
@@ -799,7 +838,7 @@ const viewEpisode = async (req, res) => {
     if (down) {
       const nextEpisode = await findEpisode(
         {
-          series: new mongoose.Types.ObjectId(currentEpisode.series),
+          series: new mongoose.Types.ObjectId(currentEpisode.series._id),
           createdAt: { $gt: currentEpisode.createdAt },
         },
         { createdAt: 1 }
@@ -826,7 +865,7 @@ const viewEpisode = async (req, res) => {
 
           return handleUnlock(nextEpisode, userCoins);
         } else {
-          return customError(res, 403, "Use coin to unlock episode");
+          return customError(res, 403, "Use coins to unlock episode");
         }
       }
     } else if (up) {
@@ -868,10 +907,9 @@ const viewEpisode = async (req, res) => {
           if (!userCoins) {
             return error404(res, "User has no coins");
           }
-
           return handleUnlock(currentEpisode, userCoins);
         } else {
-          return customError(res, 403, "Use coin to unlock episode");
+          return customError(res, 403, "Use coins to unlock episode");
         }
       }
     }

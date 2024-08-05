@@ -23,13 +23,8 @@ const userSchema = new mongoose.Schema(
       enum: ["Active", "Inactive"],
       default: "Active",
     },
-    //Cloudinary images
     profileImage: {
       publicUrl: {
-        type: String,
-        default: "",
-      },
-      secureUrl: {
         type: String,
         default: "",
       },

@@ -1,16 +1,12 @@
 //Model
 const Author = require("../models/Author.model");
 //Responses and errors
-const {
-  error500,
-  error409,
-  error404,
-  error400,
-  customError,
-} = require("../services/helpers/errors");
+const { error500, error404, error400 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
+const fs = require("fs");
+const extractFormat = require("../services/helpers/extractFormat");
+const { uploadFileToS3 } = require("../services/helpers/awsConfig");
 
 //Add author
 const addAuthor = async (req, res) => {
@@ -24,16 +20,25 @@ const addAuthor = async (req, res) => {
       name,
       gender,
     };
+
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "author",
-      });
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      //Upload file to S3
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `author/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(params);
+
       authorData.authorPic = {
-        publicUrl: result.url,
-        secureUrl: result.secure_url,
-        publicId: result.public_id,
-        format: result.format,
+        publicUrl: uploadResult.Location,
+        publicId: uploadResult.Key,
+        format: fileFormat,
       };
       await Author.create(authorData);
       return status200(res, "Author created successfully");

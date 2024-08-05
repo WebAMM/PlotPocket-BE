@@ -12,9 +12,6 @@ const {
   error400,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
-//helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
-const mongoose = require("mongoose");
 
 //1st create the customer + create setup intent in ONE GO
 //2nd then after confirmation of setup intent then do the subscription in ONE GO

@@ -13,9 +13,14 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
-const cloudinary = require("../services/helpers/cloudinary").v2;
 const mongoose = require("mongoose");
 const UserPurchases = require("../models/UserPurchases.model");
+const {
+  uploadFileToS3,
+  deleteFileFromBucket,
+} = require("../services/helpers/awsConfig");
+const extractFormat = require("../services/helpers/extractFormat");
+const fs = require("fs");
 
 //Publish the novel
 const addNovel = async (req, res) => {
@@ -50,11 +55,21 @@ const addNovel = async (req, res) => {
             status: "Published",
           }
         );
+        return status200(res, "Novel published successfully");
       } else if (req.file) {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          resource_type: "image",
-          folder: "novel",
-        });
+        const file = req.file;
+        const fileFormat = extractFormat(file.mimetype);
+
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: `novel/${Date.now()}_${file.originalname}`,
+          Body: fs.createReadStream(req.file.path),
+          ContentType: fileFormat,
+        };
+
+        //Upload file to S3
+        const uploadResult = await uploadFileToS3(params);
+
         await Novel.updateOne(
           {
             _id: draftId,
@@ -62,10 +77,9 @@ const addNovel = async (req, res) => {
           {
             ...req.body,
             thumbnail: {
-              publicUrl: result.url,
-              secureUrl: result.secure_url,
-              publicId: result.public_id,
-              format: result.format,
+              publicUrl: uploadResult.Location,
+              publicId: uploadResult.Key,
+              format: fileFormat,
             },
             status: "Published",
           }
@@ -87,18 +101,26 @@ const addNovel = async (req, res) => {
         return error409(res, "Category type don't belong to novels");
       }
       if (req.file) {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          resource_type: "image",
-          folder: "novel",
-        });
+        const file = req.file;
+        const fileFormat = extractFormat(file.mimetype);
+
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: `novel/${Date.now()}_${file.originalname}`,
+          Body: fs.createReadStream(req.file.path),
+          ContentType: fileFormat,
+        };
+
+        //Upload file to S3
+        const uploadResult = await uploadFileToS3(params);
+
         await Novel.create({
           ...req.body,
           status: "Published",
           thumbnail: {
-            publicUrl: result.url,
-            secureUrl: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
+            publicUrl: uploadResult.Location,
+            publicId: uploadResult.Key,
+            format: fileFormat,
           },
         });
         return status200(res, "Novel published successfully");
@@ -132,17 +154,25 @@ const addNovelToDraft = async (req, res) => {
       }
     }
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "novel",
-      });
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      //Upload file to S3
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `novel/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        contentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(params);
+
       await Novel.create({
         ...req.body,
         thumbnail: {
-          publicUrl: result.url,
-          secureUrl: result.secure_url,
-          publicId: result.public_id,
-          format: result.format,
+          publicUrl: uploadResult.Location,
+          publicId: uploadResult.Key,
+          format: fileFormat,
         },
         status: "Draft",
       });
@@ -151,7 +181,6 @@ const addNovelToDraft = async (req, res) => {
         ...req.body,
         thumbnail: {
           publicUrl: "",
-          secureUrl: "",
           publicId: "",
           format: "",
         },
@@ -356,24 +385,33 @@ const editNovel = async (req, res) => {
 
     if (req.file) {
       if (novelExist.thumbnail && novelExist.thumbnail.publicId) {
-        await cloudinary.uploader.destroy(novelExist.thumbnail.publicId, {
-          resource_type: "image",
-          folder: "novel",
-        });
+        const deleteParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: novelExist.thumbnail.publicId,
+        };
+        await deleteFileFromBucket(deleteParams);
       }
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "novel",
-      });
+
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      const uploadParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `novel/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(uploadParams);
+
       const updatedNovel = await Novel.findByIdAndUpdate(
         id,
         {
           ...req.body,
           thumbnail: {
-            publicUrl: result.url,
-            secureUrl: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
+            publicUrl: uploadResult.Location,
+            publicId: uploadResult.Key,
+            format: fileFormat,
           },
         },
         {
@@ -411,19 +449,21 @@ const deleteNovel = async (req, res) => {
     if (novelsChapters.length) {
       for (const chapter of novelsChapters) {
         if (chapter.chapterPdf && chapter.chapterPdf.publicId) {
-          await cloudinary.uploader.destroy(chapter.chapterPdf.publicId, {
-            resource_type: "image",
-            folder: "novel",
-          });
+          const deleteParams = {
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: chapter.chapterPdf.publicId,
+          };
+          await deleteFileFromBucket(deleteParams);
         }
         await Chapter.deleteOne(chapter._id);
       }
     }
     if (novel.thumbnail && novel.thumbnail.publicId) {
-      await cloudinary.uploader.destroy(novel.thumbnail.publicId, {
-        resource_type: "image",
-        folder: "novel",
-      });
+      const deleteParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: novel.thumbnail.publicId,
+      };
+      await deleteFileFromBucket(deleteParams);
     }
     await Novel.deleteOne({ _id: id });
     return status200(res, "Novel deleted successfully with all chapters");

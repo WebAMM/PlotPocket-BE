@@ -21,7 +21,6 @@ const {
 } = require("../../services/helpers/errors");
 const { status200, success } = require("../../services/helpers/response");
 //helpers and functions
-const cloudinary = require("../../services/helpers/cloudinary").v2;
 const removeViews = require("../../services/helpers/removeViews");
 //imports
 const bcryptjs = require("bcryptjs");
@@ -30,6 +29,12 @@ const jwt = require("jsonwebtoken");
 const config = require("../../config");
 const { v4: uuidv4 } = require("uuid");
 const appendGuestUserRec = require("../../services/helpers/appendGuestRec");
+const fs = require("fs");
+const extractFormat = require("../../services/helpers/extractFormat");
+const {
+  uploadFileToS3,
+  deleteFileFromBucket,
+} = require("../../services/helpers/awsConfig");
 
 //Register User
 const registerUser = async (req, res) => {
@@ -46,15 +51,24 @@ const registerUser = async (req, res) => {
 
     const userData = { userName, email, password: hashedPassword };
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "user",
-      });
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `user/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      //Upload file to S3
+      const uploadResult = await uploadFileToS3(params);
+      uploadFileLocation = uploadResult.Location;
+
       userData.profileImage = {
-        publicUrl: result.url,
-        secureUrl: result.secure_url,
-        publicId: result.public_id,
-        format: result.format,
+        publicUrl: uploadResult.Location,
+        publicId: uploadResult.Key,
+        format: fileFormat,
       };
       userData.role = "User";
     }
@@ -243,10 +257,8 @@ const guestLogin = async (req, res) => {
       role: "Guest",
       profileImage: {
         publicUrl:
-          "http://res.cloudinary.com/djio34uft/image/upload/v1722418079/guest_vxx3uh.png",
-        secureUrl:
-          "https://res.cloudinary.com/djio34uft/image/upload/v1722418079/guest_vxx3uh.png",
-        publicId: "guest_vxx3uh",
+          "https://plotpocket.s3.us-east-2.amazonaws.com/user/1722865699996_guest.png",
+        publicId: "user/1722865699996_guest.png",
         format: "png",
       },
     });
@@ -401,36 +413,45 @@ const updateAdminProfilePic = async (req, res) => {
       return error404(res, "User not found!");
     }
     if (req.file) {
-      // Remove existing profile image from Cloudinary
+      // Remove existing profile image from Bucket
       if (userExist.profileImage.publicId) {
-        await cloudinary.uploader.destroy(userExist.profileImage.publicId, {
-          resource_type: "image",
-          folder: "user",
-        });
+        const deleteParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: userExist.profileImage.publicId,
+        };
+        await deleteFileFromBucket(deleteParams);
       }
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "image",
-        folder: "user",
-      });
+
+      const file = req.file;
+      const fileFormat = extractFormat(file.mimetype);
+      //Upload to bucket
+      const uploadParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `user/${Date.now()}_${file.originalname}`,
+        Body: fs.createReadStream(req.file.path),
+        ContentType: fileFormat,
+      };
+
+      const uploadResult = await uploadFileToS3(uploadParams);
+
       // Update user profile image details
       userExist.profileImage = {
-        publicUrl: result.url,
-        secureUrl: result.secure_url,
-        publicId: result.public_id,
-        format: result.format,
+        publicUrl: uploadResult.Location,
+        publicId: uploadResult.Key,
+        format: fileFormat,
       };
       await userExist.save();
       return status200(res, "Profile pic updated successfully");
     } else {
       if (userExist.profileImage.publicId) {
-        await cloudinary.uploader.destroy(userExist.profileImage.publicId, {
-          resource_type: "image",
-          folder: "user",
-        });
+        const deleteParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: userExist.profileImage.publicId,
+        };
+        await deleteFileFromBucket(deleteParams);
       }
       userExist.profileImage = {
         publicUrl: "",
-        secureUrl: "",
         publicId: "",
         format: "",
       };

@@ -17,8 +17,9 @@ const upload = multer({
       ext !== ".docx" &&
       ext !== ".mp4"
     ) {
-      cb(new Error("File type is not supported"), false);
-      return;
+      const error = new Error("File type is not supported");
+      error.code = "UNSUPPORTED_FILE_TYPE";
+      return cb(error, false);
     }
     cb(null, true);
   },

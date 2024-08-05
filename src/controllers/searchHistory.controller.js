@@ -2,7 +2,6 @@
 const Novel = require("../models/Novel.model");
 const SearchHistory = require("../models/SearchHistory.model");
 const Series = require("../models/Series.model");
-
 //Responses and errors
 const {
   error500,

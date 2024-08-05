@@ -51,13 +51,8 @@ const chapterSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    //Cloudinary images
     chapterPdf: {
       publicUrl: {
-        type: String,
-        default: "",
-      },
-      secureUrl: {
         type: String,
         default: "",
       },
