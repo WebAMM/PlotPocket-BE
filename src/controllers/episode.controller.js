@@ -35,10 +35,16 @@ const addEpisode = async (req, res) => {
     if (!seriesExist) {
       return error404(res, "Series not found");
     }
-    // const existEpisode = await Episode.findOne({ title });
-    // if (existEpisode) {
-    //   return error409(res, "Episode Already Exist");
-    // }
+    const existEpisode = await Episode.findOne({
+      title,
+      series: seriesExist._id,
+    });
+    if (existEpisode) {
+      return error409(
+        res,
+        "Episode with this name already exist in this series"
+      );
+    }
     if (req.file) {
       const file = req.file;
       const fileFormat = extractFormat(file.mimetype);

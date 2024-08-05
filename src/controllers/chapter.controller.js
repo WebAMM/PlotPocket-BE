@@ -35,10 +35,13 @@ const addChapter = async (req, res) => {
     if (!novelExist) {
       return error404(res, "Novel not found");
     }
-    // const existChapter = await Chapter.findOne({ name });
-    // if (existChapter) {
-    //   return error409(res, "Chapter Already Exist");
-    // }
+    const existChapter = await Chapter.findOne({ name, novel: novelExist._id });
+    if (existChapter) {
+      return error409(
+        res,
+        "Chapter with this name already exist in this novel"
+      );
+    }
     if (req.file) {
       const file = req.file;
       const fileFormat = extractFormat(file.mimetype);
