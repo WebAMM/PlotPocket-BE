@@ -17,7 +17,6 @@ app.get("/", (req, res) => {
   res.send("Initial route running...");
 });
 
-console.log("---");
 app.use("/plotpocket/api/v1", AppRoutes);
 
 app.use((req, res) => {
