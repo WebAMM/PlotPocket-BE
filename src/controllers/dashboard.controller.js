@@ -594,7 +594,9 @@ const dashboardNovels = async (req, res) => {
       ...topRankQuery,
       averageRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl averageRating type title totalViews averageRating")
+      .select(
+        "thumbnail.publicUrl averageRating type title totalViews averageRating"
+      )
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",

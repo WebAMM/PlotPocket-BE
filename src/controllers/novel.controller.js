@@ -1136,7 +1136,7 @@ const getDetailNovelByType = async (req, res) => {
         })
         .sort(sortOptions)
         .skip(skip)
-        .limit(limit)
+        .limit(limit);
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalNovelsCount;

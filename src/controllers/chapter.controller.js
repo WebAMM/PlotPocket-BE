@@ -406,7 +406,7 @@ const viewChapter = async (req, res) => {
       (autoUnlock && autoUnlock !== "true" && autoUnlock !== true) ||
       (unlockNow && unlockNow !== "true" && unlockNow !== true)
     ) {
-      return error400(res, "Query parameters must be either true");
+      return error400(res, "Query parameters value must be true");
     }
 
     if (down && up) {
