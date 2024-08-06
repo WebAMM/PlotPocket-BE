@@ -89,7 +89,12 @@ const appDashboard = async (req, res) => {
   };
   let topRankQuery = {};
   //Filtering based on Category
-  if (category) {
+  if (
+    category &&
+    category !== "null" &&
+    category !== "undefined" &&
+    category !== "false"
+  ) {
     const existCategory = await Category.findById(category);
     if (!existCategory) {
       return error409(res, "Category not found");
@@ -97,23 +102,30 @@ const appDashboard = async (req, res) => {
     query.category = category;
   }
   //Filtering based on Day
-  if (day) {
+  if (day && day !== "null" && day !== "undefined" && day !== "false") {
     const parsedDay = parseInt(day);
-    if (![7, 14, 30].includes(parsedDay)) {
-      return error400(res, "Invalid date parameter");
+    if (day === "Today") {
+      const today = new Date();
+      topRankQuery.createdAt = {
+        $gte: new Date(today.setHours(0, 0, 0, 0)),
+        $lte: new Date(today.setHours(23, 59, 59, 999)),
+      };
+    } else if ([7, 14, 30].includes(parsedDay)) {
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - parsedDay + 1);
+      topRankQuery.createdAt = {
+        $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+        $lte: new Date(today.setHours(23, 59, 59, 999)),
+      };
+    } else {
+      return error400(res, "Invalid date parameter. Use 'Today', 7, 14, or 30");
     }
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - day);
-    topRankQuery.createdAt = {
-      $gte: startDate,
-      $lte: today,
-    };
   }
   try {
     //Latest novels and series
     const series = await Series.find(query)
-      .select("thumbnail.publicUrl title type")
+      .select("thumbnail.publicUrl title type totalViews seriesRating")
       .populate({
         path: "episodes",
         select:
@@ -124,9 +136,9 @@ const appDashboard = async (req, res) => {
         },
       })
       .sort({ createdAt: -1 })
-      .limit(10);
+      .limit(5);
     const novels = await Novel.find(query)
-      .select("thumbnail.publicUrl title type")
+      .select("thumbnail.publicUrl title type totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content coins",
@@ -136,7 +148,7 @@ const appDashboard = async (req, res) => {
         },
       })
       .sort({ createdAt: -1 })
-      .limit(10);
+      .limit(5);
 
     const topHighlight = [...series, ...novels].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -147,7 +159,7 @@ const appDashboard = async (req, res) => {
       ...query,
       totalViews: { $gte: 10 },
     })
-      .select("thumbnail.publicUrl title type seriesRating")
+      .select("thumbnail.publicUrl title type seriesRating totalViews")
       .populate({
         path: "episodes",
         select:
@@ -158,12 +170,12 @@ const appDashboard = async (req, res) => {
         },
       })
       .sort({ totalViews: -1 })
-      .limit(10);
+      .limit(5);
     const featuredNovels = await Novel.find({
       ...query,
       totalViews: { $gte: 10 },
     })
-      .select("thumbnail.publicUrl title type averageRating")
+      .select("thumbnail.publicUrl title type totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content coins",
@@ -173,7 +185,7 @@ const appDashboard = async (req, res) => {
         },
       })
       .sort({ totalViews: -1 })
-      .limit(10);
+      .limit(5);
 
     const featured = [...featuredSeries, ...featuredNovels].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -185,7 +197,7 @@ const appDashboard = async (req, res) => {
     })
       .populate({
         path: "series",
-        select: "thumbnail.publicUrl type totalViews",
+        select: "thumbnail.publicUrl type title seriesRating totalViews",
         populate: [
           {
             path: "category",
@@ -204,7 +216,7 @@ const appDashboard = async (req, res) => {
       })
       .populate({
         path: "novel",
-        select: "thumbnail.publicUrl title type totalViews",
+        select: "thumbnail.publicUrl title type totalViews averageRating",
         populate: [
           {
             path: "category",
@@ -229,7 +241,7 @@ const appDashboard = async (req, res) => {
       .limit(10);
     //Latest released novel and series [Based on latest created]
     const latestSeries = await Series.find(query)
-      .select("thumbnail.publicUrl title type totalViews")
+      .select("thumbnail.publicUrl title type totalViews seriesRating")
       .populate({
         path: "episodes",
         select:
@@ -246,9 +258,9 @@ const appDashboard = async (req, res) => {
         select: "title",
       })
       .sort({ createdAt: -1 })
-      .limit(10);
+      .limit(5);
     const latestNovels = await Novel.find(query)
-      .select("thumbnail.publicUrl title type totalViews")
+      .select("thumbnail.publicUrl title type totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -266,7 +278,7 @@ const appDashboard = async (req, res) => {
         select: "name",
       })
       .sort({ createdAt: -1 })
-      .limit(10);
+      .limit(5);
 
     const latest = [...latestSeries, ...latestNovels].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -297,7 +309,7 @@ const appDashboard = async (req, res) => {
       .sort({
         seriesRating: -1,
       })
-      .limit(10);
+      .limit(5);
 
     const topRankedNovels = await Novel.find({
       ...query,
@@ -324,7 +336,7 @@ const appDashboard = async (req, res) => {
       .sort({
         averageRating: -1,
       })
-      .limit(10);
+      .limit(5);
 
     const topRanked = [...topRankedSeries, ...topRankedNovels].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -354,7 +366,12 @@ const dashboardSeries = async (req, res) => {
   };
   let topRankQuery = {};
   //Filtering based on Category
-  if (category) {
+  if (
+    category &&
+    category !== "null" &&
+    category !== "undefined" &&
+    category !== "false"
+  ) {
     const existCategory = await Category.findById(category);
     if (!existCategory) {
       return error409(res, "Category not found");
@@ -362,23 +379,30 @@ const dashboardSeries = async (req, res) => {
     query.category = category;
   }
   //Filtering based on Day
-  if (day) {
+  if (day && day !== "null" && day !== "undefined" && day !== "false") {
     const parsedDay = parseInt(day);
-    if (![7, 14, 30].includes(parsedDay)) {
-      return error400(res, "Invalid date parameter");
+    if (day === "Today") {
+      const today = new Date();
+      topRankQuery.createdAt = {
+        $gte: new Date(today.setHours(0, 0, 0, 0)),
+        $lte: new Date(today.setHours(23, 59, 59, 999)),
+      };
+    } else if ([7, 14, 30].includes(parsedDay)) {
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - parsedDay + 1);
+      topRankQuery.createdAt = {
+        $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+        $lte: new Date(today.setHours(23, 59, 59, 999)),
+      };
+    } else {
+      return error400(res, "Invalid date parameter. Use 'Today', 7, 14, or 30");
     }
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - day);
-    topRankQuery.createdAt = {
-      $gte: startDate,
-      $lte: today,
-    };
   }
   try {
     //TopHighlight series
     const topHighlight = await Series.find(query)
-      .select("thumbnail.publicUrl title type")
+      .select("thumbnail.publicUrl title type seriesRating totalViews")
       .populate({
         path: "episodes",
         select:
@@ -395,7 +419,7 @@ const dashboardSeries = async (req, res) => {
       ...query,
       totalViews: { $gt: 500 },
     })
-      .select("thumbnail.publicUrl title type")
+      .select("thumbnail.publicUrl title type totalViews seriesRating")
       .populate({
         path: "episodes",
         select:
@@ -412,7 +436,7 @@ const dashboardSeries = async (req, res) => {
       ...query,
       totalViews: { $gt: 0, $lte: 500 },
     })
-      .select("thumbnail.publicUrl title type totalViews")
+      .select("thumbnail.publicUrl title type totalViews seriesRating")
       .populate({
         path: "episodes",
         select:
@@ -436,7 +460,7 @@ const dashboardSeries = async (req, res) => {
       ...topRankQuery,
       seriesRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl title totalViews type")
+      .select("thumbnail.publicUrl title type totalViews type seriesRating")
       .populate({
         path: "episodes",
         select:
@@ -479,7 +503,12 @@ const dashboardNovels = async (req, res) => {
   };
   let topRankQuery = {};
   //Filtering based on Category
-  if (category) {
+  if (
+    category &&
+    category !== "null" &&
+    category !== "undefined" &&
+    category !== "false"
+  ) {
     const existCategory = await Category.findById(category);
     if (!existCategory) {
       return error409(res, "Category not found");
@@ -487,23 +516,30 @@ const dashboardNovels = async (req, res) => {
     query.category = category;
   }
   //Filtering based on Day
-  if (day) {
+  if (day && day !== "null" && day !== "undefined" && day !== "false") {
     const parsedDay = parseInt(day);
-    if (![7, 14, 30].includes(parsedDay)) {
-      return error400(res, "Invalid date parameter");
+    if (day === "Today") {
+      const today = new Date();
+      topRankQuery.createdAt = {
+        $gte: new Date(today.setHours(0, 0, 0, 0)),
+        $lte: new Date(today.setHours(23, 59, 59, 999)),
+      };
+    } else if ([7, 14, 30].includes(parsedDay)) {
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - parsedDay + 1);
+      topRankQuery.createdAt = {
+        $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+        $lte: new Date(today.setHours(23, 59, 59, 999)),
+      };
+    } else {
+      return error400(res, "Invalid date parameter. Use 'Today', 7, 14, or 30");
     }
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - day);
-    topRankQuery.createdAt = {
-      $gte: startDate,
-      $lte: today,
-    };
   }
   try {
     //TopHighlight novels
     const topHighlight = await Novel.find(query)
-      .select("thumbnail.publicUrl title type averageRating")
+      .select("thumbnail.publicUrl title type totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -519,7 +555,7 @@ const dashboardNovels = async (req, res) => {
       ...query,
       totalViews: { $gt: 500 },
     })
-      .select("thumbnail.publicUrl title type averageRating")
+      .select("thumbnail.publicUrl title type totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -535,7 +571,7 @@ const dashboardNovels = async (req, res) => {
       ...query,
       totalViews: { $gt: 0, $lte: 500 },
     })
-      .select("thumbnail.publicUrl title type totalViews")
+      .select("thumbnail.publicUrl title type totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -558,7 +594,7 @@ const dashboardNovels = async (req, res) => {
       ...topRankQuery,
       averageRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl averageRating type title averageRating")
+      .select("thumbnail.publicUrl averageRating type title totalViews averageRating")
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",

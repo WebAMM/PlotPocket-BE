@@ -323,7 +323,7 @@ const guestLogout = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select(
-      "_id userName email profileImage.publicUrl status createdAt firstName lastName address city dateOfBirth emergencyContact phoneNo state zipCode"
+      "_id userName email profileImage.publicUrl status createdAt firstName lastName address city dateOfBirth emergencyContact phoneNo state zipCode role"
     );
     if (!user) {
       return error404(res, "User not found!");
@@ -339,7 +339,7 @@ const getUserProfileById = async (req, res) => {
   const { id } = req.params;
   try {
     const user = await User.findById(id).select(
-      "_id userName email profileImage.publicUrl status createdAt"
+      "_id userName email profileImage.publicUrl status createdAt role"
     );
     if (!user) {
       return error404(res, "User not found!");

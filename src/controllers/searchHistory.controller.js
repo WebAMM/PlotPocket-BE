@@ -63,9 +63,12 @@ const getAllSearchHistory = async (req, res) => {
       .sort({
         averageRating: -1,
         createdAt: -1,
-      });
+      })
+      .limit(5);
 
-    const mostPopular = [...series, ...novels];
+    const mostPopular = [...series, ...novels].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
 
     const data = {
       searchHistory,

@@ -3,7 +3,6 @@ const router = require("express").Router();
 const allController = require("../controllers/all.controller");
 //middlewares
 const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
-const payloadValidator = require("../middlewares/payloadValidator");
 
 //[APP] Featured + Latest + Top Ranked Detail
 router.get(
@@ -30,13 +29,13 @@ router.get(
 );
 
 //[APP] Increase View
-router.post(
-  "/app/inc-view",
-  verifyToken,
-  verifyRole(["User", "Guest"]),
-  payloadValidator.validateIncreaseView,
-  allController.increaseView
-);
+// router.post(
+//   "/app/inc-view",
+//   verifyToken,
+//   verifyRole(["User", "Guest"]),
+//   payloadValidator.validateIncreaseView,
+//   allController.increaseView
+// );
 
 //For Dashboard Detail Flows
 // //[APP] Featured Series + Novels

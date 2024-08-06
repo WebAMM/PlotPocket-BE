@@ -3,6 +3,7 @@ const Novel = require("../models/Novel.model");
 const Chapter = require("../models/Chapter.model");
 const Category = require("../models/Category.model");
 const Author = require("../models/Author.model");
+const UserPurchases = require("../models/UserPurchases.model");
 //Responses and errors
 const {
   error500,
@@ -14,7 +15,6 @@ const {
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const mongoose = require("mongoose");
-const UserPurchases = require("../models/UserPurchases.model");
 const {
   uploadFileToS3,
   deleteFileFromBucket,
@@ -272,7 +272,7 @@ const getAllChaptersOfNovel = async (req, res) => {
         path: "novel",
         select: "thumbnail.publicUrl",
       })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
 
@@ -291,14 +291,30 @@ const getAllChaptersOfNovel = async (req, res) => {
       userPurchases ? userPurchases.chapters.map((e) => e.toString()) : []
     );
 
-    const chapters = allNovelChapters.map((chapter) => ({
-      ...chapter._docs,
-      content:
-        chapter.content === "Paid" &&
-        purchasedChapterIds.has(chapter._id.toString())
-          ? "Free"
-          : chapter.content,
-    }));
+    let firstPaidChapter = false;
+
+    const chapters = allNovelChapters.map((chapter) => {
+      const isPurchased = purchasedChapterIds.has(chapter._id.toString());
+
+      contentStatus = chapter.content;
+
+      if (chapter.content === "Paid" && isPurchased) {
+        contentStatus = "Free";
+      }
+
+      //Set canUnlock flag for the paid chapter
+      let canUnlock = false;
+      if (!firstPaidChapter && contentStatus === "Paid") {
+        firstPaidChapter = true;
+        canUnlock = true;
+      }
+
+      return {
+        ...chapter._doc,
+        content: contentStatus,
+        canUnlock,
+      };
+    });
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalChaptersCount;
@@ -715,7 +731,12 @@ const bestNovels = async (req, res) => {
 
   try {
     //Filtering based on Category
-    if (category) {
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
         return error409(res, "Category not found");
@@ -773,7 +794,12 @@ const topNovels = async (req, res) => {
 
   //Filtering based on Category
   try {
-    if (category) {
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
         return error409(res, "Category not found");
@@ -835,7 +861,12 @@ const getTopRatedNovels = async (req, res) => {
 
   try {
     //Filtering based on Category
-    if (category) {
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
         return error409(res, "Category not found");
@@ -851,22 +882,35 @@ const getTopRatedNovels = async (req, res) => {
     const limit = size;
 
     //Filtering based on Day
-    if (day) {
+    if (day && day !== "null" && day !== "undefined" && day !== "false") {
       const parsedDay = parseInt(day);
-      if (![7, 14, 30].includes(parsedDay)) {
-        return error400(res, "Invalid date parameter");
+      if (day === "Today") {
+        const today = new Date();
+        query.createdAt = {
+          $gte: new Date(today.setHours(0, 0, 0, 0)),
+          $lte: new Date(today.setHours(23, 59, 59, 999)),
+        };
+      } else if ([7, 14, 30].includes(parsedDay)) {
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - parsedDay + 1);
+        query.createdAt = {
+          $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+          $lte: new Date(today.setHours(23, 59, 59, 999)),
+        };
+      } else {
+        return error400(
+          res,
+          "Invalid date parameter. Use 'Today', 7, 14, or 30"
+        );
       }
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - day);
-      query.createdAt = {
-        $gte: startDate,
-        $lte: today,
-      };
     }
 
     const topRatedNovel = await Novel.find(query)
       .select("thumbnail.publicUrl title view type averageRating")
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -882,10 +926,7 @@ const getTopRatedNovels = async (req, res) => {
       .populate({
         path: "author",
         select: "name",
-      })
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit);
+      });
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalNovelsCount;
@@ -921,7 +962,12 @@ const getDetailNovelByType = async (req, res) => {
       };
 
       //Filtering based on Category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category not found");
@@ -965,7 +1011,12 @@ const getDetailNovelByType = async (req, res) => {
         totalViews: { $gt: 0, $lte: 500 },
       };
 
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category not found");
@@ -1019,7 +1070,12 @@ const getDetailNovelByType = async (req, res) => {
       // }
 
       //Filtering based on Category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category not found");
@@ -1035,7 +1091,7 @@ const getDetailNovelByType = async (req, res) => {
       const limit = size;
 
       //Filtering based on Day
-      if (day) {
+      if (day && day !== "null" && day !== "undefined" && day !== "false") {
         const parsedDay = parseInt(day);
         if (day === "Today") {
           const today = new Date();
@@ -1080,7 +1136,7 @@ const getDetailNovelByType = async (req, res) => {
         })
         .sort(sortOptions)
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalNovelsCount;

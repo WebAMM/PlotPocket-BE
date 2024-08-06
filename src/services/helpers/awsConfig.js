@@ -31,4 +31,5 @@ const deleteFileFromBucket = (params) => {
     });
   });
 };
+
 module.exports = { uploadFileToS3, deleteFileFromBucket };

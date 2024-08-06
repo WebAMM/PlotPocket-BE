@@ -2,6 +2,7 @@
 const Series = require("../models/Series.model");
 const Episode = require("../models/Episode.model");
 const Category = require("../models/Category.model");
+const UserPurchases = require("../models/UserPurchases.model");
 //Responses and errors
 const {
   error500,
@@ -13,7 +14,6 @@ const {
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
 const mongoose = require("mongoose");
-const UserPurchases = require("../models/UserPurchases.model");
 const extractFormat = require("../services/helpers/extractFormat");
 const {
   uploadFileToS3,
@@ -340,7 +340,7 @@ const getAllEpisodeOfSeries = async (req, res) => {
         path: "series",
         select: "thumbnail.publicUrl _id",
       })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
 
@@ -359,14 +359,30 @@ const getAllEpisodeOfSeries = async (req, res) => {
       userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
     );
 
-    const episodes = allSeriesEpisodes.map((episode) => ({
-      ...episode._doc,
-      content:
-        episode.content === "Paid" &&
-        purchasedEpisodeIds.has(episode._id.toString())
-          ? "Free"
-          : episode.content,
-    }));
+    let firstPaidEpisode = false;
+
+    const episodes = allSeriesEpisodes.map((episode) => {
+      const isPurchased = purchasedEpisodeIds.has(episode._id.toString());
+
+      contentStatus = episode.content;
+
+      if (episode.content === "Paid" && isPurchased) {
+        contentStatus = "Free";
+      }
+
+      //Set canUnlock flag for the first paid episode
+      let canUnlock = false;
+      if (!firstPaidEpisode && contentStatus === "Paid") {
+        firstPaidEpisode = true;
+        canUnlock = true;
+      }
+
+      return {
+        ...episode._doc,
+        content: contentStatus,
+        canUnlock,
+      };
+    });
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalEpisodeCount;
@@ -535,7 +551,12 @@ const bestSeries = async (req, res) => {
 
   try {
     //Filtering based on Category
-    if (category) {
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
         return error409(res, "Category not found");
@@ -597,7 +618,12 @@ const topSeries = async (req, res) => {
 
   try {
     //Filtering based on Category
-    if (category) {
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
         return error409(res, "Category not found");
@@ -668,7 +694,12 @@ const getTopRatedSeries = async (req, res) => {
 
   try {
     //Filtering based on Category
-    if (category) {
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
       const existCategory = await Category.findById(category);
       if (!existCategory) {
         return error409(res, "Category not found");
@@ -684,18 +715,28 @@ const getTopRatedSeries = async (req, res) => {
     const limit = size;
 
     //Filtering based on Day
-    if (day) {
+    if (day && day !== "null" && day !== "undefined" && day !== "false") {
       const parsedDay = parseInt(day);
-      if (![7, 14, 30].includes(parsedDay)) {
-        return error400(res, "Invalid date parameter");
+      if (day === "Today") {
+        const today = new Date();
+        query.createdAt = {
+          $gte: new Date(today.setHours(0, 0, 0, 0)),
+          $lte: new Date(today.setHours(23, 59, 59, 999)),
+        };
+      } else if ([7, 14, 30].includes(parsedDay)) {
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - parsedDay + 1);
+        query.createdAt = {
+          $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+          $lte: new Date(today.setHours(23, 59, 59, 999)),
+        };
+      } else {
+        return error400(
+          res,
+          "Invalid date parameter. Use 'Today', 7, 14, or 30"
+        );
       }
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - day);
-      query.createdAt = {
-        $gte: startDate,
-        $lte: today,
-      };
     }
 
     const topRatedSeries = await Series.find(query)
@@ -752,7 +793,12 @@ const getDetailSeriesByType = async (req, res) => {
       };
 
       //Filtering based on Category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category not found");
@@ -805,7 +851,12 @@ const getDetailSeriesByType = async (req, res) => {
       };
 
       //Filtering based on Category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category not found");
@@ -862,7 +913,12 @@ const getDetailSeriesByType = async (req, res) => {
         seriesRating: -1,
       };
 
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category not found");
@@ -878,7 +934,7 @@ const getDetailSeriesByType = async (req, res) => {
       const limit = size;
 
       //Filtering based on Day
-      if (day) {
+      if (day && day !== "null" && day !== "undefined" && day !== "false") {
         const parsedDay = parseInt(day);
         if (day === "Today") {
           const today = new Date();

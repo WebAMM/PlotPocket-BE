@@ -21,6 +21,11 @@ const {
 } = require("../services/helpers/awsConfig");
 const extractFormat = require("../services/helpers/extractFormat");
 const fs = require("fs");
+const addToHistory = require("../services/helpers/addToHistory");
+const {
+  updateViews,
+  updateCategoryViews,
+} = require("../services/helpers/incViews");
 
 //Add Episode
 const addEpisode = async (req, res) => {
@@ -140,7 +145,7 @@ const rateTheEpisode = async (req, res) => {
   }
 };
 
-// Get All Episode Of Series
+// Get All Episode Of Series in ListBox
 const allEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
   try {
@@ -720,20 +725,33 @@ const viewEpisode = async (req, res) => {
       return error404(res, "Episode not found");
     }
 
+    if (
+      (up && up !== "true" && up !== true) ||
+      (down && down !== "true" && down !== true) ||
+      (autoUnlock && autoUnlock !== "true" && autoUnlock !== true) ||
+      (unlockNow && unlockNow !== "true" && unlockNow !== true)
+    ) {
+      return error400(res, "Query parameters must be either true or 'true'");
+    }
+
     if (down && up) {
       return error400(res, "Query must be either up or down");
     }
 
-    // if (up && autoUnlock) {
-    //   return error400(res, "Auto unlock should not be true with down");
-    // }
+    if (up && autoUnlock) {
+      return error400(res, "Auto unlock should not be true with up");
+    }
 
-    // if ((down || up) && unlockNow === "true") {
-    //   return error400(
-    //     res,
-    //     "UnlockNow should not be true when using up or down"
-    //   );
-    // }
+    if ((down || up) && unlockNow) {
+      return error400(
+        res,
+        "UnlockNow should not be true when using up or down"
+      );
+    }
+
+    if (autoUnlock && unlockNow) {
+      return error400(res, "Either autoUnlock or unlockNow");
+    }
 
     const findEpisode = async (condition, sort) => {
       return Episode.findOne(condition)
@@ -762,6 +780,12 @@ const viewEpisode = async (req, res) => {
     };
 
     const handleResponse = async (episode) => {
+      //Add to user history
+      await addToHistory("Series", req.user._id, episode._id);
+      await updateViews(Series, episode.series, req.user._id);
+      await updateViews(Episode, episode._id, req.user._id);
+      await updateCategoryViews(episode.series.category, req.user._id);
+
       const isRated = episode.ratings.some(
         (rating) => rating.user.toString() === req.user._id.toString()
       );
@@ -808,18 +832,20 @@ const viewEpisode = async (req, res) => {
       }
 
       // Deduct the remaining cost from total coins
-      if (remainingCoins > 0) {
-        totalCoins -= remainingCoins;
-      }
+      totalCoins = refillCoins + bonusCoins;
 
       return { totalCoins, refillCoins, bonusCoins };
     };
 
     const handleUnlock = async (episode, userCoins) => {
-      const { totalCoins, refillCoins, bonusCoins } = await handleCoinDeduction(
-        userCoins,
-        episode.coins
-      );
+      const result = await handleCoinDeduction(userCoins, episode.coins);
+
+      // Check if there was an error in handleCoinDeduction
+      if (result.error) {
+        return customError(res, 403, result.error);
+      }
+
+      const { totalCoins, refillCoins, bonusCoins } = result;
 
       userCoins.totalCoins = totalCoins;
       userCoins.refillCoins = refillCoins;
@@ -864,11 +890,13 @@ const viewEpisode = async (req, res) => {
         }
 
         if (autoUnlock) {
-          const userCoins = await UserCoin.findOne({ user: req.user._id });
+          const userCoins = await UserCoin.findOne({
+            user: req.user._id,
+            totalCoins: { $gte: 1 },
+          });
           if (!userCoins) {
             return error404(res, "User has no coins");
           }
-
           return handleUnlock(nextEpisode, userCoins);
         } else {
           return customError(res, 403, "Use coins to unlock episode");

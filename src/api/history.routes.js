@@ -3,16 +3,15 @@ const router = require("express").Router();
 const historyController = require("../controllers/history.controller");
 //middlewares
 const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
-const payloadValidator = require("../middlewares/payloadValidator");
 
 //[APP] Add to history of logged in user
-router.post(
-  "/app/add",
-  verifyToken,
-  verifyRole(["User", "Guest"]),
-  payloadValidator.validateAddToHistory,
-  historyController.addToHistory
-);
+// router.post(
+//   "/app/add",
+//   verifyToken,
+//   verifyRole(["User", "Guest"]),
+//   payloadValidator.validateAddToHistory,
+//   historyController.addToHistory
+// );
 
 //[APP] All history of logged in user
 router.get(

@@ -16,10 +16,10 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
-const {
-  updateViews,
-  updateCategoryViews,
-} = require("../services/helpers/incViews");
+// const {
+//   updateViews,
+//   updateCategoryViews,
+// } = require("../services/helpers/incViews");
 
 //Global Search Novels + Series
 const globalSearch = async (req, res) => {
@@ -38,7 +38,6 @@ const globalSearch = async (req, res) => {
     })
       .select("thumbnail.publicUrl title type")
       .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "chapters",
         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -56,7 +55,6 @@ const globalSearch = async (req, res) => {
     })
       .select("thumbnail.publicUrl title type")
       .sort({ createdAt: -1 })
-      .limit(10)
       .populate({
         path: "episodes",
         select:
@@ -74,38 +72,10 @@ const globalSearch = async (req, res) => {
   }
 };
 
-const increaseView = async (req, res) => {
-  const { type, seriesId, episodeId, chapterId, novelId } = req.body;
-  if (type === "Series") {
-    const series = await updateViews(Series, seriesId, req.user._id);
-    if (!series) {
-      return error409(res, "Series not found");
-    }
-    const episode = await updateViews(Episode, episodeId, req.user._id);
-    if (!episode) {
-      return error409(res, "Episode not found");
-    }
-    await updateCategoryViews(series.category, req.user._id);
-    return status200(res, "Series and episodes views increased");
-  } else if (type === "Novels") {
-    const novel = await updateViews(Novel, novelId, req.user._id);
-    if (!novel) {
-      return error409(res, "Novel not found");
-    }
-    const chapter = await updateViews(Chapter, chapterId, req.user._id);
-    if (!chapter) {
-      return error409(res, "Chapter not found");
-    }
-    await updateCategoryViews(novel.category, req.user._id);
-    return status200(res, "Novel and chapters views increased");
-  }
-};
-
 // Single novel/series detail with comments + might like.
 const singleDetailPage = async (req, res) => {
   const { id } = req.params;
-  const { type } = req.query;
-  const { fromSearch } = req.body;
+  const { type, fromSearch } = req.query;
   let content;
   let mightLike;
 
@@ -308,7 +278,12 @@ const combinedSeriesNovels = async (req, res) => {
   let novels = [];
 
   try {
-    if (type != "Featured" && type != "Latest" && type != "TopRanked") {
+    if (
+      type != "Featured" &&
+      // type != "History" &&
+      type != "Latest" &&
+      type != "TopRanked"
+    ) {
       return error400(res, "Invalid type");
     }
 
@@ -320,7 +295,12 @@ const combinedSeriesNovels = async (req, res) => {
         totalViews: { $gte: 10 },
       };
       // Filtering based on category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error404(res, "Category not found");
@@ -351,14 +331,89 @@ const combinedSeriesNovels = async (req, res) => {
             limit: 1,
           },
         });
-    } else if (type === "Latest") {
+    }
+    // else if (type === "History") {
+    //   //Query
+    //   let query = {
+    //     status: "Published",
+    //     visibility: "Public",
+    //   };
+    //   //Filtering based on category
+    //   if (
+    //     category &&
+    //     category !== "null" &&
+    //     category !== "undefined" &&
+    //     category !== "false"
+    //   ) {
+    //     const existCategory = await Category.findById(category);
+    //     if (!existCategory) {
+    //       return error404(res, "Category not found");
+    //     }
+    //     query.category = category;
+    //   }
+    //   series = await History.find({
+    //     user: req.user._id,
+    //     series: { $exists: true },
+    //     episode: { $exists: true },
+    //   })
+    //     .select("_id createdAt")
+    //     .sort({ createdAt: -1 })
+    //     .populate([
+    //       {
+    //         path: "series",
+    //         select:
+    //           "thumbnail.publicUrl type totalViews seriesRatings title description",
+    //       },
+    //       {
+    //         path: "episode",
+    //         select:
+    //           "episodeVideo.publicUrl title content visibility description createdAt coins totalViews",
+    //       },
+    //       {
+    //         path: "novel",
+    //         select:
+    //           "thumbnail.publicUrl type totalViews title adult averageRating",
+    //       },
+    //       {
+    //         path: "chapter",
+    //         select:
+    //           "chapterPdf.publicUrl name chapterNo content totalViews description createdAt coins ",
+    //       },
+    //     ]);
+
+    //   series = await History.find({
+    //     user: req.user._id,
+    //     novel: { $exists: true },
+    //     chapter: { $exists: true },
+    //   })
+    //     .select("_id createdAt")
+    //     .sort({ createdAt: -1 })
+    //     .populate([
+    //       {
+    //         path: "novel",
+    //         select:
+    //           "thumbnail.publicUrl type totalViews title adult averageRating",
+    //       },
+    //       {
+    //         path: "chapter",
+    //         select:
+    //           "chapterPdf.publicUrl name chapterNo content totalViews description createdAt coins ",
+    //       },
+    //     ]);
+    // }
+    else if (type === "Latest") {
       //Query
       let query = {
         status: "Published",
         visibility: "Public",
       };
       //Filtering based on category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error404(res, "Category not found");
@@ -418,33 +473,48 @@ const combinedSeriesNovels = async (req, res) => {
         averageRating: -1,
         createdAt: -1,
       };
-      //Filtering based on Day
-      if (day) {
-        const parsedDay = parseInt(day);
-        if (![7, 14, 30].includes(parsedDay)) {
-          return error400(res, "Invalid date parameter");
-        }
-        const today = new Date();
-        const startDate = new Date();
-        startDate.setDate(today.getDate() - day);
-        query.createdAt = {
-          $gte: startDate,
-          $lte: today,
-        };
-      }
-      //New
-      // if (latest) {
-      //   sortSeriesOptions.createdAt = -1;
-      //   sortNovelOptions.createdAt = -1;
-      // }
       //Filtering based on Category
-      if (category) {
+      if (
+        category &&
+        category !== "null" &&
+        category !== "undefined" &&
+        category !== "false"
+      ) {
         const existCategory = await Category.findById(category);
         if (!existCategory) {
           return error409(res, "Category don't exist");
         }
         query.category = category;
       }
+      //Filtering based on Day
+      if (day && day !== "null" && day !== "undefined" && day !== "false") {
+        const parsedDay = parseInt(day);
+        if (day === "Today") {
+          const today = new Date();
+          query.createdAt = {
+            $gte: new Date(today.setHours(0, 0, 0, 0)),
+            $lte: new Date(today.setHours(23, 59, 59, 999)),
+          };
+        } else if ([7, 14, 30].includes(parsedDay)) {
+          const today = new Date();
+          const startDate = new Date();
+          startDate.setDate(today.getDate() - parsedDay + 1);
+          query.createdAt = {
+            $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+            $lte: new Date(today.setHours(23, 59, 59, 999)),
+          };
+        } else {
+          return error400(
+            res,
+            "Invalid date parameter. Use 'Today', 7, 14, or 30"
+          );
+        }
+      }
+      //New
+      // if (latest) {
+      //   sortSeriesOptions.createdAt = -1;
+      //   sortNovelOptions.createdAt = -1;
+      // }
 
       series = await Series.find({
         ...query,
@@ -511,6 +581,34 @@ const combinedSeriesNovels = async (req, res) => {
   }
 };
 
+//Increase the views
+// const increaseView = async (req, res) => {
+//   const { type, seriesId, episodeId, chapterId, novelId } = req.body;
+//   if (type === "Series") {
+//     const series = await updateViews(Series, seriesId, req.user._id);
+//     if (!series) {
+//       return error409(res, "Series not found");
+//     }
+//     const episode = await updateViews(Episode, episodeId, req.user._id);
+//     if (!episode) {
+//       return error409(res, "Episode not found");
+//     }
+//     await updateCategoryViews(series.category, req.user._id);
+//     return status200(res, "Series and episodes views increased");
+//   } else if (type === "Novels") {
+//     const novel = await updateViews(Novel, novelId, req.user._id);
+//     if (!novel) {
+//       return error409(res, "Novel not found");
+//     }
+//     const chapter = await updateViews(Chapter, chapterId, req.user._id);
+//     if (!chapter) {
+//       return error409(res, "Chapter not found");
+//     }
+//     await updateCategoryViews(novel.category, req.user._id);
+//     return status200(res, "Novel and chapters views increased");
+//   }
+// };
+
 // All featured series and novel
 // const featuredSeriesNovels = async (req, res) => {
 //   const { category, pageSize = 10, page = 1 } = req.query;
@@ -535,23 +633,23 @@ const combinedSeriesNovels = async (req, res) => {
 //     const featuredSeries = await Series.find(query)
 //       .select("thumbnail.publicUrl title type seriesRating")
 //       .sort({ totalViews: -1 })
+//       .skip(skip)
+//       .limit(limit);
 //       .populate({
 //         path: "episodes",
 //         select: "episodeVideo.publicUrl title content visibility description coins",
 //         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
-//       .skip(skip)
-//       .limit(limit);
 //     const featuredNovels = await Novel.find(query)
 //       .select("thumbnail.publicUrl title type averageRating")
 //       .sort({ totalViews: -1 })
+//       .skip(skip)
+//       .limit(limit);
 //       .populate({
 //         path: "chapters",
 //         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
 //         options: { sort: { createdAt: 1 }, limit: 1 },
 //       })
-//       .skip(skip)
-//       .limit(limit);
 //     const seriesAndNovels = [...featuredSeries, ...featuredNovels].sort(
 //       (a, b) => b.createdAt - a.createdAt
 //     );
@@ -587,6 +685,8 @@ const combinedSeriesNovels = async (req, res) => {
 //     const latestSeries = await Series.find(query)
 //       .select("thumbnail.publicUrl title type totalViews")
 //       .sort({ createdAt: -1 })
+//       .skip(skip)
+//       .limit(limit);
 //       .populate({
 //         path: "episodes",
 //         select: "episodeVideo.publicUrl title content visibility description coins",
@@ -601,8 +701,6 @@ const combinedSeriesNovels = async (req, res) => {
 //         path: "category",
 //         select: "title",
 //       })
-//       .skip(skip)
-//       .limit(limit);
 //     const latestNovels = await Novel.find(query)
 //       .select("thumbnail.publicUrl title type totalViews")
 //       .sort({ createdAt: -1 })
@@ -649,19 +747,29 @@ const combinedSeriesNovels = async (req, res) => {
 //     averageRating: -1,
 //   };
 //   //Filtering based on Day
-//   if (day) {
-//     const parsedDay = parseInt(day);
-//     if (![7, 14, 30].includes(parsedDay)) {
-//       return error400(res, "Invalid date parameter");
-//     }
+// if (day && day !== "null" && day !== "undefined" && day !== "false") {
+//   const parsedDay = parseInt(day);
+//   if (day === "Today") {
+//     const today = new Date();
+//     query.createdAt = {
+//       $gte: new Date(today.setHours(0, 0, 0, 0)),
+//       $lte: new Date(today.setHours(23, 59, 59, 999)),
+//     };
+//   } else if ([7, 14, 30].includes(parsedDay)) {
 //     const today = new Date();
 //     const startDate = new Date();
-//     startDate.setDate(today.getDate() - day);
+//     startDate.setDate(today.getDate() - parsedDay + 1);
 //     query.createdAt = {
-//       $gte: startDate,
-//       $lte: today,
+//       $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+//       $lte: new Date(today.setHours(23, 59, 59, 999)),
 //     };
+//   } else {
+//     return error400(
+//       res,
+//       "Invalid date parameter. Use 'Today', 7, 14, or 30"
+//     );
 //   }
+// }
 //   //New Book and New Novel
 //   if (latest) {
 //     sortSeriesOptions.createdAt = -1;
@@ -681,6 +789,9 @@ const combinedSeriesNovels = async (req, res) => {
 //       seriesRating: { $gte: 1 },
 //     })
 //       .select("thumbnail.publicUrl title view type seriesRating")
+//       .sort(sortSeriesOptions)
+//       .skip(skip)
+//       .limit(limit);
 //       .populate({
 //         path: "episodes",
 //         select: "episodeVideo.publicUrl title content visibility description coins",
@@ -695,15 +806,15 @@ const combinedSeriesNovels = async (req, res) => {
 //         path: "category",
 //         select: "title",
 //       })
-//       .sort(sortSeriesOptions)
-//       .skip(skip)
-//       .limit(limit);
 //     //Top ranked novels
 //     const topRankedNovels = await Novel.find({
 //       ...query,
 //       averageRating: { $gte: 1 },
 //     })
 //       .select("thumbnail.publicUrl averageRating type title averageRating")
+//       .sort(sortNovelOptions)
+//       .skip(skip)
+//       .limit(limit);
 //       .populate({
 //         path: "chapters",
 //         select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
@@ -717,9 +828,6 @@ const combinedSeriesNovels = async (req, res) => {
 //         path: "author",
 //         select: "name",
 //       })
-//       .sort(sortNovelOptions)
-//       .skip(skip)
-//       .limit(limit);
 //     const seriesAndNovels = [...topRankedSeries, ...topRankedNovels].sort(
 //       (a, b) => b.createdAt - a.createdAt
 //     );
@@ -736,9 +844,9 @@ const combinedSeriesNovels = async (req, res) => {
 
 module.exports = {
   globalSearch,
-  increaseView,
   singleDetailPage,
   combinedSeriesNovels,
+  // increaseView,
   // featuredSeriesNovels,
   // latestSeriesNovels,
   // topRankedSeriesNovel,

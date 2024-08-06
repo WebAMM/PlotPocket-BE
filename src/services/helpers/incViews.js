@@ -38,15 +38,16 @@ const updateViews = async (model, id, userId) => {
 };
 
 const updateCategoryViews = async (categoryId, userId) => {
+
   const category = await Category.findOne({
     _id: categoryId,
     status: "Active",
   });
+
   if (category) {
     const alreadyViewedCategory = category.views.find(
       (viewRec) => viewRec.user == userId
     );
-
     if (alreadyViewedCategory) {
       await Category.updateOne(
         { _id: categoryId },

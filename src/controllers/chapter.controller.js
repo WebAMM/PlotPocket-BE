@@ -21,6 +21,11 @@ const {
 } = require("../services/helpers/awsConfig");
 const extractFormat = require("../services/helpers/extractFormat");
 const fs = require("fs");
+const {
+  updateCategoryViews,
+  updateViews,
+} = require("../services/helpers/incViews");
+const addToHistory = require("../services/helpers/addToHistory");
 
 //Add Chapter
 const addChapter = async (req, res) => {
@@ -375,8 +380,7 @@ const updateChapter = async (req, res) => {
 
 const viewChapter = async (req, res) => {
   const { id } = req.params;
-  const { up, down } = req.query;
-  const { autoUnlock, unlockNow } = req.body;
+  const { up, down, autoUnlock, unlockNow } = req.query;
 
   try {
     const currentChapter = await Chapter.findById(id)
@@ -396,20 +400,33 @@ const viewChapter = async (req, res) => {
       return error404(res, "Chapter not found");
     }
 
+    if (
+      (up && up !== "true" && up !== true) ||
+      (down && down !== "true" && down !== true) ||
+      (autoUnlock && autoUnlock !== "true" && autoUnlock !== true) ||
+      (unlockNow && unlockNow !== "true" && unlockNow !== true)
+    ) {
+      return error400(res, "Query parameters must be either true");
+    }
+
     if (down && up) {
       return error400(res, "Query must be either up or down");
     }
 
-    // if (up && autoUnlock) {
-    //   return error400(res, "Auto unlock should not be true with down");
-    // }
+    if (up && autoUnlock) {
+      return error400(res, "Auto unlock should not be true with up");
+    }
 
-    // if ((down || up) && unlockNow === "true") {
-    //   return error400(
-    //     res,
-    //     "UnlockNow should not be true when using up or down"
-    //   );
-    // }
+    if ((down || up) && unlockNow) {
+      return error400(
+        res,
+        "UnlockNow should not be true when using up or down"
+      );
+    }
+
+    if (autoUnlock && unlockNow) {
+      return error400(res, "Either autoUnlock or unlockNow");
+    }
 
     const findChapter = async (condition, sort) => {
       return Chapter.findOne(condition)
@@ -436,6 +453,12 @@ const viewChapter = async (req, res) => {
     };
 
     const handleResponse = async (chapter) => {
+      //Add to user history
+      await addToHistory("Novels", req.user._id, chapter._id);
+      await updateViews(Novel, chapter.novel, req.user._id);
+      await updateViews(Chapter, chapter._id, req.user._id);
+      await updateCategoryViews(chapter.novel.category, req.user._id);
+
       const isBookmarked = await myList.exists({
         user: req.user._id,
         chapter: chapter._id,
@@ -476,18 +499,20 @@ const viewChapter = async (req, res) => {
       }
 
       // Deduct the remaining cost from total coins
-      if (remainingCoins > 0) {
-        totalCoins -= remainingCoins;
-      }
+      totalCoins = refillCoins + bonusCoins;
 
       return { totalCoins, refillCoins, bonusCoins };
     };
 
     const handleUnlock = async (chapter, userCoins) => {
-      const { totalCoins, refillCoins, bonusCoins } = await handleCoinDeduction(
-        userCoins,
-        chapter.coins
-      );
+      const result = await handleCoinDeduction(userCoins, chapter.coins);
+
+      // Check if there was an error in handleCoinDeduction
+      if (result.error) {
+        return customError(res, 403, result.error);
+      }
+
+      const { totalCoins, refillCoins, bonusCoins } = result;
 
       userCoins.totalCoins = totalCoins;
       userCoins.refillCoins = refillCoins;
@@ -532,11 +557,13 @@ const viewChapter = async (req, res) => {
         }
 
         if (autoUnlock) {
-          const userCoins = await UserCoin.findOne({ user: req.user._id });
+          const userCoins = await UserCoin.findOne({
+            user: req.user._id,
+            totalCoins: { $gte: 1 },
+          });
           if (!userCoins) {
             return error404(res, "User has no coins");
           }
-
           return handleUnlock(nextChapter, userCoins);
         } else {
           return customError(res, 403, "Use coins to unlock chapter");
