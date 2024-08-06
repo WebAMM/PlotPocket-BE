@@ -151,8 +151,8 @@ const singleDetailPage = async (req, res) => {
         _id: { $nin: historyNovelIds },
       })
         .select("thumbnail.publicUrl title type totalViews")
-        .limit(10)
         .sort({ createdAt: -1 })
+        .limit(10)
         .populate({
           path: "chapters",
           select:
@@ -231,8 +231,8 @@ const singleDetailPage = async (req, res) => {
         category: { $in: seriesCategories },
         _id: { $nin: historySeriesIds },
       })
-        .limit(10)
         .sort({ createdAt: -1 })
+        .limit(10)
         .select("thumbnail.publicUrl title type seriesRating")
         .populate({
           path: "episodes",
