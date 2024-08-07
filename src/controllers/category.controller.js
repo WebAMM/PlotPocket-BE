@@ -49,6 +49,7 @@ const getCategoriesByType = async (req, res) => {
   if (!type) {
     return customError(res, 400, "Type is required");
   }
+
   let query = {
     type,
     status: "Active",
@@ -62,7 +63,9 @@ const getCategoriesByType = async (req, res) => {
     query._id = { $ne: id };
   }
   try {
-    const categories = await Category.find(query).select("_id title type");
+    const categories = await Category.find(query).select(
+      "_id title type status createdAt totalViews"
+    );
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);
@@ -83,7 +86,6 @@ const deleteCategory = async (req, res) => {
     if (!replaceCategory) {
       return error404(res, "Replace category not found");
     }
-
     if (replaceCategory.type === "Novels") {
       await Novel.updateMany({
         category: replaceCategoryId,
@@ -115,7 +117,6 @@ const editCategory = async (req, res) => {
         new: true,
       }
     );
-
     if (!updatedCategory) {
       return error404(res, "Category not found");
     }

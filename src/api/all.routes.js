@@ -6,7 +6,7 @@ const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 
 //[APP] Featured + Latest + Top Ranked Detail
 router.get(
-  "/app/all-detail",
+  "/app/all/by-type",
   verifyToken,
   verifyRole(["User", "Guest"]),
   allController.combinedSeriesNovels
@@ -14,7 +14,7 @@ router.get(
 
 //[APP] Single Novel/Series detail
 router.get(
-  "/app/single/:id",
+  "/app/detail/:id",
   verifyToken,
   verifyRole(["User", "Guest"]),
   allController.singleDetailPage

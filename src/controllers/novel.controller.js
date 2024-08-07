@@ -982,20 +982,34 @@ const getDetailNovelByType = async (req, res) => {
       const skip = (currentPage - 1) * size;
       const limit = size;
 
-      const bestNovels = await Novel.find(query)
-        .select("thumbnail.publicUrl title type averageRating")
+      let bestNovels = await Novel.find(query)
+        .select("thumbnail.publicUrl title type averageRating createdAt")
         .sort({ totalViews: -1 })
         .skip(skip)
         .limit(limit)
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
           },
-        });
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .lean();
+
+      bestNovels = bestNovels.map((item) => ({
+        ...item,
+        chapters:
+          item.chapters && item.chapters.length > 0 ? item.chapters[0] : {},
+      }));
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalNovelsCount;
@@ -1031,20 +1045,34 @@ const getDetailNovelByType = async (req, res) => {
       const skip = (currentPage - 1) * size;
       const limit = size;
 
-      const topNovels = await Novel.find(query)
-        .select("thumbnail.publicUrl title type averageRating")
+      let topNovels = await Novel.find(query)
+        .select("thumbnail.publicUrl title type averageRating createdAt")
         .sort({ totalViews: -1 })
         .skip(skip)
         .limit(limit)
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
           },
-        });
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .lean();
+
+      topNovels = topNovels.map((item) => ({
+        ...item,
+        chapters:
+          item.chapters && item.chapters.length > 0 ? item.chapters[0] : {},
+      }));
 
       const hasMore = skip + limit < totalNovelsCount;
 
@@ -1115,12 +1143,14 @@ const getDetailNovelByType = async (req, res) => {
         }
       }
 
-      const topRatedNovel = await Novel.find(query)
-        .select("thumbnail.publicUrl title view type averageRating")
+      let topRatedNovel = await Novel.find(query)
+        .select("thumbnail.publicUrl title view type averageRating createdAt")
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
@@ -1134,9 +1164,13 @@ const getDetailNovelByType = async (req, res) => {
           path: "author",
           select: "name",
         })
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(limit);
+        .lean();
+
+      topRatedNovel = topRatedNovel.map((item) => ({
+        ...item,
+        chapters:
+          item.chapters && item.chapters.length > 0 ? item.chapters[0] : {},
+      }));
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalNovelsCount;

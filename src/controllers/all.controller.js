@@ -36,7 +36,9 @@ const globalSearch = async (req, res) => {
         $regex: regex,
       },
     })
-      .select("thumbnail.publicUrl title type")
+      .select(
+        "thumbnail.publicUrl title type totalViews averageRating createdAt"
+      )
       .sort({ createdAt: -1 })
       .populate({
         path: "chapters",
@@ -45,7 +47,9 @@ const globalSearch = async (req, res) => {
           sort: { createdAt: 1 },
           limit: 1,
         },
-      });
+      })
+      .lean();
+
     const series = await Series.find({
       status: "Published",
       visibility: "Public",
@@ -53,19 +57,38 @@ const globalSearch = async (req, res) => {
         $regex: regex,
       },
     })
-      .select("thumbnail.publicUrl title type")
+      .select(
+        "thumbnail.publicUrl title type totalViews seriesRating createdAt"
+      )
       .sort({ createdAt: -1 })
       .populate({
         path: "episodes",
-        select:
-          "episodeVideo.publicUrl title content visibility description coins",
+        select: "episodeVideo.publicUrl title content totalViews coins",
         options: {
           sort: { createdAt: 1 },
           limit: 1,
         },
-      });
+      })
+      .lean();
 
-    const combined = [...series, ...novels];
+    const combined = [...series, ...novels]
+      .map((item) => ({
+        ...item,
+        episodes:
+          item.type === "Series"
+            ? item.episodes && item.episodes.length > 0
+              ? item.episodes[0]
+              : {}
+            : undefined,
+        chapters:
+          item.type === "Novel"
+            ? item.chapters && item.chapters.length > 0
+              ? item.chapters[0]
+              : {}
+            : undefined,
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     return success(res, "200", "Success", combined);
   } catch (err) {
     return error500(res, err);
@@ -82,7 +105,9 @@ const singleDetailPage = async (req, res) => {
   try {
     if (type === "Novel") {
       content = await Novel.findById(id)
-        .select("thumbnail.publicUrl title type language description")
+        .select(
+          "thumbnail.publicUrl title type language description totalViews averageRating adult"
+        )
         .populate([
           {
             path: "author",
@@ -95,10 +120,10 @@ const singleDetailPage = async (req, res) => {
           {
             path: "chapters",
             select:
-              "chapterPdf.publicUrl chapterNo content totalViews createdAt coins",
+              "chapterPdf.publicUrl chapterNo content totalViews createdAt coins name",
             options: {
               sort: { createdAt: 1 },
-              limit: 1,
+              limit: 10,
             },
           },
           {
@@ -120,27 +145,31 @@ const singleDetailPage = async (req, res) => {
         novel: id,
       }).countDocuments();
 
-      if (content.reviews?.length) {
-        content.reviews = content.reviews.map((review) => ({
+      if (content?.reviews?.length) {
+        content.reviews = content?.reviews?.map((review) => ({
           rating: review.rating,
           comment: review.comment,
           totalLikes: review.totalLikes,
           createdAt: review.createdAt,
           user: {
-            profileImage: review.user.profileImage,
-            userName: review.user.userName,
-            email: review.user.email,
+            profileImage: review?.user?.profileImage,
+            userName: review?.user?.userName,
+            email: review?.user?.email,
           },
         }));
       }
 
-      content = { ...content, totalChapters };
-      //For Might like
+      content = {
+        ...content,
+        // chapters: content.chapters?.[0] || {},
+        totalChapters,
+      };
+      //For the feature of You Might like, getting history etc
       const history = await History.find({ user: req.user._id }).populate(
         "novel"
       );
       const novelCategories = history
-        .map((record) => record.novel?.category)
+        .map((record) => record?.novel?.category)
         .filter(Boolean);
       const historyNovelIds = await History.distinct("novel", {
         user: req.user._id,
@@ -155,8 +184,7 @@ const singleDetailPage = async (req, res) => {
         .limit(10)
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
@@ -169,7 +197,13 @@ const singleDetailPage = async (req, res) => {
         .populate({
           path: "author",
           select: "name",
-        });
+        })
+        .lean();
+
+      mightLike = mightLike.map((item) => ({
+        ...item,
+        chapters: item.chapters?.[0] || {},
+      }));
 
       if (fromSearch) {
         const existSearchHistory = await SearchHistory.findOne({
@@ -185,7 +219,9 @@ const singleDetailPage = async (req, res) => {
       }
     } else if (type === "Series") {
       content = await Series.findById(id)
-        .select("thumbnail.publicUrl title description")
+        .select(
+          "thumbnail.publicUrl title description createdAt totalViews seriesRating"
+        )
         .populate([
           {
             path: "category",
@@ -193,13 +229,12 @@ const singleDetailPage = async (req, res) => {
           },
           {
             path: "episodes",
-            select:
-              "episodeVideo.publicUrl title content visibility description coins",
+            select: "episodeVideo.publicUrl title content coins",
             options: {
               sort: {
                 createdAt: 1,
               },
-              limit: 1,
+              limit: 10,
             },
           },
         ])
@@ -213,14 +248,18 @@ const singleDetailPage = async (req, res) => {
         series: id,
       }).countDocuments();
 
-      content = { ...content, totalEpisode };
+      content = {
+        ...content,
+        // episodes: content.episodes?.[0] || {},
+        totalEpisode,
+      };
 
-      //For Might like
+      //For Might like feature getting history of user etc.
       const history = await History.find({ user: req.user._id }).populate(
         "series"
       );
       const seriesCategories = history
-        .map((record) => record.series?.category)
+        .map((record) => record?.series?.category)
         .filter(Boolean);
       // Get history IDs
       const historySeriesIds = await History.distinct("series", {
@@ -231,13 +270,12 @@ const singleDetailPage = async (req, res) => {
         category: { $in: seriesCategories },
         _id: { $nin: historySeriesIds },
       })
+        .select("thumbnail.publicUrl title type seriesRating")
         .sort({ createdAt: -1 })
         .limit(10)
-        .select("thumbnail.publicUrl title type seriesRating")
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
@@ -246,7 +284,13 @@ const singleDetailPage = async (req, res) => {
         .populate({
           path: "category",
           select: "title",
-        });
+        })
+        .lean();
+
+      mightLike = mightLike.map((item) => ({
+        ...item,
+        episodes: item.episodes?.[0] || {},
+      }));
 
       if (fromSearch) {
         const existSearchHistory = await SearchHistory.findOne({
@@ -280,11 +324,14 @@ const combinedSeriesNovels = async (req, res) => {
   try {
     if (
       type != "Featured" &&
-      // type != "History" &&
       type != "Latest" &&
       type != "TopRanked"
+      // type != "History" &&
     ) {
-      return error400(res, "Invalid type");
+      return error400(
+        res,
+        "Invalid type, Type must be either Featured, Latest or TopRanked"
+      );
     }
 
     if (type === "Featured") {
@@ -308,29 +355,45 @@ const combinedSeriesNovels = async (req, res) => {
         query.category = category;
       }
       series = await Series.find(query)
-        .select("thumbnail.publicUrl title type seriesRating totalViews")
+        .select(
+          "thumbnail.publicUrl title type seriesRating totalViews createdAt"
+        )
         .sort({ totalViews: -1 })
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
           },
-        });
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .lean();
       novels = await Novel.find(query)
-        .select("thumbnail.publicUrl title type averageRating totalViews")
+        .select(
+          "thumbnail.publicUrl title type averageRating totalViews createdAt"
+        )
         .sort({ totalViews: -1 })
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
           },
-        });
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .lean();
     }
     // else if (type === "History") {
     //   //Query
@@ -380,7 +443,6 @@ const combinedSeriesNovels = async (req, res) => {
     //           "chapterPdf.publicUrl name chapterNo content totalViews description createdAt coins ",
     //       },
     //     ]);
-
     //   series = await History.find({
     //     user: req.user._id,
     //     novel: { $exists: true },
@@ -421,12 +483,13 @@ const combinedSeriesNovels = async (req, res) => {
         query.category = category;
       }
       series = await Series.find(query)
-        .select("thumbnail.publicUrl title type totalViews")
+        .select(
+          "thumbnail.publicUrl title type totalViews seriesRating createdAt"
+        )
         .sort({ createdAt: -1 })
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: {
               createdAt: 1,
@@ -437,14 +500,16 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "category",
           select: "title",
-        });
+        })
+        .lean();
       novels = await Novel.find(query)
-        .select("thumbnail.publicUrl title type totalViews")
+        .select(
+          "thumbnail.publicUrl title type totalViews averageRating createdAt"
+        )
         .sort({ createdAt: -1 })
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
@@ -457,7 +522,8 @@ const combinedSeriesNovels = async (req, res) => {
         .populate({
           path: "author",
           select: "name",
-        });
+        })
+        .lean();
     } else if (type === "TopRanked") {
       //Query
       let query = {
@@ -515,16 +581,17 @@ const combinedSeriesNovels = async (req, res) => {
       //   sortSeriesOptions.createdAt = -1;
       //   sortNovelOptions.createdAt = -1;
       // }
-
       series = await Series.find({
         ...query,
         seriesRating: { $gte: 1 },
       })
-        .select("thumbnail.publicUrl title view type seriesRating")
+        .select(
+          "thumbnail.publicUrl title type seriesRating totalViews createdAt"
+        )
+        .sort(sortSeriesOptions)
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: {
               createdAt: 1,
@@ -536,16 +603,18 @@ const combinedSeriesNovels = async (req, res) => {
           path: "category",
           select: "title",
         })
-        .sort(sortSeriesOptions);
+        .lean();
       novels = await Novel.find({
         ...query,
         averageRating: { $gte: 1 },
       })
-        .select("thumbnail.publicUrl averageRating type title averageRating")
+        .select(
+          "thumbnail.publicUrl type title totalViews averageRating createdAt"
+        )
+        .sort(sortNovelOptions)
         .populate({
           path: "chapters",
-          select:
-            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          select: "chapterPdf.publicUrl name content coins",
           options: {
             sort: { createdAt: 1 },
             limit: 1,
@@ -559,12 +628,27 @@ const combinedSeriesNovels = async (req, res) => {
           path: "author",
           select: "name",
         })
-        .sort(sortNovelOptions);
+        .lean();
     }
 
-    const combinedData = [...series, ...novels].sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    const combinedData = [...series, ...novels]
+      .map((item) => ({
+        ...item,
+        episodes:
+          item.type === "Series"
+            ? item.episodes && item.episodes.length > 0
+              ? item.episodes[0]
+              : {}
+            : undefined,
+        chapters:
+          item.type === "Novel"
+            ? item.chapters && item.chapters.length > 0
+              ? item.chapters[0]
+              : {}
+            : undefined,
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     const startIndex = (page - 1) * pageSize;
     const endIndex = page * pageSize;
     const seriesNovels = combinedData.slice(startIndex, endIndex);

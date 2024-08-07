@@ -39,36 +39,75 @@ const getAllSearchHistory = async (req, res) => {
       visibility: "Public",
       seriesRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl title view type seriesRating")
-      .populate({
-        path: "category",
-        select: "title",
-      })
+      .select(
+        "thumbnail.publicUrl title type seriesRating totalViews createdAt"
+      )
       .sort({
         seriesRating: -1,
         createdAt: -1,
       })
-      .limit(5);
+      .limit(5)
+      .populate({
+        path: "episodes",
+        select:
+          "episodeVideo.publicUrl title content coins",
+        options: {
+          sort: { createdAt: 1 },
+          limit: 1,
+        },
+      })
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .lean();
 
     const novels = await Novel.find({
       status: "Published",
       visibility: "Public",
       averageRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl averageRating type title averageRating")
-      .populate({
-        path: "category",
-        select: "title",
-      })
+      .select("thumbnail.publicUrl averageRating type title averageRating totalViews")
       .sort({
         averageRating: -1,
         createdAt: -1,
       })
-      .limit(5);
+      .limit(5)
+      .populate({
+        path: "category",
+        select: "title",
+      })
+      .populate({
+        path: "author",
+        select: "name",
+      })
+      .populate({
+        path: "chapters",
+        select: "chapterPdf.publicUrl name content coins",
+        options: {
+          sort: { createdAt: 1 },
+          limit: 1,
+        },
+      })
+      .lean();
 
-    const mostPopular = [...series, ...novels].sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    const mostPopular = [...series, ...novels]
+      .map((item) => ({
+        ...item,
+        episodes:
+          item.type === "Series"
+            ? item.episodes && item.episodes.length > 0
+              ? item.episodes[0]
+              : {}
+            : undefined,
+        chapters:
+          item.type === "Novel"
+            ? item.chapters && item.chapters.length > 0
+              ? item.chapters[0]
+              : {}
+            : undefined,
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const data = {
       searchHistory,

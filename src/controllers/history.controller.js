@@ -92,21 +92,23 @@ const allHistory = async (req, res) => {
       .populate([
         {
           path: "series",
-          select: "thumbnail.publicUrl type totalViews",
+          select:
+            "thumbnail.publicUrl title type totalViews seriesRating createdAt",
         },
         {
           path: "episode",
           select:
-            "episodeVideo.publicUrl title content visibility description createdAt coins",
+            "episodeVideo.publicUrl title content totalViews createdAt coins",
         },
         {
           path: "novel",
-          select: "thumbnail.publicUrl type totalViews",
+          select:
+            "thumbnail.publicUrl title type totalViews averageRating createdAt",
         },
         {
           path: "chapter",
           select:
-            "chapterPdf.publicUrl name chapterNo content totalViews description createdAt coins",
+            "chapterPdf.publicUrl name chapterNo content totalViews createdAt coins",
         },
       ]);
 
@@ -118,7 +120,7 @@ const allHistory = async (req, res) => {
       hasMore,
     };
 
-    return success(res, "200", "All History record", data);
+    return success(res, "200", "All history record", data);
   } catch (err) {
     return error500(res, err);
   }

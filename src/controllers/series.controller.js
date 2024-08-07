@@ -813,15 +813,16 @@ const getDetailSeriesByType = async (req, res) => {
       const skip = (currentPage - 1) * size;
       const limit = size;
 
-      const bestSeries = await Series.find(query)
-        .select("thumbnail.publicUrl title view type totalViews")
+      let bestSeries = await Series.find(query)
+        .select(
+          "thumbnail.publicUrl title type totalViews seriesRating createdAt"
+        )
         .sort({ totalViews: -1 })
         .skip(skip)
         .limit(limit)
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: {
               createdAt: 1,
@@ -832,7 +833,14 @@ const getDetailSeriesByType = async (req, res) => {
         .populate({
           path: "category",
           select: "title",
-        });
+        })
+        .lean();
+
+      bestSeries = bestSeries.map((item) => ({
+        ...item,
+        episodes:
+          item.episodes && item.episodes.length > 0 ? item.episodes[0] : {},
+      }));
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalSeriesCount;
@@ -871,15 +879,16 @@ const getDetailSeriesByType = async (req, res) => {
       const skip = (currentPage - 1) * size;
       const limit = size;
 
-      const topSeries = await Series.find(query)
-        .select("thumbnail.publicUrl title type totalViews")
+      let topSeries = await Series.find(query)
+        .select(
+          "thumbnail.publicUrl title type totalViews seriesRating createdAt"
+        )
         .sort({ totalViews: -1 })
         .skip(skip)
         .limit(limit)
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: {
               createdAt: 1,
@@ -890,7 +899,14 @@ const getDetailSeriesByType = async (req, res) => {
         .populate({
           path: "category",
           select: "title",
-        });
+        })
+        .lean();
+
+      topSeries = topSeries.map((item) => ({
+        ...item,
+        episodes:
+          item.episodes && item.episodes.length > 0 ? item.episodes[0] : {},
+      }));
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalSeriesCount;
@@ -958,12 +974,13 @@ const getDetailSeriesByType = async (req, res) => {
         }
       }
 
-      const topRatedSeries = await Series.find(query)
-        .select("thumbnail.publicUrl title view type seriesRating")
+      let topRatedSeries = await Series.find(query)
+        .select(
+          "thumbnail.publicUrl title type totalViews seriesRating createdAt"
+        )
         .populate({
           path: "episodes",
-          select:
-            "episodeVideo.publicUrl title content visibility description coins",
+          select: "episodeVideo.publicUrl title content coins",
           options: {
             sort: {
               createdAt: 1,
@@ -977,7 +994,14 @@ const getDetailSeriesByType = async (req, res) => {
         })
         .sort(sortOptions)
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean();
+
+      topRatedSeries = topRatedSeries.map((item) => ({
+        ...item,
+        episodes:
+          item.episodes && item.episodes.length > 0 ? item.episodes[0] : {},
+      }));
 
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalSeriesCount;
