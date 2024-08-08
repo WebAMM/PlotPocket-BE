@@ -24,10 +24,12 @@ const { status200, success } = require("../services/helpers/response");
 //Global Search Novels + Series
 const globalSearch = async (req, res) => {
   const { title } = req.query;
+
+  if (!title) {
+    return error400(res, "Title is required");
+  }
+
   try {
-    if (!title) {
-      return error400(res, "Title is required");
-    }
     const regex = new RegExp(`.*${title}.*`, "i");
     const novels = await Novel.find({
       status: "Published",
@@ -71,7 +73,7 @@ const globalSearch = async (req, res) => {
       })
       .lean();
 
-    const combined = [...series, ...novels]
+    const data = [...series, ...novels]
       .map((item) => ({
         ...item,
         episodes:
@@ -89,7 +91,7 @@ const globalSearch = async (req, res) => {
       }))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    return success(res, "200", "Success", combined);
+    return success(res, "200", "Success", data);
   } catch (err) {
     return error500(res, err);
   }
@@ -305,7 +307,6 @@ const singleDetailPage = async (req, res) => {
         }
       }
     }
-
     const data = {
       detail: content,
       mightLike,
@@ -679,7 +680,7 @@ const combinedSeriesNovels = async (req, res) => {
 //     }
 //     await updateCategoryViews(series.category, req.user._id);
 //     return status200(res, "Series and episodes views increased");
-//   } else if (type === "Novels") {
+//   } else if (type === "Novel") {
 //     const novel = await updateViews(Novel, novelId, req.user._id);
 //     if (!novel) {
 //       return error409(res, "Novel not found");

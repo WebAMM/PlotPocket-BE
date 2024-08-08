@@ -44,4 +44,12 @@ router.get(
   dashboardController.dashboardNovels
 );
 
+//[APP] Top ranked
+router.get(
+  "/app/top-ranked",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  dashboardController.dashboardTopRanked
+);
+
 module.exports = router;

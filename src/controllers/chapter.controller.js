@@ -454,7 +454,7 @@ const viewChapter = async (req, res) => {
 
     const handleResponse = async (chapter) => {
       //Add to user history
-      await addToHistory("Novels", req.user._id, chapter._id);
+      await addToHistory("Novel", req.user._id, chapter._id);
       await updateViews(Novel, chapter.novel, req.user._id);
       await updateViews(Chapter, chapter._id, req.user._id);
       await updateCategoryViews(chapter.novel.category, req.user._id);

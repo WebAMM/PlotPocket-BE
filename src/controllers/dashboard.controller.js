@@ -81,48 +81,27 @@ const adminDashboardMetrics = async (req, res) => {
 
 //1st Main screen Series and Novels [APP]
 const appDashboard = async (req, res) => {
-  const { category, day } = req.query;
+  const { category } = req.query;
   //Query's
   let query = {
     status: "Published",
     visibility: "Public",
   };
-  let topRankQuery = {};
-  //Filtering based on Category
-  if (
-    category &&
-    category !== "null" &&
-    category !== "undefined" &&
-    category !== "false"
-  ) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-  //Filtering based on Day
-  if (day && day !== "null" && day !== "undefined" && day !== "false") {
-    const parsedDay = parseInt(day);
-    if (day === "Today") {
-      const today = new Date();
-      topRankQuery.createdAt = {
-        $gte: new Date(today.setHours(0, 0, 0, 0)),
-        $lte: new Date(today.setHours(23, 59, 59, 999)),
-      };
-    } else if ([7, 14, 30].includes(parsedDay)) {
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - parsedDay + 1);
-      topRankQuery.createdAt = {
-        $gte: new Date(startDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(today.setHours(23, 59, 59, 999)),
-      };
-    } else {
-      return error400(res, "Invalid date parameter. Use 'Today', 7, 14, or 30");
-    }
-  }
   try {
+    //Filtering based on Category
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
     //Latest novels and series
     const series = await Series.find(query)
       .select(
@@ -388,87 +367,12 @@ const appDashboard = async (req, res) => {
       }))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    //Top Ranked [Based on ratings and reviews]
-    const topRankedSeries = await Series.find({
-      ...query,
-      ...topRankQuery,
-      seriesRating: { $gte: 1 },
-    })
-      .select("thumbnail.publicUrl title totalViews type seriesRating")
-      .populate({
-        path: "episodes",
-        select:
-          "episodeVideo.publicUrl title content visibility description coins",
-        options: {
-          sort: {
-            createdAt: 1,
-          },
-          limit: 1,
-        },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .sort({
-        seriesRating: -1,
-      })
-      .limit(5)
-      .lean();
-
-    const topRankedNovels = await Novel.find({
-      ...query,
-      ...topRankQuery,
-      averageRating: { $gte: 1 },
-    })
-      .select("thumbnail.publicUrl type title averageRating")
-      .populate({
-        path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content totalViews coins",
-        options: {
-          sort: { createdAt: 1 },
-          limit: 1,
-        },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .populate({
-        path: "author",
-        select: "name",
-      })
-      .sort({
-        averageRating: -1,
-      })
-      .limit(5)
-      .lean();
-
-    const topRanked = [...topRankedSeries, ...topRankedNovels]
-      .map((item) => ({
-        ...item,
-        episodes:
-          item.type === "Series"
-            ? item.episodes && item.episodes.length > 0
-              ? item.episodes[0]
-              : {}
-            : undefined,
-        chapters:
-          item.type === "Novel"
-            ? item.chapters && item.chapters.length > 0
-              ? item.chapters[0]
-              : {}
-            : undefined,
-      }))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
     //All record in response
     const data = {
       topHighlight,
       featured,
       history,
       latest,
-      topRanked,
     };
     return success(res, "200", "Success", data);
   } catch (err) {
@@ -478,48 +382,26 @@ const appDashboard = async (req, res) => {
 
 //Dashboard Series
 const dashboardSeries = async (req, res) => {
-  const { category, day } = req.query;
+  const { category } = req.query;
   //Query's
   let query = {
     status: "Published",
     visibility: "Public",
   };
-  let topRankQuery = {};
-  //Filtering based on Category
-  if (
-    category &&
-    category !== "null" &&
-    category !== "undefined" &&
-    category !== "false"
-  ) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-  //Filtering based on Day
-  if (day && day !== "null" && day !== "undefined" && day !== "false") {
-    const parsedDay = parseInt(day);
-    if (day === "Today") {
-      const today = new Date();
-      topRankQuery.createdAt = {
-        $gte: new Date(today.setHours(0, 0, 0, 0)),
-        $lte: new Date(today.setHours(23, 59, 59, 999)),
-      };
-    } else if ([7, 14, 30].includes(parsedDay)) {
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - parsedDay + 1);
-      topRankQuery.createdAt = {
-        $gte: new Date(startDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(today.setHours(23, 59, 59, 999)),
-      };
-    } else {
-      return error400(res, "Invalid date parameter. Use 'Today', 7, 14, or 30");
-    }
-  }
   try {
+    //Filtering based on Category
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
     //TopHighlight series
     let topHighlight = await Series.find(query)
       .select(
@@ -605,47 +487,11 @@ const dashboardSeries = async (req, res) => {
         item.episodes && item.episodes.length > 0 ? item.episodes[0] : {},
     }));
 
-    //Top Ranked [Based on ratings and reviews]
-    let topRanked = await Series.find({
-      ...query,
-      ...topRankQuery,
-      seriesRating: { $gte: 1 },
-    })
-      .select(
-        "thumbnail.publicUrl title type totalViews seriesRating createdAt"
-      )
-      .populate({
-        path: "episodes",
-        select: "episodeVideo.publicUrl title content coins",
-        options: {
-          sort: {
-            createdAt: 1,
-          },
-          limit: 1,
-        },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .sort({
-        seriesRating: -1,
-      })
-      .limit(10)
-      .lean();
-
-    topRanked = topRanked.map((item) => ({
-      ...item,
-      episodes:
-        item.episodes && item.episodes.length > 0 ? item.episodes[0] : {},
-    }));
-
     //All record in response
     const data = {
       topHighlight,
       best,
       top,
-      topRanked,
     };
     return success(res, "200", "Success", data);
   } catch (err) {
@@ -655,48 +501,27 @@ const dashboardSeries = async (req, res) => {
 
 // Dashboard Novels.
 const dashboardNovels = async (req, res) => {
-  const { category, day } = req.query;
+  const { category } = req.query;
   //Query's
   let query = {
     status: "Published",
     visibility: "Public",
   };
-  let topRankQuery = {};
-  //Filtering based on Category
-  if (
-    category &&
-    category !== "null" &&
-    category !== "undefined" &&
-    category !== "false"
-  ) {
-    const existCategory = await Category.findById(category);
-    if (!existCategory) {
-      return error409(res, "Category not found");
-    }
-    query.category = category;
-  }
-  //Filtering based on Day
-  if (day && day !== "null" && day !== "undefined" && day !== "false") {
-    const parsedDay = parseInt(day);
-    if (day === "Today") {
-      const today = new Date();
-      topRankQuery.createdAt = {
-        $gte: new Date(today.setHours(0, 0, 0, 0)),
-        $lte: new Date(today.setHours(23, 59, 59, 999)),
-      };
-    } else if ([7, 14, 30].includes(parsedDay)) {
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - parsedDay + 1);
-      topRankQuery.createdAt = {
-        $gte: new Date(startDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(today.setHours(23, 59, 59, 999)),
-      };
-    } else {
-      return error400(res, "Invalid date parameter. Use 'Today', 7, 14, or 30");
-    }
-  }
   try {
+    //Filtering based on Category
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+
     //TopHighlight novels
     let topHighlight = await Novel.find(query)
       .select(
@@ -790,51 +615,219 @@ const dashboardNovels = async (req, res) => {
         item.chapters && item.chapters.length > 0 ? item.chapters[0] : {},
     }));
 
-    //Top ranked novels
-    let topRanked = await Novel.find({
-      ...query,
-      ...topRankQuery,
-      averageRating: { $gte: 1 },
-    })
-      .select(
-        "thumbnail.publicUrl averageRating type title totalViews averageRating createdAt"
-      )
-      .populate({
-        path: "chapters",
-        select: "chapterPdf.publicUrl name content totalViews coins",
-        options: {
-          sort: { createdAt: 1 },
-          limit: 1,
-        },
-      })
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .populate({
-        path: "author",
-        select: "name",
-      })
-      .sort({
-        averageRating: -1,
-      })
-      .limit(10)
-      .lean();
-
-    topRanked = topRanked.map((item) => ({
-      ...item,
-      chapters:
-        item.chapters && item.chapters.length > 0 ? item.chapters[0] : {},
-    }));
-
     //All record in response
     const data = {
       topHighlight,
       best,
       top,
-      topRanked,
     };
     success(res, "200", "Success", data);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+const dashboardTopRanked = async (req, res) => {
+  const { type, category, day } = req.query;
+
+  if (type != "All" && type != "Series" && type != "Novel") {
+    return error400(
+      res,
+      "Invalid type, Type must be either All, Series or Novel"
+    );
+  }
+  //Query
+  let query = {
+    status: "Published",
+    visibility: "Public",
+  };
+  try {
+    //Filtering based on Category
+    if (
+      category &&
+      category !== "null" &&
+      category !== "undefined" &&
+      category !== "false"
+    ) {
+      const existCategory = await Category.findById(category);
+      if (!existCategory) {
+        return error409(res, "Category not found");
+      }
+      query.category = category;
+    }
+    //Filtering based on Day
+    if (day && day !== "null" && day !== "undefined" && day !== "false") {
+      const parsedDay = parseInt(day);
+      if (day === "Today") {
+        const today = new Date();
+        query.createdAt = {
+          $gte: new Date(today.setHours(0, 0, 0, 0)),
+          $lte: new Date(today.setHours(23, 59, 59, 999)),
+        };
+      } else if ([7, 14, 30].includes(parsedDay)) {
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - parsedDay + 1);
+        query.createdAt = {
+          $gte: new Date(startDate.setHours(0, 0, 0, 0)),
+          $lte: new Date(today.setHours(23, 59, 59, 999)),
+        };
+      } else {
+        return error400(
+          res,
+          "Invalid date parameter. Use 'Today', 7, 14, or 30"
+        );
+      }
+    }
+    if (type === "All") {
+      //Top Ranked [Based on ratings and reviews]
+      const topRankedSeries = await Series.find({
+        ...query,
+        seriesRating: { $gte: 1 },
+      })
+        .select("thumbnail.publicUrl title totalViews type seriesRating")
+        .populate({
+          path: "episodes",
+          select:
+            "episodeVideo.publicUrl title content visibility description coins",
+          options: {
+            sort: {
+              createdAt: 1,
+            },
+            limit: 1,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .sort({
+          seriesRating: -1,
+        })
+        .limit(5)
+        .lean();
+
+      const topRankedNovels = await Novel.find({
+        ...query,
+        averageRating: { $gte: 1 },
+      })
+        .select("thumbnail.publicUrl type title averageRating")
+        .populate({
+          path: "chapters",
+          select:
+            "chapterPdf.publicUrl name chapterNo content totalViews coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .sort({
+          averageRating: -1,
+        })
+        .limit(5)
+        .lean();
+
+      const data = [...topRankedSeries, ...topRankedNovels]
+        .map((item) => ({
+          ...item,
+          episodes:
+            item.type === "Series"
+              ? item.episodes && item.episodes.length > 0
+                ? item.episodes[0]
+                : {}
+              : undefined,
+          chapters:
+            item.type === "Novel"
+              ? item.chapters && item.chapters.length > 0
+                ? item.chapters[0]
+                : {}
+              : undefined,
+        }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      return success(res, "200", "Success", data);
+    } else if (type === "Series") {
+      //Top Ranked [Based on ratings and reviews]
+      let topRanked = await Series.find({
+        ...query,
+        seriesRating: { $gte: 1 },
+      })
+        .select(
+          "thumbnail.publicUrl title type totalViews seriesRating createdAt"
+        )
+        .populate({
+          path: "episodes",
+          select: "episodeVideo.publicUrl title content coins",
+          options: {
+            sort: {
+              createdAt: 1,
+            },
+            limit: 1,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .sort({
+          seriesRating: -1,
+        })
+        .limit(10)
+        .lean();
+
+      const data = topRanked.map((item) => ({
+        ...item,
+        episodes:
+          item.episodes && item.episodes.length > 0 ? item.episodes[0] : {},
+      }));
+      return success(res, "200", "Success", data);
+    } else if (type === "Novel") {
+      //Top ranked novels
+      let topRanked = await Novel.find({
+        ...query,
+        averageRating: { $gte: 1 },
+      })
+        .select(
+          "thumbnail.publicUrl averageRating type title totalViews averageRating createdAt"
+        )
+        .populate({
+          path: "chapters",
+          select: "chapterPdf.publicUrl name content totalViews coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .sort({
+          averageRating: -1,
+        })
+        .limit(10)
+        .lean();
+
+      const data = topRanked.map((item) => ({
+        ...item,
+        chapters:
+          item.chapters && item.chapters.length > 0 ? item.chapters[0] : {},
+      }));
+
+      return success(res, "200", "Success", data);
+    }
   } catch (err) {
     error500(res, err);
   }
@@ -846,4 +839,5 @@ module.exports = {
   appDashboard,
   dashboardSeries,
   dashboardNovels,
+  dashboardTopRanked,
 };

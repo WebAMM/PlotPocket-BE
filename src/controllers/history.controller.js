@@ -42,7 +42,7 @@ const { status200, success } = require("../services/helpers/response");
 //       episode: episodeId,
 //     });
 //     return status200(res, "Episode of series added to history");
-//   } else if (type === "Novels") {
+//   } else if (type === "Novel") {
 //     const novel = await Novel.findById(novelId);
 //     if (!novel) {
 //       return error409(res, "Novel not found");

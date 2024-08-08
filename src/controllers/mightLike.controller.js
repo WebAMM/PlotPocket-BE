@@ -81,7 +81,7 @@ const { success } = require("../services/helpers/response");
 //       results: mergedResults,
 //       hasMore,
 //     };
-//     return success(res, "200", "All might liked novels and series", data);
+//     return success(res, "200", "All might like novels and series", data);
 //   } catch (err) {
 //     return error500(res, err);
 //   }
@@ -173,11 +173,11 @@ const mightLike = async (req, res) => {
 
     const startIndex = (page - 1) * pageSize;
     const endIndex = page * pageSize;
-    const mightLiked = combinedData.slice(startIndex, endIndex);
+    const mightLike = combinedData.slice(startIndex, endIndex);
     const hasMore = combinedData.length > endIndex;
 
     const data = {
-      mightLiked,
+      mightLike,
       hasMore,
     };
 

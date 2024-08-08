@@ -19,7 +19,7 @@ const addToHistory = async (type, userId, segmentId) => {
       series: episode.series,
       episode: segmentId,
     });
-  } else if (type === "Novels") {
+  } else if (type === "Novel") {
     const chapter = await Chapter.findById(segmentId);
     const existHistory = await History.findOne({
       user: userId,
