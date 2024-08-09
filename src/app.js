@@ -4,9 +4,18 @@ const colors = require("./loaders/colors");
 const config = require("./config");
 const { appMiddlewares } = require("./loaders");
 const app = express();
-
+//controllers
+const allController = require("./controllers/all.controller");
 //loaders
 require("dotenv").config();
+
+//Stripe webhook, due to application/json
+//[APP] Stripe webhook
+app.post(
+  "/plotpocket/api/v1/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  allController.stripeWebhook
+);
 
 //Middlewares
 appMiddlewares(app);

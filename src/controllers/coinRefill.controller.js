@@ -1,8 +1,10 @@
 //Models
 const CoinRefill = require("../models/CoinRefill.model");
 //Responses and errors
-const { error500, error409 } = require("../services/helpers/errors");
+const { error500, error409, error400 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
+//helpers
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 //Add Coin Refill
 const addCoinRefill = async (req, res) => {
@@ -68,6 +70,37 @@ const deleteCoinRefill = async (req, res) => {
   }
 };
 
+//Refill the coins using stripe
+const refillCoins = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const coinRefill = await CoinRefill.findById(id);
+    if (!coinRefill) {
+      return error409(res, "Coin refill record not found");
+    }
+    let discountedPrice = coinRefill.price - coinRefill.discount;
+    if (discountedPrice <= 0) {
+      return error400(res, "Discounted price is less than or equal to 0");
+    }
+
+    discountedPrice = Math.round(discountedPrice * 100);
+    // discountedPrice = discountedPrice.toFixed(2);
+    await stripe.charges.create({
+      amount: discountedPrice,
+      currency: "usd",
+      source: "tok_visa", // obtained from Stripe.js or Elements
+      description: coinRefill.description,
+      metadata: {
+        userId: req.user._id,
+        coinRefillId: coinRefill._id,
+      },
+    });
+    return status200(res, "Coins refilled successfully");
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
 // Get Subscription based on plan
 // const getSubscriptionByPlan = async (req, res) => {
 //   const { plan } = req.query;
@@ -88,5 +121,6 @@ module.exports = {
   getAllAppCoinRefill,
   editCoinRefill,
   deleteCoinRefill,
+  refillCoins,
   // getSubscriptionByPlan,
 };

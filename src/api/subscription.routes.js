@@ -47,6 +47,14 @@ router.delete(
   subscriptionController.deleteSubscription
 );
 
+//[APP] Get subscription
+router.post(
+  "/app/checkout-session/:id",
+  // verifyToken,
+  // verifyRole(["User"]),
+  subscriptionController.createStripeSession
+);
+
 //[ADMIN] Get subscription by plan
 // router.get("/admin/by-plan", verifyToken, verifyRole(["Admin"]), subscriptionController.getSubscriptionByPlan);
 

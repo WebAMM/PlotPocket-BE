@@ -47,6 +47,14 @@ router.delete(
   coinRefill.deleteCoinRefill
 );
 
+//[APP] Refill the coins
+router.post(
+  "/app/refill/:id",
+  verifyToken,
+  verifyRole(["User"]),
+  coinRefill.refillCoins
+);
+
 //[ADMIN] Get coin subscription by plan
 // router.get("/admin/by-plan", verifyToken, subscriptionController.getSubscriptionByPlan);
 

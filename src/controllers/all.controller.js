@@ -6,6 +6,9 @@ const Chapter = require("../models/Chapter.model");
 const Category = require("../models/Category.model");
 const History = require("../models/History.model");
 const SearchHistory = require("../models/SearchHistory.model");
+const UserSubscription = require("../models/UserSubscription.model");
+const CoinRefill = require("../models/CoinRefill.model");
+const UserCoin = require("../models/UserCoin.model");
 //Responses and errors
 const {
   error500,
@@ -16,6 +19,7 @@ const {
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 // const {
 //   updateViews,
 //   updateCategoryViews,
@@ -666,6 +670,139 @@ const combinedSeriesNovels = async (req, res) => {
   }
 };
 
+const stripeWebhook = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    //Webhook signature, verifying that webhook is coming from authentic provided and not tempered.
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_ENDPOINT_SECRET
+    );
+  } catch (err) {
+    console.log(`Webhook error: ${err.message}`);
+    return error400(res, `Webhook error ${err.message}`);
+  }
+
+  try {
+    //This event is fired when checkout session for subscription is successful, it involves both initial payment (checkout session or any subsequent recurring payment)
+    //If customer is already been made but his subscription is deleted, this event will not fired
+    //This event is only fired when new customer and his first subscription
+    if (event.type === "invoice.payment_succeeded") {
+      const invoice = event.data.object;
+      //On payment successful in checkout session, get subscription and customer details, these details are added when in checkout session we created customer and subscription when checkout session subscription mode
+      let subscription;
+      if (invoice.subscription) {
+        subscription = await stripe.subscriptions.retrieve(
+          invoice.subscription
+        );
+      }
+      if (
+        subscription.metadata.userId &&
+        subscription.metadata.subscriptionId
+      ) {
+        // const customer = await stripe.customers.retrieve(invoice.customer);
+        //Handle first subscription of user from Checkout session
+        if (invoice.billing_reason === "subscription_create") {
+          const alreadyUserSubscription = await UserSubscription.findOne({
+            user: subscription.metadata.userId,
+            subscription: subscription.metadata.subscriptionId,
+          });
+          if (alreadyUserSubscription) {
+            return error409(res, "Subscription already exist for this user");
+          }
+          await UserSubscription.create({
+            user: subscription.metadata.userId,
+            subscription: subscription.metadata.subscriptionId,
+            stripeSubscriptionId: subscription.id,
+            stripeCustomerId: subscription.customer,
+            isSubscribed: true,
+            startAt: new Date(),
+          });
+        }
+        // subscription_cycle: This indicates that a recurring payment for an existing subscription was successful. This event is fired each time a subscription invoice is paid, marking the start of a new billing cycle.
+        // subscription_updated: This indicates that there was an update to the subscription, which could include changes to the subscription plan, quantity, or other parameters. This event is also fired when a new invoice is created due to these updates, but it's specifically about changes to the subscription itself.
+        else if (
+          invoice.billing_reason === "subscription_cycle" ||
+          invoice.billing_reason === "subscription_updated"
+        ) {
+          //This condition when recurring is Done
+          await UserSubscription.findOneAndUpdate(
+            {
+              subscription: subscription.metadata.subscriptionId,
+              user: subscription.metadata.userId,
+            },
+            {
+              isSubscribed: true,
+              recurringSuccess: true,
+              recurredAt: new Date(),
+            }
+          );
+        }
+      }
+    }
+
+    // For canceled/renewal subscription
+    if (event.type === "customer.subscription.updated") {
+      const subscription = event.data.object;
+      if (subscription.cancel_at_period_end) {
+        //This condition when the subscription is cancelled
+        await UserSubscription.findOneAndUpdate(
+          {
+            user: subscription.metadata.userId,
+            subscription: subscription.metadata.subscriptionId,
+          },
+          {
+            isSubscribed: false,
+          }
+        );
+      } else {
+        //This condition when the subscription is renewed
+        await UserSubscription.findOneAndUpdate(
+          {
+            user: subscription.metadata.userId,
+            subscription: subscription.metadata.subscriptionId,
+          },
+          {
+            isSubscribed: true,
+            startAt: new Date(),
+          }
+        );
+      }
+    }
+
+    //For charge API
+    if (event.type === "charge.succeeded") {
+      const charge = event.data.object;
+      const userId = charge.metadata.userId;
+      const coinRefillId = charge.metadata.coinRefillId;
+
+      const coinRefill = await CoinRefill.findById(coinRefillId);
+      if (!coinRefill) {
+        return error409(res, "No coin refill found");
+      }
+
+      await UserCoin.findByIdAndUpdate(
+        {
+          user: userId,
+        },
+        {
+          $inc: {
+            refillCoins: coinRefill.coins,
+            bonusCoins: coinRefill.bonus,
+            totalCoins: coinRefill.coins + coinRefill.bonus,
+          },
+        }
+      );
+    }
+    return res.status(200).end();
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 //Increase the views
 // const increaseView = async (req, res) => {
 //   const { type, seriesId, episodeId, chapterId, novelId } = req.body;
@@ -931,6 +1068,7 @@ module.exports = {
   globalSearch,
   singleDetailPage,
   combinedSeriesNovels,
+  stripeWebhook,
   // increaseView,
   // featuredSeriesNovels,
   // latestSeriesNovels,
