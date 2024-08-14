@@ -133,4 +133,11 @@ router.get(
   novelController.getDetailNovelByType
 );
 
+//[APP] Get all novel comments/reviews
+router.get(
+  "/app/reviews/:id",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  novelController.getReviewsOfNovel
+);
 module.exports = router;

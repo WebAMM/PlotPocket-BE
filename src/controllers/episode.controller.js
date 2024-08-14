@@ -4,6 +4,7 @@ const Series = require("../models/Series.model");
 const UserPurchases = require("../models/UserPurchases.model");
 const UserCoin = require("../models/UserCoin.model");
 const myList = require("../models/MyList.model");
+const UserSubscription = require("../models/UserSubscription.model");
 //Responses and errors
 const {
   error500,
@@ -149,22 +150,29 @@ const rateTheEpisode = async (req, res) => {
 const allEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
   try {
+    // Check if the series exists
     const seriesExist = await Series.findById(id);
     if (!seriesExist) {
       return error409(res, "Series not found");
     }
 
-    //Fetch user purchases
-    const userPurchases = await UserPurchases.findOne(
-      {
-        user: req.user._id,
-      },
-      { episodes: 1, _id: 0 }
-    ).lean();
+    // Check if the user has an active subscription
+    const isSubscribed = await UserSubscription.findOne({
+      user: req.user._id,
+      isSubscribed: true,
+    }).lean();
 
-    const allSeriesEpisodes = await Episode.find({
-      series: id,
-    })
+    // Fetch user purchases (only if not subscribed)
+    let userPurchases = null;
+    if (!isSubscribed) {
+      userPurchases = await UserPurchases.findOne(
+        { user: req.user._id },
+        { episodes: 1, _id: 0 }
+      ).lean();
+    }
+
+    // Get all episodes of the series
+    const allSeriesEpisodes = await Episode.find({ series: id })
       .select(
         "episodeVideo.publicUrl totalViews createdAt content title description coins"
       )
@@ -174,34 +182,45 @@ const allEpisodeOfSeries = async (req, res) => {
       })
       .sort({ createdAt: 1 });
 
-    const purchasedEpisodeIds = new Set(
-      userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
-    );
-
-    let firstPaidEpisode = false;
-
-    const episodes = allSeriesEpisodes.map((episode) => {
-      const isPurchased = purchasedEpisodeIds.has(episode._id.toString());
-
-      contentStatus = episode.content;
-
-      if (episode.content === "Paid" && isPurchased) {
-        contentStatus = "Free";
-      }
-
-      // Set canUnlock flag for the first paid episode
-      let canUnlock = false;
-      if (!firstPaidEpisode && contentStatus === "Paid") {
-        firstPaidEpisode = true;
-        canUnlock = true;
-      }
-
-      return {
+    // If user is subscribed, mark all episodes as "Free"
+    let episodes = [];
+    if (isSubscribed) {
+      episodes = allSeriesEpisodes.map((episode) => ({
         ...episode._doc,
-        content: contentStatus,
-        canUnlock,
-      };
-    });
+        content: "Free",
+        canUnlock: false, // No need to unlock if everything is free
+      }));
+    } else {
+      // If not subscribed, proceed with checking purchases
+      const purchasedEpisodeIds = new Set(
+        userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
+      );
+
+      let firstPaidEpisode = false;
+
+      episodes = allSeriesEpisodes.map((episode) => {
+        const isPurchased = purchasedEpisodeIds.has(episode._id.toString());
+
+        let contentStatus = episode.content;
+
+        if (episode.content === "Paid" && isPurchased) {
+          contentStatus = "Free";
+        }
+
+        // Set canUnlock flag for the first paid episode
+        let canUnlock = false;
+        if (!firstPaidEpisode && contentStatus === "Paid") {
+          firstPaidEpisode = true;
+          canUnlock = true;
+        }
+
+        return {
+          ...episode._doc,
+          content: contentStatus,
+          canUnlock,
+        };
+      });
+    }
 
     return success(res, "200", "Success", episodes);
   } catch (err) {
@@ -833,7 +852,6 @@ const viewEpisode = async (req, res) => {
 
       // Deduct the remaining cost from total coins
       totalCoins = refillCoins + bonusCoins;
-
       return { totalCoins, refillCoins, bonusCoins };
     };
 
@@ -885,21 +903,59 @@ const viewEpisode = async (req, res) => {
       }
 
       if (nextEpisode.content === "Paid" && nextEpisode.coins > 0) {
-        if (await checkUserPurchases(req.user._id, nextEpisode._id)) {
+        // Check if the user has an active subscription
+        const isSubscribed = await UserSubscription.findOne({
+          user: req.user._id,
+          isSubscribed: true,
+        }).lean();
+        if (isSubscribed) {
           return handleResponse(nextEpisode);
-        }
-
-        if (autoUnlock) {
-          const userCoins = await UserCoin.findOne({
-            user: req.user._id,
-            totalCoins: { $gte: 1 },
-          });
-          if (!userCoins) {
-            return error404(res, "User has no coins");
-          }
-          return handleUnlock(nextEpisode, userCoins);
         } else {
-          return customError(res, 403, "Use coins to unlock episode");
+          if (await checkUserPurchases(req.user._id, nextEpisode._id)) {
+            return handleResponse(nextEpisode);
+          }
+          if (autoUnlock) {
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+              totalCoins: { $gte: 1 },
+            });
+            if (!userCoins) {
+              //return error404(res, "User has no coins");
+              //Changes to show price, coin balance.
+              //If no coins of user, then screen card open where price, _id of nextEpisode and user coins balance
+              let coinDetails = {
+                bonusCoins: 0,
+                refillCoins: 0,
+                totalCoins: 0,
+              };
+              let price = nextEpisode.coins;
+
+              let data = {
+                price,
+                coinDetails,
+                currentEpisodeId: nextEpisode._id,
+              };
+              return success(res, "200", "User coins not found", data);
+            }
+            //Else if user have coin give response
+            return handleUnlock(nextEpisode, userCoins);
+          } else {
+            //Telling to use unlock now now because user didn't use auto unlock with down.
+            //Now episode is not down but current
+            //return customError(res, 403, "Use unlockNow to use coins to unlock this episode");
+            let coinDetails = {
+              bonusCoins: 0,
+              refillCoins: 0,
+              totalCoins: 0,
+            };
+            let price = nextEpisode.coins;
+            let data = {
+              price,
+              coinDetails,
+              currentEpisodeId: nextEpisode._id,
+            };
+            return success(res, "200", "Use unlock to purchase episode", data);
+          }
         }
       }
     } else if (up) {
@@ -920,30 +976,77 @@ const viewEpisode = async (req, res) => {
       }
 
       if (prevEpisode.content === "Paid" && prevEpisode.coins > 0) {
-        if (await checkUserPurchases(req.user._id, prevEpisode._id)) {
+        const isSubscribed = await UserSubscription.findOne({
+          user: req.user._id,
+          isSubscribed: true,
+        }).lean();
+        if (isSubscribed) {
           return handleResponse(prevEpisode);
         } else {
-          return customError(res, 403, "Episode not found in user purchases");
+          if (await checkUserPurchases(req.user._id, prevEpisode._id)) {
+            return handleResponse(prevEpisode);
+          } else {
+            return customError(res, 403, "Episode not found in user purchases");
+          }
         }
       }
     } else {
       if (currentEpisode.content === "Free") {
         return handleResponse(currentEpisode);
       }
-
       if (currentEpisode.content === "Paid" && currentEpisode.coins > 0) {
-        if (await checkUserPurchases(req.user._id, currentEpisode._id)) {
+        const isSubscribed = await UserSubscription.findOne({
+          user: req.user._id,
+          isSubscribed: true,
+        });
+        if (isSubscribed) {
           return handleResponse(currentEpisode);
-        }
-
-        if (unlockNow) {
-          const userCoins = await UserCoin.findOne({ user: req.user._id });
-          if (!userCoins) {
-            return error404(res, "User has no coins");
-          }
-          return handleUnlock(currentEpisode, userCoins);
         } else {
-          return customError(res, 403, "Use coins to unlock episode");
+          if (await checkUserPurchases(req.user._id, currentEpisode._id)) {
+            return handleResponse(currentEpisode);
+          }
+          if (unlockNow) {
+            const userCoins = await UserCoin.findOne({ user: req.user._id });
+            if (!userCoins) {
+              // return error404(res, "User has no coins");
+              //Changes to show price, coin balance.
+              //If no coins of user, then screen card open where price, _id of nextEpisode and user coins balance
+              let coinDetails = {
+                bonusCoins: 0,
+                refillCoins: 0,
+                totalCoins: 0,
+              };
+              let price = currentEpisode.coins;
+
+              let data = {
+                price,
+                coinDetails,
+                currentEpisodeId: currentEpisode._id,
+              };
+
+              return success(res, "200", "User coins not found", data);
+            }
+            return handleUnlock(currentEpisode, userCoins);
+          } else {
+            //Telling to use unlock now.
+            // return customError(
+            //   res,
+            //   403,
+            //   "Use unlockNow to use coins to unlock this episode"
+            // );
+            let coinDetails = {
+              bonusCoins: 0,
+              refillCoins: 0,
+              totalCoins: 0,
+            };
+            let price = currentEpisode.coins;
+            let data = {
+              price,
+              coinDetails,
+              currentEpisodeId: currentEpisode._id,
+            };
+            return success(res, "200", "Use unlock to purchase episode", data);
+          }
         }
       }
     }

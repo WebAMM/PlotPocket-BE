@@ -47,12 +47,12 @@ router.delete(
   subscriptionController.deleteSubscription
 );
 
-//[APP] Get subscription
+//[APP] Purchase subscription using stripe checkout API
 router.post(
-  "/app/checkout-session/:id",
+  "/app/purchase/:id",
   // verifyToken,
   // verifyRole(["User"]),
-  subscriptionController.createStripeSession
+  subscriptionController.purchaseSubscription
 );
 
 //[ADMIN] Get subscription by plan

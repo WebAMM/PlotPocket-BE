@@ -9,6 +9,8 @@ const SearchHistory = require("../models/SearchHistory.model");
 const UserSubscription = require("../models/UserSubscription.model");
 const CoinRefill = require("../models/CoinRefill.model");
 const UserCoin = require("../models/UserCoin.model");
+const Subscription = require("../models/Subscription.model");
+
 //Responses and errors
 const {
   error500,
@@ -129,7 +131,7 @@ const singleDetailPage = async (req, res) => {
               "chapterPdf.publicUrl chapterNo content totalViews createdAt coins name",
             options: {
               sort: { createdAt: 1 },
-              limit: 10,
+              limit: 5,
             },
           },
           {
@@ -240,7 +242,7 @@ const singleDetailPage = async (req, res) => {
               sort: {
                 createdAt: 1,
               },
-              limit: 10,
+              limit: 5,
             },
           },
         ])
@@ -688,8 +690,6 @@ const stripeWebhook = async (req, res) => {
 
   try {
     //This event is fired when checkout session for subscription is successful, it involves both initial payment (checkout session or any subsequent recurring payment)
-    //If customer is already been made but his subscription is deleted, this event will not fired
-    //This event is only fired when new customer and his first subscription
     if (event.type === "invoice.payment_succeeded") {
       const invoice = event.data.object;
       //On payment successful in checkout session, get subscription and customer details, these details are added when in checkout session we created customer and subscription when checkout session subscription mode
@@ -728,11 +728,11 @@ const stripeWebhook = async (req, res) => {
           invoice.billing_reason === "subscription_cycle" ||
           invoice.billing_reason === "subscription_updated"
         ) {
-          //This condition when recurring is Done
+          //This condition when recurring is done successfully
           await UserSubscription.findOneAndUpdate(
             {
-              subscription: subscription.metadata.subscriptionId,
               user: subscription.metadata.userId,
+              subscription: subscription.metadata.subscriptionId,
             },
             {
               isSubscribed: true,
@@ -772,7 +772,32 @@ const stripeWebhook = async (req, res) => {
         );
       }
     }
-
+    //If Payment fails, in first attempt or in recurring
+    if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object;
+      let subscription;
+      if (invoice.subscription) {
+        subscription = await stripe.subscriptions.retrieve(
+          invoice.subscription
+        );
+      }
+      if (
+        subscription.metadata.userId &&
+        subscription.metadata.subscriptionId
+      ) {
+        // Update the subscription status in your database
+        await UserSubscription.findOneAndUpdate(
+          {
+            user: subscription.metadata.userId,
+            subscription: subscription.metadata.subscriptionId,
+          },
+          {
+            isSubscribed: false,
+            recurringSuccess: false,
+          }
+        );
+      }
+    }
     //For charge API
     if (event.type === "charge.succeeded") {
       const charge = event.data.object;
@@ -783,8 +808,7 @@ const stripeWebhook = async (req, res) => {
       if (!coinRefill) {
         return error409(res, "No coin refill found");
       }
-
-      await UserCoin.findByIdAndUpdate(
+      await UserCoin.findOneAndUpdate(
         {
           user: userId,
         },
@@ -794,12 +818,56 @@ const stripeWebhook = async (req, res) => {
             bonusCoins: coinRefill.bonus,
             totalCoins: coinRefill.coins + coinRefill.bonus,
           },
+        },
+        {
+          upsert: true,
+          runValidators: true,
         }
       );
     }
     return res.status(200).end();
   } catch (err) {
     return error500(res, err);
+  }
+};
+
+const allStore = async (req, res) => {
+  try {
+    const subscriptions = await Subscription.find()
+      .select("plan price description stripeProductId stripePriceId createdAt")
+      .sort({ createdAt: -1 });
+
+    const coinRefills = await CoinRefill.find()
+      .select("price coins discount bonus description")
+      .sort({ createdAt: -1 });
+
+    let coinDetails = {
+      bonusCoins: 0,
+      refillCoins: 0,
+      totalCoins: 0,
+    };
+
+    const userCoins = await UserCoin.findOne({
+      user: req.user._id,
+    }).select("bonusCoins refillCoins totalCoins -_id");
+
+    if (userCoins) {
+      coinDetails = {
+        bonusCoins: userCoins.bonusCoins,
+        refillCoins: userCoins.refillCoins,
+        totalCoins: userCoins.totalCoins,
+      };
+    }
+
+    const data = {
+      userCoins,
+      coinRefills,
+      subscriptions,
+    };
+
+    return success(res, "200", "Success", data);
+  } catch (err) {
+    error500(res, err);
   }
 };
 
@@ -1069,6 +1137,7 @@ module.exports = {
   singleDetailPage,
   combinedSeriesNovels,
   stripeWebhook,
+  allStore,
   // increaseView,
   // featuredSeriesNovels,
   // latestSeriesNovels,

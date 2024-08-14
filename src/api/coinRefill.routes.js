@@ -47,12 +47,20 @@ router.delete(
   coinRefill.deleteCoinRefill
 );
 
-//[APP] Refill the coins
+//[APP] Refill the coins using stripe charge API
 router.post(
   "/app/refill/:id",
+  // verifyToken,
+  // verifyRole(["User"]),
+  coinRefill.refillCoins
+);
+
+//[APP] Price needed for episode/chapter and all refills to buy coins
+router.get(
+  "/app/buy-coins/:id",
   verifyToken,
   verifyRole(["User"]),
-  coinRefill.refillCoins
+  coinRefill.buyCoinRefills
 );
 
 //[ADMIN] Get coin subscription by plan

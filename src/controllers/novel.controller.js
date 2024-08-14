@@ -4,6 +4,7 @@ const Chapter = require("../models/Chapter.model");
 const Category = require("../models/Category.model");
 const Author = require("../models/Author.model");
 const UserPurchases = require("../models/UserPurchases.model");
+const UserSubscription = require("../models/UserSubscription.model");
 //Responses and errors
 const {
   error500,
@@ -250,6 +251,7 @@ const getAllChaptersOfNovel = async (req, res) => {
   const { id } = req.params;
   const { page = 1, pageSize = 10 } = req.query;
   try {
+    //Check if novel exists
     const novelExist = await Novel.findById(id);
     if (!novelExist) {
       return error404(res, "Novel not found");
@@ -262,6 +264,7 @@ const getAllChaptersOfNovel = async (req, res) => {
     const skip = (currentPage - 1) * size;
     const limit = size;
 
+    // Get all chapters of the novel
     const allNovelChapters = await Chapter.find({
       novel: id,
     })
@@ -276,47 +279,62 @@ const getAllChaptersOfNovel = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    //Fetch user purchases
-    const userPurchases = await UserPurchases.findOne(
-      {
-        user: req.user._id,
-      },
-      {
-        chapters: 1,
-        _id: 0,
-      }
-    ).lean();
+    // Check if the user has an active subscription
+    const userSubscription = await UserSubscription.findOne({
+      user: req.user._id,
+      isSubscribed: true,
+    }).lean();
 
-    const purchasedChapterIds = new Set(
-      userPurchases ? userPurchases.chapters.map((e) => e.toString()) : []
-    );
+    let chapters;
 
-    let firstPaidChapter = false;
-
-    const chapters = allNovelChapters.map((chapter) => {
-      const isPurchased = purchasedChapterIds.has(chapter._id.toString());
-
-      contentStatus = chapter.content;
-
-      if (chapter.content === "Paid" && isPurchased) {
-        contentStatus = "Free";
-      }
-
-      //Set canUnlock flag for the paid chapter
-      let canUnlock = false;
-      if (!firstPaidChapter && contentStatus === "Paid") {
-        firstPaidChapter = true;
-        canUnlock = true;
-      }
-
-      return {
+    if (userSubscription) {
+      // If the user is subscribed, mark all chapters as "Free" and skip further checks
+      chapters = allNovelChapters.map((chapter) => ({
         ...chapter._doc,
-        content: contentStatus,
-        canUnlock,
-      };
-    });
+        content: "Free",
+        canUnlock: false,
+      }));
+    } else {
+      // If the user is not subscribed, proceed with checking purchases
+      const userPurchases = await UserPurchases.findOne(
+        { user: req.user._id },
+        {
+          chapters: 1,
+          _id: 0,
+        }
+      ).lean();
 
-    //To handle infinite scroll on frontend
+      const purchasedChapterIds = new Set(
+        userPurchases ? userPurchases.chapters.map((e) => e.toString()) : []
+      );
+
+      let firstPaidChapter = false;
+
+      chapters = allNovelChapters.map((chapter) => {
+        const isPurchased = purchasedChapterIds.has(chapter._id.toString());
+
+        let contentStatus = chapter.content;
+
+        if (chapter.content === "Paid" && isPurchased) {
+          contentStatus = "Free";
+        }
+
+        // Set canUnlock flag for the first paid chapter
+        let canUnlock = false;
+        if (!firstPaidChapter && contentStatus === "Paid") {
+          firstPaidChapter = true;
+          canUnlock = true;
+        }
+
+        return {
+          ...chapter._doc,
+          content: contentStatus,
+          canUnlock,
+        };
+      });
+    }
+
+    // To handle infinite scroll on frontend
     const hasMore = skip + limit < totalChaptersCount;
     const data = {
       chapters,
@@ -1187,6 +1205,31 @@ const getDetailNovelByType = async (req, res) => {
   }
 };
 
+const getReviewsOfNovel = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const novel = await Novel.findById(id).populate({
+      path: "reviews.user",
+      select: "name email",
+    });
+
+    if (!novel) {
+      return error409(res, "Novel not found");
+    }
+
+    //Removing likes array
+    const filteredReviews = novel.reviews.map((review) => {
+      const { likes, ...rest } = review.toObject();
+      return rest;
+    });
+
+    const reviews = filteredReviews || [];
+    return success(res, "200", "Success", reviews);
+  } catch (err) {
+    return error500(res, err);
+  }
+};
+
 module.exports = {
   addNovel,
   addNovelToDraft,
@@ -1203,4 +1246,5 @@ module.exports = {
   topNovels,
   getTopRatedNovels,
   getDetailNovelByType,
+  getReviewsOfNovel,
 };

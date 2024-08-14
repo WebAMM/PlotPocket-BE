@@ -22,6 +22,10 @@ const coinRefillSchema = new mongoose.Schema(
       type: String,
       required: [true, "Description is required"],
     },
+    discountedPrice: {
+      type: Number,
+      required: [true, "Discounted Price is required"],
+    },
   },
   {
     timestamps: true,

@@ -3,6 +3,7 @@ const Series = require("../models/Series.model");
 const Episode = require("../models/Episode.model");
 const Category = require("../models/Category.model");
 const UserPurchases = require("../models/UserPurchases.model");
+const UserSubscription = require("../models/UserSubscription.model");
 //Responses and errors
 const {
   error500,
@@ -318,6 +319,7 @@ const getAllEpisodeOfSeries = async (req, res) => {
   const { id } = req.params;
   const { page = 1, pageSize = 10 } = req.query;
   try {
+    //Check if series exist
     const seriesExist = await Series.findById(id);
     if (!seriesExist) {
       return error409(res, "Series not found");
@@ -326,13 +328,12 @@ const getAllEpisodeOfSeries = async (req, res) => {
     // Pagination calculations
     const currentPage = parseInt(page, 10) || 1;
     const size = parseInt(pageSize, 10) || 10;
-    const totalEpisodeCount = await Episode.countDocuments();
+    const totalEpisodeCount = await Episode.countDocuments({ series: id });
     const skip = (currentPage - 1) * size;
     const limit = size;
 
-    const allSeriesEpisodes = await Episode.find({
-      series: id,
-    })
+    // Get all episodes of the series
+    const allSeriesEpisodes = await Episode.find({ series: id })
       .select(
         "episodeVideo.publicUrl title _id totalViews content series createdAt description coins"
       )
@@ -344,47 +345,62 @@ const getAllEpisodeOfSeries = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    //Fetch user purchases
-    const userPurchases = await UserPurchases.findOne(
-      {
-        user: req.user._id,
-      },
-      {
-        episodes: 1,
-        _id: 0,
-      }
-    ).lean();
+    // Check if the user has an active subscription
+    const userSubscription = await UserSubscription.findOne({
+      user: req.user._id,
+      isSubscribed: true,
+    }).lean();
 
-    const purchasedEpisodeIds = new Set(
-      userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
-    );
+    let episodes;
 
-    let firstPaidEpisode = false;
-
-    const episodes = allSeriesEpisodes.map((episode) => {
-      const isPurchased = purchasedEpisodeIds.has(episode._id.toString());
-
-      contentStatus = episode.content;
-
-      if (episode.content === "Paid" && isPurchased) {
-        contentStatus = "Free";
-      }
-
-      //Set canUnlock flag for the first paid episode
-      let canUnlock = false;
-      if (!firstPaidEpisode && contentStatus === "Paid") {
-        firstPaidEpisode = true;
-        canUnlock = true;
-      }
-
-      return {
+    if (userSubscription) {
+      // If the user is subscribed, mark all episodes as "Free" and skip further checks
+      episodes = allSeriesEpisodes.map((episode) => ({
         ...episode._doc,
-        content: contentStatus,
-        canUnlock,
-      };
-    });
+        content: "Free",
+        canUnlock: false,
+      }));
+    } else {
+      // If the user is not subscribed, proceed with checking purchases
+      const userPurchases = await UserPurchases.findOne(
+        { user: req.user._id },
+        {
+          episodes: 1,
+          _id: 0,
+        }
+      ).lean();
 
-    //To handle infinite scroll on frontend
+      const purchasedEpisodeIds = new Set(
+        userPurchases ? userPurchases.episodes.map((e) => e.toString()) : []
+      );
+
+      let firstPaidEpisode = false;
+
+      episodes = allSeriesEpisodes.map((episode) => {
+        const isPurchased = purchasedEpisodeIds.has(episode._id.toString());
+
+        let contentStatus = episode.content;
+
+        if (episode.content === "Paid" && isPurchased) {
+          contentStatus = "Free";
+        }
+
+        // Set canUnlock flag for the first paid episode
+        let canUnlock = false;
+        if (!firstPaidEpisode && contentStatus === "Paid") {
+          firstPaidEpisode = true;
+          canUnlock = true;
+        }
+
+        return {
+          ...episode._doc,
+          content: contentStatus,
+          canUnlock,
+        };
+      });
+    }
+
+    // To handle infinite scroll on frontend
     const hasMore = skip + limit < totalEpisodeCount;
     const data = {
       episodes,

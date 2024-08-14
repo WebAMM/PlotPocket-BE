@@ -4,6 +4,7 @@ const Novel = require("../models/Novel.model");
 const UserCoin = require("../models/UserCoin.model");
 const UserPurchases = require("../models/UserPurchases.model");
 const myList = require("../models/MyList.model");
+const UserSubscription = require("../models/UserSubscription.model");
 //Responses and errors
 const {
   error500,
@@ -552,21 +553,28 @@ const viewChapter = async (req, res) => {
       }
 
       if (nextChapter.content === "Paid" && nextChapter.coins > 0) {
-        if (await checkUserPurchases(req.user._id, nextChapter._id)) {
+        const isSubscribed = await UserSubscription.findOne({
+          user: req.user._id,
+          isSubscribed: true,
+        });
+        if (isSubscribed) {
           return handleResponse(nextChapter);
-        }
-
-        if (autoUnlock) {
-          const userCoins = await UserCoin.findOne({
-            user: req.user._id,
-            totalCoins: { $gte: 1 },
-          });
-          if (!userCoins) {
-            return error404(res, "User has no coins");
-          }
-          return handleUnlock(nextChapter, userCoins);
         } else {
-          return customError(res, 403, "Use coins to unlock chapter");
+          if (await checkUserPurchases(req.user._id, nextChapter._id)) {
+            return handleResponse(nextChapter);
+          }
+          if (autoUnlock) {
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+              totalCoins: { $gte: 1 },
+            });
+            if (!userCoins) {
+              return error404(res, "User has no coins");
+            }
+            return handleUnlock(nextChapter, userCoins);
+          } else {
+            return customError(res, 403, "Use coins to unlock chapter");
+          }
         }
       }
     } else if (up) {
@@ -587,30 +595,44 @@ const viewChapter = async (req, res) => {
       }
 
       if (prevChapter.content === "Paid" && prevChapter.coins > 0) {
-        if (await checkUserPurchases(req.user._id, prevChapter._id)) {
+        const isSubscribed = await UserSubscription.findOne({
+          user: req.user._id,
+          isSubscribed: true,
+        });
+        if (isSubscribed) {
           return handleResponse(prevChapter);
         } else {
-          return customError(res, 403, "Chapter not found in user purchases");
+          if (await checkUserPurchases(req.user._id, prevChapter._id)) {
+            return handleResponse(prevChapter);
+          } else {
+            return customError(res, 403, "Chapter not found in user purchases");
+          }
         }
       }
     } else {
       if (currentChapter.content === "Free") {
         return handleResponse(currentChapter);
       }
-
       if (currentChapter.content === "Paid" && currentChapter.coins > 0) {
-        if (await checkUserPurchases(req.user._id, currentChapter._id)) {
+        const isSubscribed = await UserSubscription.findOne({
+          user: req.user._id,
+          isSubscribed: true,
+        });
+        if (isSubscribed) {
           return handleResponse(currentChapter);
-        }
-
-        if (unlockNow) {
-          const userCoins = await UserCoin.findOne({ user: req.user._id });
-          if (!userCoins) {
-            return error404(res, "User has no coins");
-          }
-          return handleUnlock(currentChapter, userCoins);
         } else {
-          return customError(res, 403, "Use coins to unlock chapter");
+          if (await checkUserPurchases(req.user._id, currentChapter._id)) {
+            return handleResponse(currentChapter);
+          }
+          if (unlockNow) {
+            const userCoins = await UserCoin.findOne({ user: req.user._id });
+            if (!userCoins) {
+              return error404(res, "User has no coins");
+            }
+            return handleUnlock(currentChapter, userCoins);
+          } else {
+            return customError(res, 403, "Use coins to unlock chapter");
+          }
         }
       }
     }

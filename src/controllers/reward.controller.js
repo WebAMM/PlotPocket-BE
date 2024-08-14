@@ -78,50 +78,68 @@ const editRewardStatus = async (req, res) => {
 //Get Reward
 const getRewardsForUser = async (req, res) => {
   try {
+    let bonusCoins = 0;
+
+    const userCoins = await UserCoin.findOne({
+      user: req.user._id,
+    }).select("bonusCoins refillCoins totalCoins -_id");
+
+    if (userCoins) {
+      bonusCoins = userCoins.bonusCoins;
+    }
+
     const rewards = await Reward.findOne({ status: "Active" });
 
-    if (!rewards) {
-      return success(res, "200", "Success", []);
-    }
-    if (rewards.weeklyRewards.length !== 7) {
-      return customError(res, 422, `Weekly rewards invalid`);
+    let rewardsWithClaim = [];
+
+    if (rewards) {
+      if (rewards.weeklyRewards.length !== 7) {
+        return customError(res, 422, `Weekly rewards invalid`);
+      }
+
+      const userSteak = await UserSteak.findOne({
+        user: req.user._id,
+      });
+
+      // Function to generate the rewards with the canClaim flag
+      const generateRewardsWithClaim = (claimedDay, canClaim) => {
+        return rewards.weeklyRewards.map((reward) => ({
+          day: reward.day,
+          reward: reward.reward,
+          canClaim:
+            canClaim &&
+            (claimedDay < 7 ? claimedDay + 1 === reward.day : reward.day === 1),
+        }));
+      };
+
+      if (userSteak && userSteak.claimedDate) {
+        const isNextDay = timeDiffChecker(userSteak.claimedDate);
+
+        if (isNextDay) {
+          rewardsWithClaim = generateRewardsWithClaim(
+            userSteak.claimedDay,
+            true
+          );
+        } else {
+          rewardsWithClaim = generateRewardsWithClaim(
+            userSteak.claimedDay,
+            false
+          );
+        }
+      } else {
+        // If no steak exists, the user can only claim Day 1 reward
+        rewardsWithClaim = generateRewardsWithClaim(0, true);
+      }
     }
 
-    const userSteak = await UserSteak.findOne({
-      user: req.user._id,
-    });
-
-    // Function to generate the rewards with the canClaim flag
-    const generateRewardsWithClaim = (claimedDay, canClaim) => {
-      return rewards.weeklyRewards.map((reward) => ({
-        day: reward.day,
-        reward: reward.reward,
-        canClaim:
-          canClaim &&
-          (claimedDay < 7 ? claimedDay + 1 === reward.day : reward.day === 1),
-      }));
+    const data = {
+      rewards: rewardsWithClaim, // This will be an empty array if no rewards are active
+      bonusCoins: bonusCoins,
     };
 
-    let rewardsWithClaim;
-    if (userSteak && userSteak.claimedDate) {
-      const isNextDay = timeDiffChecker(userSteak.claimedDate);
-
-      if (isNextDay) {
-        rewardsWithClaim = generateRewardsWithClaim(userSteak.claimedDay, true);
-      } else {
-        rewardsWithClaim = generateRewardsWithClaim(
-          userSteak.claimedDay,
-          false
-        );
-      }
-    } else {
-      // If no steak exists, the user can only claim Day 1 reward
-      rewardsWithClaim = generateRewardsWithClaim(0, true);
-    }
-
-    return success(res, "200", "Success", rewardsWithClaim);
+    return success(res, "200", "Success", data);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -214,7 +232,7 @@ const claimReward = async (req, res) => {
       }
     }
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 

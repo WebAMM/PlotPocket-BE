@@ -14,6 +14,13 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const addSubscription = async (req, res) => {
   const { plan, description, price } = req.body;
   try {
+    if (price < 0.5) {
+      return error400(res, "Price should be minimum 0.50 USD");
+    }
+    // const existPlan = await Subscription.findOne({ plan: plan });
+    // if (existPlan) {
+    //   return error409(res, `${plan} plan already exist`);
+    // }
     //Get plan names
     const subscriptionInterval = getStripeInterval(plan);
 
@@ -71,18 +78,57 @@ const getAllAppSubscriptions = async (req, res) => {
 //Edit Subscriptions
 const editSubscription = async (req, res) => {
   const { id } = req.params;
+  const { plan, description, price } = req.body;
+
   try {
-    const subscription = await Subscription.findByIdAndUpdate(
-      id,
-      { $set: { ...req.body } },
-      { new: true }
-    );
+    const subscription = await Subscription.findById(id);
+
     if (!subscription) {
       return error409(res, "Subscription not found");
     }
-    return success(res, "200", "Success", subscription);
+
+    if (price < 0.5) {
+      return error400(res, "Price should be minimum 0.50 USD");
+    }
+
+    // Get plan interval
+    const subscriptionInterval = getStripeInterval(plan);
+
+    // Update the product in Stripe
+    await stripe.products.update(subscription.stripeProductId, {
+      name: `${plan} Plan for free episodes and chapters`,
+      description: description,
+    });
+
+    // Create a new price in Stripe (since prices are immutable)
+    const newProductPrice = await stripe.prices.create({
+      product: subscription.stripeProductId,
+      unit_amount: price * 100,
+      currency: "usd",
+      recurring: {
+        interval: subscriptionInterval,
+      },
+    });
+
+    if (newProductPrice.id) {
+      const updatedSubscription = await Subscription.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            plan: plan,
+            description: description,
+            price: price,
+            stripePriceId: newProductPrice.id,
+          },
+        },
+        { new: true }
+      );
+      return success(res, "200", "Success", updatedSubscription);
+    } else {
+      return error500(res, "Failed to update new price in Stripe");
+    }
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 
@@ -103,7 +149,7 @@ const deleteSubscription = async (req, res) => {
 };
 
 //Create stripe subscription session
-const createStripeSession = async (req, res) => {
+const purchaseSubscription = async (req, res) => {
   //Subscription id
   const { id } = req.params;
   try {
@@ -116,25 +162,16 @@ const createStripeSession = async (req, res) => {
     const existsCustomer = await stripe.customers.search({
       query: `metadata['userId']:'665e066d49ba272266e993e7'`,
     });
-
-    console.log("The exist", existsCustomer);
     if (existsCustomer.data.length > 0) {
       //Customer already exist
       customer = existsCustomer.data[0];
       //Check if customer have already active subscription
-      console.log("The customer", typeof customer.id);
-      console.log(
-        "The subscriptionRecord.stripePriceId",
-        subscriptionRecord.stripePriceId
-      );
-
       const subscription = await stripe.subscriptions.list({
         customer: customer.id,
         price: subscriptionRecord.stripePriceId,
         // status: "active",
         // limit: 10,
       });
-      console.log("The subscription", subscription.data);
       if (subscription.data.length > 0) {
         //Customer already have active subscription, send them to billing portal to manage subscription
         const stripeSession = await stripe.billingPortal.sessions.create({
@@ -210,6 +247,6 @@ module.exports = {
   getAllAppSubscriptions,
   editSubscription,
   deleteSubscription,
-  createStripeSession,
+  purchaseSubscription,
   // getSubscriptionByPlan,
 };

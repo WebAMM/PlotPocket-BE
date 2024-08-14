@@ -73,7 +73,7 @@ const getUserCoinsDetail = async (req, res) => {
 
     return success(res, "200", "Success", data);
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 

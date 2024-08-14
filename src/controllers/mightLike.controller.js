@@ -3,7 +3,7 @@ const Novel = require("../models/Novel.model");
 const Series = require("../models/Series.model");
 const History = require("../models/History.model");
 //Responses and errors
-const { error500 } = require("../services/helpers/errors");
+const { error500, error400 } = require("../services/helpers/errors");
 const { success } = require("../services/helpers/response");
 
 //Get User based like
@@ -88,9 +88,18 @@ const { success } = require("../services/helpers/response");
 // };
 
 const mightLike = async (req, res) => {
-  const { page = 1, pageSize = 10 } = req.query;
+  const { page = 1, pageSize = 10, type = "All" } = req.query;
+
+  const validTypes = ["All", "Novel", "Series"];
+  if (!validTypes.includes(type)) {
+    return error400(
+      res,
+      `Invalid type value. Expected one of ${validTypes.join(", ")}`
+    );
+  }
+
   try {
-    //User history
+    // User history
     const history = await History.find({ user: req.user._id })
       .populate("series")
       .populate("novel");
@@ -110,48 +119,55 @@ const mightLike = async (req, res) => {
       user: req.user._id,
     });
 
-    const mightLikeSeries = await Series.find({
-      category: { $in: seriesCategories },
-      _id: { $nin: historySeriesIds },
-    })
-      .select("thumbnail.publicUrl title type seriesRating totalViews")
-      .populate({
-        path: "category",
-        select: "title",
-      })
-      .populate({
-        path: "episodes",
-        select:
-          "episodeVideo.publicUrl title content coins totalViews",
-        options: {
-          sort: { createdAt: 1 },
-          limit: 1,
-        },
-      })
-      .lean();
+    let mightLikeSeries = [];
+    let mightLikeNovels = [];
 
-    const mightLikeNovels = await Novel.find({
-      category: { $in: novelCategories },
-      _id: { $nin: historyNovelIds },
-    })
-      .select("thumbnail.publicUrl title type averageRating totalViews")
-      .populate({
-        path: "chapters",
-        select: "chapterPdf.publicUrl name chapterNo content coins",
-        options: {
-          sort: { createdAt: 1 },
-          limit: 1,
-        },
+    // Filter by type
+    if (type === "Series" || type === "All") {
+      mightLikeSeries = await Series.find({
+        category: { $in: seriesCategories },
+        _id: { $nin: historySeriesIds },
       })
-      .populate({
-        path: "category",
-        select: "title",
+        .select("thumbnail.publicUrl title type seriesRating totalViews")
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "episodes",
+          select: "episodeVideo.publicUrl title content coins totalViews",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1,
+          },
+        })
+        .lean();
+    }
+
+    if (type === "Novel" || type === "All") {
+      mightLikeNovels = await Novel.find({
+        category: { $in: novelCategories },
+        _id: { $nin: historyNovelIds },
       })
-      .populate({
-        path: "author",
-        select: "name",
-      })
-      .lean();
+        .select("thumbnail.publicUrl title type averageRating totalViews")
+        .populate({
+          path: "chapters",
+          select: "chapterPdf.publicUrl name chapterNo content coins",
+          options: {
+            sort: { createdAt: 1 },
+            limit: 1,
+          },
+        })
+        .populate({
+          path: "category",
+          select: "title",
+        })
+        .populate({
+          path: "author",
+          select: "name",
+        })
+        .lean();
+    }
 
     const combinedData = [...mightLikeSeries, ...mightLikeNovels]
       .map((item) => ({
@@ -170,7 +186,7 @@ const mightLike = async (req, res) => {
             : undefined,
       }))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
+    // Pagination
     const startIndex = (page - 1) * pageSize;
     const endIndex = page * pageSize;
     const mightLike = combinedData.slice(startIndex, endIndex);

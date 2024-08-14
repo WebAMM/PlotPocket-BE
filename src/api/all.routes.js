@@ -28,6 +28,14 @@ router.get(
   allController.globalSearch
 );
 
+//[APP] Subscriptions + Refills
+router.get(
+  "/app/store",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  allController.allStore
+);
+
 //[APP] Increase View
 // router.post(
 //   "/app/inc-view",
