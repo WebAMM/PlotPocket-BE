@@ -1,8 +1,8 @@
-const router = require("express").Router();
+// const router = require("express").Router();
 //PaymentController
-const paymentController = require("../controllers/payment.controller");
+// const paymentController = require("../controllers/payment.controller");
 //middlewares
-const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
+// const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 
 //[APP] Made the payment
 // router.post(

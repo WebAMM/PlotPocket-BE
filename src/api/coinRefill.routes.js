@@ -57,7 +57,7 @@ router.post(
 
 //[APP] Price needed for episode/chapter and all refills to buy coins
 router.get(
-  "/app/buy-coins/:id",
+  "/app/buy-refill/:id",
   verifyToken,
   verifyRole(["User"]),
   coinRefill.buyCoinRefills
