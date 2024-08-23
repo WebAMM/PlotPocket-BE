@@ -662,7 +662,7 @@ const combinedSeriesNovels = async (req, res) => {
     const hasMore = combinedData.length > endIndex;
 
     const data = {
-      seriesNovels,
+      data: seriesNovels,
       hasMore,
     };
 

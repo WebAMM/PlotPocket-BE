@@ -1032,7 +1032,7 @@ const getDetailNovelByType = async (req, res) => {
       //To handle infinite scroll on frontend
       const hasMore = skip + limit < totalNovelsCount;
       const data = {
-        novels: bestNovels,
+        data: bestNovels,
         hasMore,
       };
       return success(res, "200", "Success", data);
@@ -1095,7 +1095,7 @@ const getDetailNovelByType = async (req, res) => {
       const hasMore = skip + limit < totalNovelsCount;
 
       const data = {
-        novels: topNovels,
+        data: topNovels,
         hasMore,
       };
       return success(res, "200", "Success", data);
@@ -1194,7 +1194,7 @@ const getDetailNovelByType = async (req, res) => {
       const hasMore = skip + limit < totalNovelsCount;
 
       const data = {
-        novels: topRatedNovel,
+        data: topRatedNovel,
         hasMore,
       };
 

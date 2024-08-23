@@ -862,7 +862,7 @@ const getDetailSeriesByType = async (req, res) => {
       const hasMore = skip + limit < totalSeriesCount;
 
       const data = {
-        series: bestSeries,
+        data: bestSeries,
         hasMore,
       };
 
@@ -928,7 +928,7 @@ const getDetailSeriesByType = async (req, res) => {
       const hasMore = skip + limit < totalSeriesCount;
 
       const data = {
-        series: topSeries,
+        data: topSeries,
         hasMore,
       };
 
@@ -1023,7 +1023,7 @@ const getDetailSeriesByType = async (req, res) => {
       const hasMore = skip + limit < totalSeriesCount;
 
       const data = {
-        series: topRatedSeries,
+        data: topRatedSeries,
         hasMore,
       };
 
