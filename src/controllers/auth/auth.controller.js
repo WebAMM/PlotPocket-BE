@@ -58,7 +58,7 @@ const registerUser = async (req, res) => {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `user/${Date.now()}_${file.originalname}`,
         Body: fs.createReadStream(req.file.path),
-        ContentType: fileFormat,
+        ContentType: req.file.mimetype,
       };
 
       //Upload file to S3
@@ -70,8 +70,8 @@ const registerUser = async (req, res) => {
         publicId: uploadResult.Key,
         format: fileFormat,
       };
-      userData.role = "User";
     }
+    userData.role = "User";
     const newUser = new User(userData);
     await newUser.save();
     if (guestId) {
@@ -445,7 +445,7 @@ const updateAdminProfilePic = async (req, res) => {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `user/${Date.now()}_${file.originalname}`,
         Body: fs.createReadStream(req.file.path),
-        ContentType: fileFormat,
+        ContentType: req.file.mimetype,
       };
 
       const uploadResult = await uploadFileToS3(uploadParams);

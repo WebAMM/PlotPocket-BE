@@ -30,7 +30,7 @@ const addAuthor = async (req, res) => {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `author/${Date.now()}_${file.originalname}`,
         Body: fs.createReadStream(req.file.path),
-        ContentType: fileFormat,
+        ContentType: req.file.mimetype,
       };
 
       const uploadResult = await uploadFileToS3(params);
