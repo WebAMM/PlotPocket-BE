@@ -322,13 +322,26 @@ const guestLogout = async (req, res) => {
 //Get User
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select(
-      "_id userName email profileImage.publicUrl status createdAt firstName lastName address city dateOfBirth emergencyContact phoneNo state zipCode role"
-    );
+    const user = await User.findById(req.user._id)
+      .select(
+        "_id userName email profileImage.publicUrl status createdAt firstName lastName address city dateOfBirth emergencyContact phoneNo state zipCode role"
+      )
+      .lean();
+
     if (!user) {
       return error404(res, "User not found!");
     }
-    return success(res, "200", "User profile", user);
+
+    const userCoinInfo = await UserCoin.findOne({ user: req.user._id })
+      .select("bonusCoins refillCoins -_id")
+      .lean();
+
+    const userInfo = {
+      ...user,
+      ...(userCoinInfo ? userCoinInfo : { bonusCoins: 0, refillCoins: 0 }),
+    };
+
+    return success(res, "200", "User profile", userInfo);
   } catch (err) {
     return error500(res, err);
   }
@@ -338,13 +351,24 @@ const getUserProfile = async (req, res) => {
 const getUserProfileById = async (req, res) => {
   const { id } = req.params;
   try {
-    const user = await User.findById(id).select(
-      "_id userName email profileImage.publicUrl status createdAt role"
-    );
+    const user = await User.findById(id)
+    .select("_id userName email profileImage.publicUrl status createdAt role")
+    .lean();
+
     if (!user) {
       return error404(res, "User not found!");
     }
-    return success(res, "200", "User profile", user);
+
+    const userCoinInfo = await UserCoin.findOne({ user: id })
+    .select("bonusCoins refillCoins -_id")
+    .lean();
+
+    const userInfo = {
+      ...user,
+      ...(userCoinInfo ? userCoinInfo : { bonusCoins: 0, refillCoins: 0 }),
+    };
+
+    return success(res, "200", "User profile", userInfo);
   } catch (err) {
     return error500(res, err);
   }
