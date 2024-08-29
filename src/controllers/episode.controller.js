@@ -757,8 +757,8 @@ const viewEpisode = async (req, res) => {
       return error400(res, "Query must be either up or down");
     }
 
-    if (up && autoUnlock) {
-      return error400(res, "Auto unlock should not be true with up");
+    if (down && autoUnlock) {
+      return error400(res, "Auto unlock should not be true with down");
     }
 
     if ((down || up) && unlockNow) {
@@ -885,7 +885,7 @@ const viewEpisode = async (req, res) => {
       return handleResponse(episode);
     };
 
-    if (down) {
+    if (up) {
       const nextEpisode = await findEpisode(
         {
           series: new mongoose.Types.ObjectId(currentEpisode.series._id),
@@ -941,7 +941,7 @@ const viewEpisode = async (req, res) => {
             return handleUnlock(nextEpisode, userCoins);
           } else {
             //Telling to use unlock now now because user didn't use auto unlock with down.
-            //Now episode is not down but current
+            //Now episode is not up but current
             //return customError(res, 403, "Use unlockNow to use coins to unlock this episode");
             let coinDetails = {
               bonusCoins: 0,
@@ -969,7 +969,7 @@ const viewEpisode = async (req, res) => {
           }
         }
       }
-    } else if (up) {
+    } else if (down) {
       const prevEpisode = await findEpisode(
         {
           series: new mongoose.Types.ObjectId(currentEpisode.series),
