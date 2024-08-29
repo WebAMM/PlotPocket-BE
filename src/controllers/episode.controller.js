@@ -948,6 +948,17 @@ const viewEpisode = async (req, res) => {
               refillCoins: 0,
               totalCoins: 0,
             };
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+              totalCoins: { $gte: 1 },
+            });
+            if (userCoins) {
+              coinDetails = {
+                bonusCoins: userCoins?.bonusCoins,
+                refillCoins: userCoins?.refillCoins,
+                totalCoins: userCoins?.totalCoins,
+              };
+            }
             let price = nextEpisode.coins;
             let data = {
               price,
@@ -1039,6 +1050,17 @@ const viewEpisode = async (req, res) => {
               refillCoins: 0,
               totalCoins: 0,
             };
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+              totalCoins: { $gte: 1 },
+            });
+            if (userCoins) {
+              coinDetails = {
+                bonusCoins: userCoins?.bonusCoins,
+                refillCoins: userCoins?.refillCoins,
+                totalCoins: userCoins?.totalCoins,
+              };
+            }
             let price = currentEpisode.coins;
             let data = {
               price,

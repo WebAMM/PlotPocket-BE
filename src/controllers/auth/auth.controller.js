@@ -152,7 +152,10 @@ const registerUser = async (req, res) => {
 //Login User
 const loginUser = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email, role: "User" });
+    const user = await User.findOne({
+      email: req.body.email,
+      role: "User",
+    }).select("userName email role password profileImage.publicUrl createdAt");
     if (!user) {
       return error404(res, "User not found!");
     }
@@ -179,7 +182,7 @@ const loginUser = async (req, res) => {
         userName: user.userName,
         email: user.email,
         role: user.role,
-        profileImage: user.profileImage.publicUrl,
+        profileImage: user.profileImage,
         createdAt: user.createdAt,
       };
       return success(res, "200", "Login success", {
@@ -263,22 +266,25 @@ const guestLogin = async (req, res) => {
       },
     });
 
+    const newUser = await User.findById(user._id).select("userName email role password profileImage.publicUrl createdAt");
     const secret = config.jwtPrivateKey;
     const token = jwt.sign(
       {
-        _id: user._id,
-        name: user.userName,
-        role: user.role,
-        createdAt: user.createdAt,
+        _id: newUser._id,
+        name: newUser.userName,
+        role: newUser.role,
+        createdAt: newUser.createdAt,
+        profileImage: newUser.profileImage,
       },
       secret
     );
 
     const responseUser = {
-      _id: user._id,
-      userName: user.userName,
-      role: user.role,
-      createdAt: user.createdAt,
+      _id: newUser._id,
+      userName: newUser.userName,
+      role: newUser.role,
+      createdAt: newUser.createdAt,
+      profileImage: newUser.profileImage
     };
 
     return success(res, "200", "Guest login success", {
@@ -352,16 +358,16 @@ const getUserProfileById = async (req, res) => {
   const { id } = req.params;
   try {
     const user = await User.findById(id)
-    .select("_id userName email profileImage.publicUrl status createdAt role")
-    .lean();
+      .select("_id userName email profileImage.publicUrl status createdAt role")
+      .lean();
 
     if (!user) {
       return error404(res, "User not found!");
     }
 
     const userCoinInfo = await UserCoin.findOne({ user: id })
-    .select("bonusCoins refillCoins -_id")
-    .lean();
+      .select("bonusCoins refillCoins -_id")
+      .lean();
 
     const userInfo = {
       ...user,
