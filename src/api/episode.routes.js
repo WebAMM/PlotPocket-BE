@@ -64,4 +64,13 @@ router.get(
   verifyRole(["Guest", "User"]),
   episodeController.viewEpisode
 );
+
+//[APP] For you episodes/reels
+router.get(
+  "/app/for-you",
+  verifyToken,
+  verifyRole(["User", "Guest"]),
+  episodeController.episodesForYou
+);
+
 module.exports = router;

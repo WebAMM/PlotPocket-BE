@@ -36,13 +36,6 @@ router.get(
   allController.allStore
 );
 
-//[APP] For you
-router.get(
-  "/app/for-you",
-  verifyToken,
-  verifyRole(["User", "Guest"]),
-  allController.forYou
-);
 
 //[APP] Increase View
 // router.post(
