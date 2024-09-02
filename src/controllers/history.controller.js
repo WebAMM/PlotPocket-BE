@@ -110,7 +110,8 @@ const allHistory = async (req, res) => {
           select:
             "chapterPdf.publicUrl name chapterNo content totalViews createdAt coins",
         },
-      ]);
+      ])
+      .lean()
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalHistoryCount;

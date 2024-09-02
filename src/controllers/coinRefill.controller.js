@@ -45,7 +45,7 @@ const addCoinRefill = async (req, res) => {
 // Get All Coin Refill for Admin
 const getAllAdminCoinRefill = async (req, res) => {
   try {
-    const coinRefills = await CoinRefill.find().sort({ createdAt: -1 });
+    const coinRefills = await CoinRefill.find().sort({ createdAt: -1 }).lean();
     return success(res, "200", "Success", coinRefills);
   } catch (err) {
     error500(res, err);
@@ -57,7 +57,8 @@ const getAllAppCoinRefill = async (req, res) => {
   try {
     const coinRefills = await CoinRefill.find()
       .select("price coins discount bonus description")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean()
     return success(res, "200", "Success", coinRefills);
   } catch (err) {
     error500(res, err);
@@ -119,7 +120,7 @@ const refillCoins = async (req, res) => {
   const { id } = req.params;
   const { token } = req.body;
   try {
-    const coinRefill = await CoinRefill.findById(id);
+    const coinRefill = await CoinRefill.findById(id).lean();
     if (!coinRefill) {
       return error409(res, "Coin refill record not found");
     }

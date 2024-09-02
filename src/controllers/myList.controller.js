@@ -28,14 +28,14 @@ const addEpisodeToList = async (req, res) => {
       const alreadyExist = await MyList.findOne({
         episode: id,
         user: req.user._id,
-      });
+      }).lean()
       if (alreadyExist) {
         await MyList.deleteOne({
           _id: alreadyExist._id,
         });
         return status200(res, "Episode removed from my list");
       }
-      const episodeExist = await Episode.findById(id);
+      const episodeExist = await Episode.findById(id).lean();
       if (!episodeExist) {
         return error409(res, "No such episode exist");
       }
@@ -47,14 +47,14 @@ const addEpisodeToList = async (req, res) => {
       const alreadyExist = await MyList.findOne({
         chapter: id,
         user: req.user._id,
-      });
+      }).lean()
       if (alreadyExist) {
         await MyList.deleteOne({
           _id: alreadyExist._id,
         });
         return status200(res, "Chapter removed from my list");
       }
-      const chapterExist = await Chapter.findById(id);
+      const chapterExist = await Chapter.findById(id).lean();
       if (!chapterExist) {
         return error409(res, "No such chapter exist");
       }

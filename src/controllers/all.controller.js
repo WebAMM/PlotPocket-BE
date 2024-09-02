@@ -147,7 +147,6 @@ const singleDetailPage = async (req, res) => {
       if (!content) {
         return error404(res, "Novel not found");
       }
-
       const totalChapters = await Chapter.find({
         novel: id,
       }).countDocuments();
@@ -165,16 +164,15 @@ const singleDetailPage = async (req, res) => {
           },
         }));
       }
-
       content = {
         ...content,
         // chapters: content.chapters?.[0] || {},
         totalChapters,
       };
       //For the feature of You Might like, getting history etc
-      const history = await History.find({ user: req.user._id }).populate(
-        "novel"
-      );
+      const history = await History.find({ user: req.user._id })
+        .populate("novel")
+        .lean();
       const novelCategories = history
         .map((record) => record?.novel?.category)
         .filter(Boolean);
@@ -216,7 +214,8 @@ const singleDetailPage = async (req, res) => {
         const existSearchHistory = await SearchHistory.findOne({
           user: req.user._id,
           novel: content._id,
-        });
+        }).lean();
+
         if (!existSearchHistory) {
           await SearchHistory.create({
             user: req.user._id,
@@ -262,9 +261,9 @@ const singleDetailPage = async (req, res) => {
       };
 
       //For Might like feature getting history of user etc.
-      const history = await History.find({ user: req.user._id }).populate(
-        "series"
-      );
+      const history = await History.find({ user: req.user._id })
+        .populate("series")
+        .lean();
       const seriesCategories = history
         .map((record) => record?.series?.category)
         .filter(Boolean);
@@ -303,7 +302,8 @@ const singleDetailPage = async (req, res) => {
         const existSearchHistory = await SearchHistory.findOne({
           user: req.user._id,
           series: content._id,
-        });
+        }).lean();
+
         if (!existSearchHistory) {
           await SearchHistory.create({
             user: req.user._id,
@@ -439,7 +439,8 @@ const combinedSeriesNovels = async (req, res) => {
             select:
               "episodeVideo.publicUrl title content description createdAt coins totalViews",
           },
-        ]);
+        ])
+        .lean();
       novels = await History.find({
         user: req.user._id,
         novel: { $exists: true },
@@ -469,7 +470,8 @@ const combinedSeriesNovels = async (req, res) => {
             select:
               "chapterPdf.publicUrl name chapterNo content totalViews description createdAt coins ",
           },
-        ]);
+        ])
+        .lean();
     } else if (type === "Latest") {
       //Query
       let query = {
@@ -901,11 +903,13 @@ const allStore = async (req, res) => {
   try {
     const coinRefills = await CoinRefill.find()
       .select("price coins discount bonus description")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     const subscriptions = await Subscription.find()
       .select("plan price description stripeProductId stripePriceId createdAt")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     let coinDetails = {
       bonusCoins: 0,

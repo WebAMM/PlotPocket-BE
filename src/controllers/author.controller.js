@@ -55,7 +55,7 @@ const getAllAuthors = async (req, res) => {
   try {
     const authors = await Author.find().select(
       "authorPic.publicUrl _id name gender createdAt"
-    );
+    ).lean()
     success(res, "200", "Success", authors);
   } catch (err) {
     error500(res, err);

@@ -5,6 +5,7 @@ const UserPurchases = require("../models/UserPurchases.model");
 const UserCoin = require("../models/UserCoin.model");
 const myList = require("../models/MyList.model");
 const UserSubscription = require("../models/UserSubscription.model");
+const History = require("../models/History.model");
 //Responses and errors
 const {
   error500,
@@ -12,6 +13,7 @@ const {
   error404,
   error400,
   customError,
+  customErrorWithData,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
@@ -160,7 +162,7 @@ const allEpisodeOfSeries = async (req, res) => {
     const isSubscribed = await UserSubscription.findOne({
       user: req.user._id,
       isSubscribed: true,
-    }).lean();
+    });
 
     // Fetch user purchases (only if not subscribed)
     let userPurchases = null;
@@ -168,7 +170,7 @@ const allEpisodeOfSeries = async (req, res) => {
       userPurchases = await UserPurchases.findOne(
         { user: req.user._id },
         { episodes: 1, _id: 0 }
-      ).lean();
+      );
     }
 
     // Get all episodes of the series
@@ -245,7 +247,8 @@ const episodesOfSeries = async (req, res) => {
       .populate({
         path: "series",
         select: "thumbnail.publicUrl",
-      });
+      })
+      .lean();
     success(res, "200", "Success", allEpisodesOfSeries);
   } catch (err) {
     error500(res, err);
@@ -738,7 +741,8 @@ const viewEpisode = async (req, res) => {
         path: "series",
         select: "thumbnail.publicUrl title content visibility description coin",
         populate: [{ path: "category", select: "title" }],
-      });
+      })
+      .lean();
 
     if (!currentEpisode) {
       return error404(res, "Episode not found");
@@ -759,6 +763,10 @@ const viewEpisode = async (req, res) => {
 
     if (down && autoUnlock) {
       return error400(res, "Auto unlock should not be true with down");
+    }
+
+    if (!up && autoUnlock) {
+      return error400(res, "Auto unlock should only be used with up");
     }
 
     if ((down || up) && unlockNow) {
@@ -787,11 +795,14 @@ const viewEpisode = async (req, res) => {
               select: "title",
             },
           ],
-        });
+        })
+        .lean();
     };
 
     const checkUserPurchases = async (userId, episodeId) => {
-      const userPurchases = await UserPurchases.findOne({ user: userId });
+      const userPurchases = await UserPurchases.findOne({
+        user: userId,
+      }).lean();
       if (userPurchases) {
         return userPurchases.episodes.includes(episodeId);
       }
@@ -814,10 +825,11 @@ const viewEpisode = async (req, res) => {
         episode: episode._id,
       });
 
-      // const episodeCopy = { ...episode._doc };
-      // delete episodeCopy.ratings;
+      const episodeCopy = { ...episode };
+      delete episodeCopy.ratings;
+
       const data = {
-        episode,
+        episode: episodeCopy,
         isBookmarked: isBookmarked ? true : false,
         isRated,
       };
@@ -859,10 +871,21 @@ const viewEpisode = async (req, res) => {
 
     const handleUnlock = async (episode, userCoins) => {
       const result = await handleCoinDeduction(userCoins, episode.coins);
-
       // Check if there was an error in handleCoinDeduction
       if (result.error) {
-        return customError(res, 403, result.error);
+        // return customError(res, 403, result.error);
+        let coinDetails = {
+          bonusCoins: userCoins?.bonusCoins || 0,
+          refillCoins: userCoins?.refillCoins || 0,
+          totalCoins: userCoins?.totalCoins || 0,
+        };
+        let price = episode.coins || 0;
+        let data = {
+          episodePrice: price,
+          userCoins: coinDetails,
+          currentEpisodeId: episode._id,
+        };
+        return customErrorWithData(res, 403, result.error, data);
       }
 
       const { totalCoins, refillCoins, bonusCoins } = result;
@@ -872,7 +895,9 @@ const viewEpisode = async (req, res) => {
       userCoins.bonusCoins = bonusCoins;
       await userCoins.save();
 
-      const userPurchases = await UserPurchases.findOne({ user: req.user._id });
+      const userPurchases = await UserPurchases.findOne({
+        user: req.user._id,
+      });
       if (!userPurchases) {
         const newUserPurchases = new UserPurchases({
           user: req.user._id,
@@ -931,13 +956,23 @@ const viewEpisode = async (req, res) => {
                 totalCoins: 0,
               };
               let price = nextEpisode.coins;
-
               let data = {
-                price,
-                coinDetails,
+                episodePrice: price,
+                userCoins: coinDetails,
                 currentEpisodeId: nextEpisode._id,
               };
-              return success(res, "200", "User coins not found", data);
+              // return success(res, "200", "User coins not found", data);
+              return customErrorWithData(
+                res,
+                403,
+                "User coins not found",
+                data
+              );
+              // return customError(
+              //   res,
+              //   403,
+              //   "Insufficient total coins to purchase episode"
+              // );
             }
             //Else if user have coin give response
             return handleUnlock(nextEpisode, userCoins);
@@ -974,7 +1009,7 @@ const viewEpisode = async (req, res) => {
     } else if (down) {
       const prevEpisode = await findEpisode(
         {
-          series: new mongoose.Types.ObjectId(currentEpisode.series),
+          series: new mongoose.Types.ObjectId(currentEpisode.series._id),
           createdAt: { $lt: currentEpisode.createdAt },
         },
         { createdAt: -1 }
@@ -1011,7 +1046,7 @@ const viewEpisode = async (req, res) => {
         const isSubscribed = await UserSubscription.findOne({
           user: req.user._id,
           isSubscribed: true,
-        });
+        }).lean();
         if (isSubscribed) {
           return handleResponse(currentEpisode);
         } else {
@@ -1019,7 +1054,9 @@ const viewEpisode = async (req, res) => {
             return handleResponse(currentEpisode);
           }
           if (unlockNow) {
-            const userCoins = await UserCoin.findOne({ user: req.user._id });
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+            });
             if (!userCoins) {
               // return error404(res, "User has no coins");
               //Changes to show price, coin balance.
@@ -1032,12 +1069,22 @@ const viewEpisode = async (req, res) => {
               let price = currentEpisode.coins;
 
               let data = {
-                price,
-                coinDetails,
+                episodePrice: price,
+                userCoins: coinDetails,
                 currentEpisodeId: currentEpisode._id,
               };
-
-              return success(res, "200", "User coins not found", data);
+              return customErrorWithData(
+                res,
+                403,
+                "User coins not found",
+                data
+              );
+              // return success(res, "200", "User coins not found", data);
+              // return customError(
+              //   res,
+              //   403,
+              //   "Insufficient total coins to purchase episode"
+              // );
             }
             return handleUnlock(currentEpisode, userCoins);
           } else {
@@ -1082,28 +1129,37 @@ const viewEpisode = async (req, res) => {
 //For you episodes
 const episodesForYou = async (req, res) => {
   try {
+    const { page = 1, pageSize = 10 } = req.query;
     // Step 1: Getting all the history of user where series exist in most sorted order.
     const userHistory = await History.find({
       user: req.user._id,
       series: { $exists: true },
     })
       .populate("series")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     if (!userHistory.length) {
-      return res.status(404).json({
-        status: "404",
-        message: "No series found in the user's history",
-      });
+      // return res.status(404).json({
+      //   status: "404",
+      //   message: "No series found in the user's history",
+      // });
+      const data = {
+        data: [],
+        hasMore: false,
+      };
+      return success(res, "200", "Success", data);
     }
 
     // Step 2: Determine the unique categories from the user's history
     const uniqueCategories = new Set();
+    const seriesInHistory = new Set();
     // const seriesByCategory = {};
     userHistory.forEach((record) => {
       if (record.series && record.series.category) {
         const categoryId = String(record.series.category);
         uniqueCategories.add(categoryId);
+        seriesInHistory.add(String(record.series._id));
         // if (!seriesByCategory[categoryId]) {
         //   seriesByCategory[categoryId] = [];
         // }
@@ -1129,29 +1185,42 @@ const episodesForYou = async (req, res) => {
 
       //Find all the series of same category
       const allSeriesInCategory = await Series.find({
+        status: "Published",
+        visibility: "Public",
         category: categoryId,
-      }).select("_id");
+        // _id: { $nin: Array.from(seriesInHistory) },
+      })
+        .select("_id")
+        .lean();
       const allSeriesIds = allSeriesInCategory.map((series) => series._id);
 
       //Get episodes for all series in that category
 
       //All series id of which we need episodes | 3 represents the limit | the id of logged in user
       response = await getEpisodesBySeriesOrder(allSeriesIds, 3, req.user._id);
-
-      //Pagination
     } else if (uniqueCategoriesArray.length === 2) {
       // Level 2: Two unique categories
       const [latestCategory, olderCategory] = uniqueCategoriesArray;
 
       //Latest unique watched series category
       const latestSeries = await Series.find({
+        status: "Published",
+        visibility: "Public",
         category: latestCategory,
-      }).select("_id");
+        // _id: { $nin: Array.from(seriesInHistory) },
+      })
+        .select("_id")
+        .lean();
 
       //Oldest unique watched series category
-      const olderSeries = await Series.find({ category: olderCategory }).select(
-        "_id"
-      );
+      const olderSeries = await Series.find({
+        status: "Published",
+        visibility: "Public",
+        category: olderCategory,
+        // _id: { $nin: Array.from(seriesInHistory) },
+      })
+        .select("_id")
+        .lean();
 
       //Getting the latest and oldest episodes
       const latestEpisodes = await getEpisodesBySeriesOrder(
@@ -1171,16 +1240,31 @@ const episodesForYou = async (req, res) => {
         uniqueCategoriesArray;
 
       const latestSeries = await Series.find({
+        status: "Published",
+        visibility: "Public",
         category: latestCategory,
-      }).select("_id");
+        // _id: { $nin: Array.from(seriesInHistory) },
+      })
+        .select("_id")
+        .lean();
 
       const middleSeries = await Series.find({
+        status: "Published",
+        visibility: "Public",
         category: middleCategory,
-      }).select("_id");
+        // _id: { $nin: Array.from(seriesInHistory) },
+      })
+        .select("_id")
+        .lean();
 
       const oldestSeries = await Series.find({
+        status: "Published",
+        visibility: "Public",
         category: oldestCategory,
-      }).select("_id");
+        // _id: { $nin: Array.from(seriesInHistory) },
+      })
+        .select("_id")
+        .lean();
 
       const latestEpisodes = await getEpisodesBySeriesOrder(
         latestSeries.map((series) => series._id),
@@ -1202,7 +1286,18 @@ const episodesForYou = async (req, res) => {
       response = [...latestEpisodes, ...middleEpisodes, ...oldestEpisodes];
     }
 
-    return success(res, "200", "Success", response);
+    //Pagination
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = page * pageSize;
+    const episodes = response.slice(startIndex, endIndex);
+    const hasMore = response.length > endIndex;
+
+    const data = {
+      data: episodes,
+      hasMore,
+    };
+
+    return success(res, "200", "Success", data);
   } catch (err) {
     error500(res, err);
   }
@@ -1211,7 +1306,11 @@ const episodesForYou = async (req, res) => {
 // Helper function to get episodes in order for a series array
 async function getEpisodesBySeriesOrder(seriesIds, episodeLimit, userId) {
   // Fetch all episodes for the given series IDs, sorted by creation date
-  const episodes = await Episode.find({ series: { $in: seriesIds } })
+  const episodes = await Episode.find({
+    series: { $in: seriesIds },
+    coins: 0,
+    content: "Free",
+  })
     .select(
       "episodeVideo.publicUrl episodeVideo.format coins series title description content totalViews createdAt episodeRating ratings"
     )
@@ -1220,7 +1319,9 @@ async function getEpisodesBySeriesOrder(seriesIds, episodeLimit, userId) {
       select: "thumbnail.publicUrl title content visibility description coin",
       populate: [{ path: "category", select: "title" }],
     })
-    .sort({ createdAt: 1 }); // Sort by creation date to get episodes in order
+    .sort({ createdAt: 1 })
+    .lean();
+  // Sort by creation date to get episodes in order
 
   // Group episodes by series ID and limit to the first 3 episodes
   const episodesBySeries = {};
@@ -1267,11 +1368,10 @@ async function getEpisodesBySeriesOrder(seriesIds, episodeLimit, userId) {
             content: episode.content || "",
             totalViews: episode.totalViews || 0,
             episodeRating: episode.episodeRating || 0,
-            // ratings: episode.ratings || [],
             createdAt: episode.createdAt || "",
           },
-          isRated: isRated,
-          isBookmarked: isBookmarked || null,
+          isRated: isRated || false,
+          isBookmarked: isBookmarked ? true : false,
         });
       }
     }

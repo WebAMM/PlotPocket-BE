@@ -35,7 +35,7 @@ const getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find({ status: "Active" }).select(
       "_id title type status createdAt totalViews"
-    );
+    ).lean()
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);
@@ -55,16 +55,15 @@ const getCategoriesByType = async (req, res) => {
   //For Admin Panel check that id matches for what replacing
   try {
     if (id) {
-      const categoryExist = await Category.findById(id, type);
+      const categoryExist = await Category.findById(id, type).lean();
       if (!categoryExist) {
         return error409(res, `Category don't exist`);
       }
       query._id = { $ne: id };
     }
-
     const categories = await Category.find(query).select(
       "_id title type status createdAt totalViews"
-    );
+    ).lean()
     return success(res, "200", "Success", categories);
   } catch (err) {
     return error500(res, err);

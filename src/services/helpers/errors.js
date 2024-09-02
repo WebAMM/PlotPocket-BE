@@ -38,10 +38,19 @@ const customError = (res, statusCode, message) => {
   });
 };
 
+const customErrorWithData = (res, statusCode, message, data) => {
+  res.status(statusCode).json({
+    status: statusCode,
+    message: message,
+    data: data,
+  });
+};
+
 module.exports = {
   error400,
   error404,
   error409,
   error500,
   customError,
+  customErrorWithData,
 };

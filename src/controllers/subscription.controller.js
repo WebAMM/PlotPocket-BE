@@ -68,7 +68,7 @@ const getAllAppSubscriptions = async (req, res) => {
   try {
     const subscriptions = await Subscription.find()
       .select("plan price description stripeProductId stripePriceId createdAt")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 }).lean();
     return success(res, "200", "Success", subscriptions);
   } catch (err) {
     error500(res, err);

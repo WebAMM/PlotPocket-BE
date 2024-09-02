@@ -217,12 +217,12 @@ const getAllNovels = async (req, res) => {
         path: "author",
         select: "authorPic.publicUrl name gender",
       })
-      .populate("chapters");
+      .populate("chapters")
+      .lean();
 
     if (novels.length === 0) {
       return success(res, "200", "Success", novels);
     }
-
     const allNovels = novels.map((novel) => ({
       _id: novel._id,
       thumbnail: novel.thumbnail,
@@ -370,7 +370,6 @@ const getAuthorNovels = async (req, res) => {
         select: "authorPic.publicUrl name gender",
       })
       .populate("chapters");
-
     if (novels.length === 0) {
       return success(res, "200", "Success", novels);
     }
@@ -755,7 +754,7 @@ const bestNovels = async (req, res) => {
       category !== "undefined" &&
       category !== "false"
     ) {
-      const existCategory = await Category.findById(category);
+      const existCategory = await Category.findById(category).lean();
       if (!existCategory) {
         return error409(res, "Category not found");
       }
@@ -781,7 +780,8 @@ const bestNovels = async (req, res) => {
           sort: { createdAt: 1 },
           limit: 1,
         },
-      });
+      })
+      .lean();
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalNovelsCount;
@@ -843,7 +843,8 @@ const topNovels = async (req, res) => {
           sort: { createdAt: 1 },
           limit: 1,
         },
-      });
+      })
+      .lean();
 
     const hasMore = skip + limit < totalNovelsCount;
 
@@ -944,7 +945,8 @@ const getTopRatedNovels = async (req, res) => {
       .populate({
         path: "author",
         select: "name",
-      });
+      })
+      .lean();
 
     //To handle infinite scroll on frontend
     const hasMore = skip + limit < totalNovelsCount;

@@ -49,8 +49,7 @@ const getAllSearchHistory = async (req, res) => {
       .limit(5)
       .populate({
         path: "episodes",
-        select:
-          "episodeVideo.publicUrl title content coins",
+        select: "episodeVideo.publicUrl title content coins",
         options: {
           sort: { createdAt: 1 },
           limit: 1,
@@ -67,7 +66,9 @@ const getAllSearchHistory = async (req, res) => {
       visibility: "Public",
       averageRating: { $gte: 1 },
     })
-      .select("thumbnail.publicUrl averageRating type title averageRating totalViews")
+      .select(
+        "thumbnail.publicUrl averageRating type title averageRating totalViews"
+      )
       .sort({
         averageRating: -1,
         createdAt: -1,

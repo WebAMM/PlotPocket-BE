@@ -36,7 +36,6 @@ router.get(
   allController.allStore
 );
 
-
 //[APP] Increase View
 // router.post(
 //   "/app/inc-view",

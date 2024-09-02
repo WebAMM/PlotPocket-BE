@@ -31,7 +31,7 @@ const addReward = async (req, res) => {
 //Get Reward
 const getRewards = async (req, res) => {
   try {
-    const reward = await Reward.findOne();
+    const reward = await Reward.findOne().lean();
     return success(res, "200", "Success", reward);
   } catch (err) {
     error500(res, err);
