@@ -5,6 +5,7 @@ const UserCoin = require("../models/UserCoin.model");
 const UserPurchases = require("../models/UserPurchases.model");
 const myList = require("../models/MyList.model");
 const UserSubscription = require("../models/UserSubscription.model");
+const SearchHistory = require("../models/SearchHistory.model");
 //Responses and errors
 const {
   error500,
@@ -381,7 +382,7 @@ const updateChapter = async (req, res) => {
 
 const viewChapter = async (req, res) => {
   const { id } = req.params;
-  const { up, down, autoUnlock, unlockNow } = req.query;
+  const { up, down, autoUnlock, unlockNow, fromSearch } = req.query;
 
   try {
     const currentChapter = await Chapter.findById(id)
@@ -399,6 +400,20 @@ const viewChapter = async (req, res) => {
 
     if (!currentChapter) {
       return error404(res, "Chapter not found");
+    }
+
+    if (fromSearch) {
+      const existSearchHistory = await SearchHistory.findOne({
+        user: req.user._id,
+        novel: currentChapter.novel,
+      }).lean();
+
+      if (!existSearchHistory) {
+        await SearchHistory.create({
+          user: req.user._id,
+          novel: currentChapter.novel,
+        });
+      }
     }
 
     if (

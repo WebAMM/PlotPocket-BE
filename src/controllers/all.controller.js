@@ -105,7 +105,7 @@ const globalSearch = async (req, res) => {
 // Single novel/series detail with comments + might like.
 const singleDetailPage = async (req, res) => {
   const { id } = req.params;
-  const { type, fromSearch } = req.query;
+  const { type } = req.query;
   let content;
   let mightLike;
 
@@ -210,19 +210,19 @@ const singleDetailPage = async (req, res) => {
         chapters: item.chapters?.[0] || {},
       }));
 
-      if (fromSearch) {
-        const existSearchHistory = await SearchHistory.findOne({
-          user: req.user._id,
-          novel: content._id,
-        }).lean();
+      // if (fromSearch) {
+      //   const existSearchHistory = await SearchHistory.findOne({
+      //     user: req.user._id,
+      //     novel: content._id,
+      //   }).lean();
 
-        if (!existSearchHistory) {
-          await SearchHistory.create({
-            user: req.user._id,
-            novel: content._id,
-          });
-        }
-      }
+      //   if (!existSearchHistory) {
+      //     await SearchHistory.create({
+      //       user: req.user._id,
+      //       novel: content._id,
+      //     });
+      //   }
+      // }
     } else if (type === "Series") {
       content = await Series.findById(id)
         .select(
@@ -298,19 +298,19 @@ const singleDetailPage = async (req, res) => {
         episodes: item.episodes?.[0] || {},
       }));
 
-      if (fromSearch) {
-        const existSearchHistory = await SearchHistory.findOne({
-          user: req.user._id,
-          series: content._id,
-        }).lean();
+      // if (fromSearch) {
+      //   const existSearchHistory = await SearchHistory.findOne({
+      //     user: req.user._id,
+      //     series: content._id,
+      //   }).lean();
 
-        if (!existSearchHistory) {
-          await SearchHistory.create({
-            user: req.user._id,
-            series: content._id,
-          });
-        }
-      }
+      //   if (!existSearchHistory) {
+      //     await SearchHistory.create({
+      //       user: req.user._id,
+      //       series: content._id,
+      //     });
+      //   }
+      // }
     }
     const data = {
       detail: content,

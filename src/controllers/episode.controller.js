@@ -6,6 +6,7 @@ const UserCoin = require("../models/UserCoin.model");
 const myList = require("../models/MyList.model");
 const UserSubscription = require("../models/UserSubscription.model");
 const History = require("../models/History.model");
+const SearchHistory = require("../models/SearchHistory.model");
 //Responses and errors
 const {
   error500,
@@ -730,7 +731,7 @@ const updateEpisode = async (req, res) => {
 //View Episode
 const viewEpisode = async (req, res) => {
   const { id } = req.params;
-  const { up, down, autoUnlock, unlockNow } = req.query;
+  const { up, down, autoUnlock, unlockNow, fromSearch } = req.query;
 
   try {
     const currentEpisode = await Episode.findById(id)
@@ -746,6 +747,20 @@ const viewEpisode = async (req, res) => {
 
     if (!currentEpisode) {
       return error404(res, "Episode not found");
+    }
+
+    if (fromSearch) {
+      const existSearchHistory = await SearchHistory.findOne({
+        user: req.user._id,
+        series: currentEpisode.series,
+      }).lean();
+
+      if (!existSearchHistory) {
+        await SearchHistory.create({
+          user: req.user._id,
+          series: currentEpisode.series,
+        });
+      }
     }
 
     if (
