@@ -58,7 +58,7 @@ const addChapter = async (req, res) => {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `chapter/${Date.now()}_${file.originalname}`,
         Body: fs.createReadStream(req.file.path),
-        ContentType: req.file.mimetype, 
+        ContentType: req.file.mimetype,
       };
 
       const uploadResult = await uploadFileToS3(params);
@@ -396,7 +396,8 @@ const viewChapter = async (req, res) => {
           { path: "category", select: "title" },
           { path: "author", select: "name" },
         ],
-      });
+      })
+      .lean();
 
     if (!currentChapter) {
       return error404(res, "Chapter not found");
@@ -429,9 +430,13 @@ const viewChapter = async (req, res) => {
       return error400(res, "Query must be either up or down");
     }
 
-    if (up && autoUnlock) {
-      return error400(res, "Auto unlock should not be true with up");
-    }
+    // if (down && autoUnlock) {
+    //   return error400(res, "Auto unlock should not be true with down");
+    // }
+
+    // if (!up && autoUnlock) {
+    //   return error400(res, "Auto unlock should not be true with up");
+    // }
 
     if ((down || up) && unlockNow) {
       return error400(
@@ -440,9 +445,9 @@ const viewChapter = async (req, res) => {
       );
     }
 
-    if (autoUnlock && unlockNow) {
-      return error400(res, "Either autoUnlock or unlockNow");
-    }
+    // if (autoUnlock && unlockNow) {
+    //   return error400(res, "Either autoUnlock or unlockNow");
+    // }
 
     const findChapter = async (condition, sort) => {
       return Chapter.findOne(condition)
@@ -457,7 +462,8 @@ const viewChapter = async (req, res) => {
             { path: "category", select: "title" },
             { path: "author", select: "name" },
           ],
-        });
+        })
+        .lean();
     };
 
     const checkUserPurchases = async (userId, chapterId) => {
@@ -516,7 +522,6 @@ const viewChapter = async (req, res) => {
 
       // Deduct the remaining cost from total coins
       totalCoins = refillCoins + bonusCoins;
-
       return { totalCoins, refillCoins, bonusCoins };
     };
 
@@ -571,7 +576,7 @@ const viewChapter = async (req, res) => {
         const isSubscribed = await UserSubscription.findOne({
           user: req.user._id,
           isSubscribed: true,
-        });
+        }).lean();
         if (isSubscribed) {
           return handleResponse(nextChapter);
         } else {

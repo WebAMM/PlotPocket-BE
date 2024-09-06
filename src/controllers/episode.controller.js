@@ -776,13 +776,13 @@ const viewEpisode = async (req, res) => {
       return error400(res, "Query must be either up or down");
     }
 
-    if (down && autoUnlock) {
-      return error400(res, "Auto unlock should not be true with down");
-    }
+    // if (down && autoUnlock) {
+    //   return error400(res, "Auto unlock should not be true with down");
+    // }
 
-    if (!up && autoUnlock) {
-      return error400(res, "Auto unlock should only be used with up");
-    }
+    // if (!up && autoUnlock) {
+    //   return error400(res, "Auto unlock should only be used with up");
+    // }
 
     if ((down || up) && unlockNow) {
       return error400(
@@ -791,9 +791,9 @@ const viewEpisode = async (req, res) => {
       );
     }
 
-    if (autoUnlock && unlockNow) {
-      return error400(res, "Either autoUnlock or unlockNow");
-    }
+    // if (autoUnlock && unlockNow) {
+    //   return error400(res, "Either autoUnlock or unlockNow");
+    // }
 
     const findEpisode = async (condition, sort) => {
       return Episode.findOne(condition)

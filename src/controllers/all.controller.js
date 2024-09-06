@@ -930,7 +930,7 @@ const allStore = async (req, res) => {
     }
 
     const data = {
-      userCoins,
+      userCoins: coinDetails,
       coinRefills,
       subscriptions,
     };
