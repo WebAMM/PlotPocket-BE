@@ -58,7 +58,7 @@ const getAllAppCoinRefill = async (req, res) => {
     const coinRefills = await CoinRefill.find()
       .select("price coins discount bonus description")
       .sort({ createdAt: -1 })
-      .lean()
+      .lean();
     return success(res, "200", "Success", coinRefills);
   } catch (err) {
     error500(res, err);
@@ -126,7 +126,6 @@ const refillCoins = async (req, res) => {
     }
     let discountedPrice = coinRefill.discountedPrice;
     if (discountedPrice < 0.5) {
-      // discountPrice < 0.50
       return error400(res, "Price must be at least $0.50 USD");
     }
     let priceInCents = Math.round(discountedPrice * 100);

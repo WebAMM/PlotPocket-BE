@@ -50,8 +50,8 @@ router.delete(
 //[APP] Refill the coins using stripe charge API
 router.post(
   "/app/refill/:id",
-  // verifyToken,
-  // verifyRole(["User"]),
+  verifyToken,
+  verifyRole(["User"]),
   coinRefill.refillCoins
 );
 
