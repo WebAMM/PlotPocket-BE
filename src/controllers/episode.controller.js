@@ -126,7 +126,7 @@ const addEpisode = async (req, res) => {
         episodeVideo: {
           publicUrl: uploadResult.Location,
           publicId: uploadResult.Key,
-          format: fileFormat
+          format: fileFormat,
         },
       });
 
@@ -1071,7 +1071,13 @@ const viewEpisode = async (req, res) => {
               coinDetails,
               currentEpisodeId: nextEpisode._id,
             };
-            return success(res, "200", "Use unlock to purchase episode", data);
+            //change in demo --> return success(res, "200", "Use unlock to purchase episode", data);
+            return customErrorWithData(
+              res,
+              400,
+              "Use unlock to purchase episode",
+              data
+            );
           }
         }
       }
@@ -1185,7 +1191,13 @@ const viewEpisode = async (req, res) => {
               coinDetails,
               currentEpisodeId: currentEpisode._id,
             };
-            return success(res, "200", "Use unlock to purchase episode", data);
+            return customErrorWithData(
+              res,
+              400,
+              "Use unlock to purchase episode",
+              data
+            );
+            //change in demo --> return success(res, "200", "Use unlock to purchase episode", data);
           }
         }
       }
