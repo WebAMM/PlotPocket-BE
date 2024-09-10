@@ -57,8 +57,8 @@ const registerUser = async (req, res) => {
       const params = {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `user/${Date.now()}_${file.originalname}`,
-        Body: fs.createReadStream(req.file.path),
-        ContentType: req.file.mimetype,
+        Body: file.buffer,
+        ContentType: file.mimetype,
       };
 
       //Upload file to S3
@@ -266,7 +266,9 @@ const guestLogin = async (req, res) => {
       },
     });
 
-    const newUser = await User.findById(user._id).select("userName email role password profileImage.publicUrl createdAt");
+    const newUser = await User.findById(user._id).select(
+      "userName email role password profileImage.publicUrl createdAt"
+    );
     const secret = config.jwtPrivateKey;
     const token = jwt.sign(
       {
@@ -284,7 +286,7 @@ const guestLogin = async (req, res) => {
       userName: newUser.userName,
       role: newUser.role,
       createdAt: newUser.createdAt,
-      profileImage: newUser.profileImage
+      profileImage: newUser.profileImage,
     };
 
     return success(res, "200", "Guest login success", {
