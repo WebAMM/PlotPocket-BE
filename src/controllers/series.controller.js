@@ -71,8 +71,8 @@ const addSeries = async (req, res) => {
         const params = {
           Bucket: process.env.S3_BUCKET_NAME,
           Key: `series/${Date.now()}_${file.originalname}`,
-          Body: fs.createReadStream(req.file.path),
-          ContentType: req.file.mimetype,
+          Body: file.buffer,
+          ContentType: file.mimetype,
         };
 
         const uploadResult = await uploadFileToS3(params);
@@ -114,8 +114,8 @@ const addSeries = async (req, res) => {
         const params = {
           Bucket: process.env.S3_BUCKET_NAME,
           Key: `series/${Date.now()}_${file.originalname}`,
-          Body: fs.createReadStream(req.file.path),
-          ContentType: req.file.mimetype,
+          Body: file.buffer,
+          ContentType: file.mimetype,
         };
 
         //Upload file to S3
@@ -168,8 +168,8 @@ const addSeriesToDraft = async (req, res) => {
       const params = {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `series/${Date.now()}_${file.originalname}`,
-        Body: fs.createReadStream(req.file.path),
-        contentType: req.file.mimetype,
+        Body: file.buffer,
+        contentType: file.mimetype,
       };
 
       //Upload file to S3
@@ -236,8 +236,8 @@ const editSeries = async (req, res) => {
       const uploadParams = {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `series/${Date.now()}_${file.originalname}`,
-        Body: fs.createReadStream(req.file.path),
-        ContentType: req.file.mimetype,
+        Body: file.buffer,
+        ContentType: file.mimetype,
       };
 
       const uploadResult = await uploadFileToS3(uploadParams);

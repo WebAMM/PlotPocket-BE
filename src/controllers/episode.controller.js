@@ -871,7 +871,7 @@ const viewEpisode = async (req, res) => {
     const checkUserPurchases = async (userId, episodeId) => {
       const userPurchases = await UserPurchases.findOne({
         user: userId,
-      }).lean();
+      });
       if (userPurchases) {
         return userPurchases.episodes.includes(episodeId);
       }
