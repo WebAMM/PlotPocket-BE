@@ -24,65 +24,119 @@ const {
   deleteFileFromBucket,
 } = require("../services/helpers/awsConfig");
 const extractFormat = require("../services/helpers/extractFormat");
-const fs = require("fs");
 const addToHistory = require("../services/helpers/addToHistory");
 const {
   updateViews,
   updateCategoryViews,
 } = require("../services/helpers/incViews");
+//For compression of episodes and bucket upload
+const fs = require("fs");
+const path = require("path");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("ffmpeg-static");
+
+// Set the path for FFmpeg
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 //Add Episode
 const addEpisode = async (req, res) => {
   const { title } = req.body;
   const { id } = req.params;
+
   try {
     const seriesExist = await Series.findOne({
       _id: id,
       status: "Published",
       visibility: "Public",
     });
+
     if (!seriesExist) {
       return error404(res, "Series not found");
     }
+
     const existEpisode = await Episode.findOne({
       title,
       series: seriesExist._id,
     });
+
     if (existEpisode) {
       return error409(
         res,
-        "Episode with this name already exist in this series"
+        "Episode with this name already exists in this series"
       );
     }
+
     if (req.file) {
       const file = req.file;
       const fileFormat = extractFormat(file.mimetype);
 
-      //Upload file to S3
-      const params = {
+      // Save buffer to a temporary file for compression
+      const tempInputFilePath = path.join(__dirname, "temp_video.mp4");
+      const tempOutputFilePath = path.join(__dirname, "compressed_video.mp4");
+      //Temporary input video file saved
+      fs.writeFileSync(tempInputFilePath, file.buffer);
+      console.log(
+        "Temporary input video file saved for debugging:",
+        tempInputFilePath
+      );
+
+      //Compress video using FFmpeg with file output
+      await new Promise((resolve, reject) => {
+        ffmpeg(tempInputFilePath) // Use the temporary file path as input
+          .output(tempOutputFilePath) // Write output to a temporary file
+          .outputOptions("-c:v libx264") // Use H.264 codec
+          .outputOptions("-crf 28") // Set CRF value for more compression (lower quality)
+          .outputOptions("-preset slow") // Use a slower preset for better compression
+          .format("mp4") // Output format
+          .on("stderr", (stderrLine) =>
+            console.log("FFmpeg stderr:", stderrLine)
+          ) // Log FFmpeg errors
+          .on("end", () => {
+            console.log("Compression finished.");
+            resolve();
+          })
+          .on("error", (err) => {
+            console.error("Error during compression:", err);
+            reject(err);
+          })
+          .run(); // Run FFmpeg command
+      });
+
+      //Read compressed file into a buffer
+      const compressedBuffer = fs.readFileSync(tempOutputFilePath);
+
+      //Upload compressed file to S3
+      const s3Params = {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: `episode/${Date.now()}_${file.originalname}`,
-        Body: fs.createReadStream(req.file.path),
-        ContentType: req.file.mimetype,
+        Body: compressedBuffer,
+        ContentType: "video/mp4",
       };
 
-      const uploadResult = await uploadFileToS3(params);
+      const uploadResult = await uploadFileToS3(s3Params);
 
+      //Clean up temporary files made for compression
+      fs.unlinkSync(tempInputFilePath);
+      fs.unlinkSync(tempOutputFilePath);
+
+      // Save episode details in the database
       const newEpisode = await Episode.create({
         ...req.body,
         series: seriesExist._id,
         episodeVideo: {
           publicUrl: uploadResult.Location,
           publicId: uploadResult.Key,
-          format: fileFormat,
+          format: fileFormat
         },
       });
+
       await Series.updateOne(
         { _id: id },
         { $push: { episodes: newEpisode._id } },
         { new: true }
       );
-      return status200(res, "Episode added in series");
+
+      return status200(res, "Episode added to series");
     } else {
       return error400(res, "Episode video is required");
     }

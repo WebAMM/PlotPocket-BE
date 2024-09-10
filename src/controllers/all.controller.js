@@ -867,11 +867,37 @@ const stripeWebhook = async (req, res) => {
       }
     }
     //For charge API
-    if (event.type === "charge.succeeded") {
-      const charge = event.data.object;
-      const userId = charge.metadata.userId;
-      const coinRefillId = charge.metadata.coinRefillId;
+    // if (event.type === "charge.succeeded") {
+    //   const charge = event.data.object;
+    //   const userId = charge.metadata.userId;
+    //   const coinRefillId = charge.metadata.coinRefillId;
 
+    //   const coinRefill = await CoinRefill.findById(coinRefillId);
+    //   if (!coinRefill) {
+    //     return error409(res, "No coin refill found");
+    //   }
+    //   await UserCoin.findOneAndUpdate(
+    //     {
+    //       user: userId,
+    //     },
+    //     {
+    //       $inc: {
+    //         refillCoins: coinRefill.coins,
+    //         bonusCoins: coinRefill.bonus,
+    //         totalCoins: coinRefill.coins + coinRefill.bonus,
+    //       },
+    //     },
+    //     {
+    //       upsert: true,
+    //       runValidators: true,
+    //     }
+    //   );
+    // }
+
+    if (event.type === "payment_intent_succeeded") {
+      const intent = event.data.object;
+      const userId = intent.metadata.userId;
+      const coinRefillId = intent.metadata.coinRefillId;
       const coinRefill = await CoinRefill.findById(coinRefillId);
       if (!coinRefill) {
         return error409(res, "No coin refill found");

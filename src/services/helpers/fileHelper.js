@@ -2,11 +2,11 @@ const multer = require("multer");
 const path = require("path");
 
 const upload = multer({
-  storage: multer.diskStorage({}),
+  storage: multer.memoryStorage(),
   // limits: { fileSize: 100  1024  1024 }, //100mb
   limits: { fieldSize: 52428800 }, //100mb
   fileFilter: (req, file, cb) => {
-    let ext = path.extname(file.originalname);
+    let ext = path.extname(file.originalname).toLowerCase();
     if (
       ext !== ".jpg" &&
       ext !== ".jpeg" &&

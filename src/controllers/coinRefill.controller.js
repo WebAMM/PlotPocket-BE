@@ -115,10 +115,10 @@ const deleteCoinRefill = async (req, res) => {
   }
 };
 
-//Refill the coins using stripe charge API
+//Refill the coins using stripe payment intent API
 const refillCoins = async (req, res) => {
   const { id } = req.params;
-  const { token } = req.body;
+  // const { token } = req.body;
   try {
     const coinRefill = await CoinRefill.findById(id).lean();
     if (!coinRefill) {
@@ -129,17 +129,19 @@ const refillCoins = async (req, res) => {
       return error400(res, "Price must be at least $0.50 USD");
     }
     let priceInCents = Math.round(discountedPrice * 100);
-    await stripe.charges.create({
+    const paymentIntent = await stripe.paymentIntents.create({
       amount: priceInCents,
       currency: "usd",
-      source: token, // obtained from Stripe.js or Elements
       description: coinRefill.description,
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: {
         userId: req.user._id.toString(),
         coinRefillId: coinRefill._id.toString(),
       },
     });
-    return status200(res, "Coins refilled successfully");
+    return success(res, "200", "Success", paymentIntent.client_secret);
   } catch (err) {
     return error500(res, err);
   }
