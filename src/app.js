@@ -10,6 +10,7 @@ const allController = require("./controllers/all.controller");
 require("dotenv").config();
 
 //Stripe webhook, due to application/json
+
 //[APP] Stripe webhook
 app.post(
   "/plotpocket/api/v1/stripe-webhook",
