@@ -68,7 +68,8 @@ const getAllAppSubscriptions = async (req, res) => {
   try {
     const subscriptions = await Subscription.find()
       .select("plan price description stripeProductId stripePriceId createdAt")
-      .sort({ createdAt: -1 }).lean();
+      .sort({ createdAt: -1 })
+      .lean();
     return success(res, "200", "Success", subscriptions);
   } catch (err) {
     error500(res, err);
@@ -160,7 +161,7 @@ const purchaseSubscription = async (req, res) => {
     let customer;
     //Check if existing customer in stripe account
     const existsCustomer = await stripe.customers.search({
-      query: `metadata['userId']:'665e066d49ba272266e993e7'`,
+      query: `metadata['userId']: "${req.user._id}"`,
     });
     if (existsCustomer.data.length > 0) {
       //Customer already exist
@@ -183,9 +184,9 @@ const purchaseSubscription = async (req, res) => {
     } else {
       //No customer found, create a new customer
       customer = await stripe.customers.create({
-        email: "umar@gmail.com",
+        email: req.user.email,
         metadata: {
-          userId: "665e066d49ba272266e993e7",
+          userId: req.user._id,
         },
       });
     }
@@ -224,20 +225,19 @@ const purchaseSubscription = async (req, res) => {
       ],
       metadata: {
         //User id will help in webhook to update related user data
-        userId: "665e066d49ba272266e993e7".toString(),
+        userId: req.user._id.toString(),
       },
       customer: customer.id,
       subscription_data: {
         metadata: {
           subscriptionId: id.toString(),
-          userId: "665e066d49ba272266e993e7".toString(),
+          userId: req.user._id.toString(),
         },
       },
     });
     return res.json({ url: session.url });
   } catch (err) {
-    console.log("The err", err);
-    error500(res, err);
+    return error500(res, err);
   }
 };
 

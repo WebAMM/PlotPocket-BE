@@ -50,8 +50,8 @@ router.delete(
 //[APP] Purchase subscription using stripe checkout API
 router.post(
   "/app/purchase/:id",
-  // verifyToken,
-  // verifyRole(["User"]),
+  verifyToken,
+  verifyRole(["User"]),
   subscriptionController.purchaseSubscription
 );
 

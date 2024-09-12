@@ -13,6 +13,7 @@ const {
   error404,
   error400,
   customError,
+  customErrorWithData,
 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 //helpers and functions
@@ -488,7 +489,7 @@ const viewChapter = async (req, res) => {
 
       const data = {
         chapter,
-        isBookmarked: isBookmarked || false,
+        isBookmarked: isBookmarked ? true : false,
       };
 
       return success(res, "200", "Success", data);
@@ -527,10 +528,21 @@ const viewChapter = async (req, res) => {
 
     const handleUnlock = async (chapter, userCoins) => {
       const result = await handleCoinDeduction(userCoins, chapter.coins);
-
       // Check if there was an error in handleCoinDeduction
       if (result.error) {
-        return customError(res, 403, result.error);
+        // return customError(res, 403, result.error);
+        let coinDetails = {
+          bonusCoins: userCoins?.bonusCoins || 0,
+          refillCoins: userCoins?.refillCoins || 0,
+          totalCoins: userCoins?.totalCoins || 0,
+        };
+        let price = chapter.coins || 0;
+        let data = {
+          chapterPrice: price,
+          userCoins: coinDetails,
+          currentChapterId: chapter._id,
+        };
+        return customErrorWithData(res, 403, result.error, data);
       }
 
       const { totalCoins, refillCoins, bonusCoins } = result;
@@ -555,7 +567,7 @@ const viewChapter = async (req, res) => {
       return handleResponse(chapter);
     };
 
-    if (down) {
+    if (up) {
       const nextChapter = await findChapter(
         {
           novel: new mongoose.Types.ObjectId(currentChapter.novel._id),
@@ -565,7 +577,7 @@ const viewChapter = async (req, res) => {
       );
 
       if (!nextChapter) {
-        return error404(res, "No more chapters in the novel");
+        return error404(res, "No more chapters of novel");
       }
 
       if (nextChapter.content === "Free" && nextChapter.coins === 0) {
@@ -573,6 +585,7 @@ const viewChapter = async (req, res) => {
       }
 
       if (nextChapter.content === "Paid" && nextChapter.coins > 0) {
+        // Check if the user has an active subscription
         const isSubscribed = await UserSubscription.findOne({
           user: req.user._id,
           isSubscribed: true,
@@ -589,15 +602,61 @@ const viewChapter = async (req, res) => {
               totalCoins: { $gte: 1 },
             });
             if (!userCoins) {
-              return error404(res, "User has no coins");
+              let coinDetails = {
+                bonusCoins: 0,
+                refillCoins: 0,
+                totalCoins: 0,
+              };
+              let price = nextChapter.coins;
+              let data = {
+                chapterPrice: price,
+                userCoins: coinDetails,
+                currentChapterId: nextChapter._id,
+              };
+              // return success(res, "200", "User coins not found", data);
+              return customErrorWithData(
+                res,
+                403,
+                "User coins not found",
+                data
+              );
+              // return error404(res, "User has no coins");
             }
             return handleUnlock(nextChapter, userCoins);
           } else {
-            return customError(res, 403, "Use coins to unlock chapter");
+            let coinDetails = {
+              bonusCoins: 0,
+              refillCoins: 0,
+              totalCoins: 0,
+            };
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+              totalCoins: { $gte: 1 },
+            });
+            if (userCoins) {
+              coinDetails = {
+                bonusCoins: userCoins?.bonusCoins,
+                refillCoins: userCoins?.refillCoins,
+                totalCoins: userCoins?.totalCoins,
+              };
+            }
+            let price = nextChapter.coins;
+            let data = {
+              price,
+              coinDetails,
+              currentChapterId: nextChapter._id,
+            };
+            return customErrorWithData(
+              res,
+              400,
+              "Use unlock to purchase chapter",
+              data
+            );
+            // return customError(res, 403, "Use coins to unlock chapter");
           }
         }
       }
-    } else if (up) {
+    } else if (down) {
       const prevChapter = await findChapter(
         {
           novel: new mongoose.Types.ObjectId(currentChapter.novel._id),
@@ -637,7 +696,7 @@ const viewChapter = async (req, res) => {
         const isSubscribed = await UserSubscription.findOne({
           user: req.user._id,
           isSubscribed: true,
-        });
+        }).lean();
         if (isSubscribed) {
           return handleResponse(currentChapter);
         } else {
@@ -647,11 +706,57 @@ const viewChapter = async (req, res) => {
           if (unlockNow) {
             const userCoins = await UserCoin.findOne({ user: req.user._id });
             if (!userCoins) {
-              return error404(res, "User has no coins");
+              let coinDetails = {
+                bonusCoins: 0,
+                refillCoins: 0,
+                totalCoins: 0,
+              };
+              let price = currentChapter.coins;
+
+              let data = {
+                chapterPrice: price,
+                userCoins: coinDetails,
+                currentChapterId: currentChapter._id,
+              };
+              return customErrorWithData(
+                res,
+                403,
+                "User coins not found",
+                data
+              );
+              // return error404(res, "User has no coins");
             }
             return handleUnlock(currentChapter, userCoins);
           } else {
-            return customError(res, 403, "Use coins to unlock chapter");
+            let coinDetails = {
+              bonusCoins: 0,
+              refillCoins: 0,
+              totalCoins: 0,
+            };
+            const userCoins = await UserCoin.findOne({
+              user: req.user._id,
+              totalCoins: { $gte: 1 },
+            });
+            if (userCoins) {
+              coinDetails = {
+                bonusCoins: userCoins?.bonusCoins,
+                refillCoins: userCoins?.refillCoins,
+                totalCoins: userCoins?.totalCoins,
+              };
+            }
+            let price = currentChapter.coins;
+            let data = {
+              price,
+              coinDetails,
+              currentChapterId: currentChapter._id,
+            };
+            return customErrorWithData(
+              res,
+              400,
+              "Use unlock to purchase chapter",
+              data
+            );
+            // return customError(res, 403, "Use coins to unlock chapter");
           }
         }
       }

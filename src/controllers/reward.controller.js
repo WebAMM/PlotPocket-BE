@@ -157,7 +157,9 @@ const getRewardsForUser = async (req, res) => {
 
     const rewards = await Reward.findOne({ status: "Active" });
 
-    let rewardsWithClaim = [];
+    let rewardsWithFlags = [];
+    let canClaimBtn = false;
+    let claimedDay = 0;
 
     if (rewards) {
       if (rewards.weeklyRewards.length !== 7) {
@@ -168,15 +170,24 @@ const getRewardsForUser = async (req, res) => {
         user: req.user._id,
       });
 
-      // Function to generate the rewards with the canClaim flag
-      const generateRewardsWithClaim = (claimedDay, canClaim) => {
-        return rewards.weeklyRewards.map((reward) => ({
-          day: reward.day,
-          reward: reward.reward,
-          canClaim:
-            canClaim &&
-            (claimedDay < 7 ? claimedDay + 1 === reward.day : reward.day === 1),
-        }));
+      const generateRewardsWithFlags = (claimedDay, isNextDay) => {
+        return rewards.weeklyRewards.map((reward) => {
+          let isClaimed = reward.day <= claimedDay;
+          let isNextClaimable = reward.day === claimedDay + 1;
+          let isUpcoming = !isClaimed && !isNextClaimable;
+
+          if (isNextClaimable && isNextDay) {
+            canClaimBtn = true;
+          }
+
+          return {
+            day: reward.day,
+            reward: reward.reward,
+            isClaimed,
+            isNextClaimable,
+            isUpcoming,
+          };
+        });
       };
 
       if (userSteak && userSteak.claimedDate) {
@@ -188,32 +199,39 @@ const getRewardsForUser = async (req, res) => {
             "days"
           );
           if (daysMissed > 1) {
-            // userSteak.claimedDay = 0;
-            // userSteak.claimedDate = new Date(); // Reset the claimed date to today
-            // await userSteak.save();
-            //If the user missed a day, reset the streak providing user with day 1 claim only.
-            rewardsWithClaim = generateRewardsWithClaim(0, true);
+            rewardsWithFlags = generateRewardsWithFlags(0, true);
           } else {
-            rewardsWithClaim = generateRewardsWithClaim(
-              userSteak.claimedDay,
-              true
-            );
+            if (userSteak.claimedDay >= 7) {
+              rewardsWithFlags = generateRewardsWithFlags(0, true);
+            } else {
+              rewardsWithFlags = generateRewardsWithFlags(
+                userSteak.claimedDay,
+                true
+              );
+            }
           }
         } else {
-          rewardsWithClaim = generateRewardsWithClaim(
+          rewardsWithFlags = generateRewardsWithFlags(
             userSteak.claimedDay,
             false
           );
         }
       } else {
         // If no streak exists, the user can only claim day 1 reward
-        rewardsWithClaim = generateRewardsWithClaim(0, true);
+        rewardsWithFlags = generateRewardsWithFlags(0, true);
       }
+
+      // Calculate the claimedDay based on isClaimed flags
+      claimedDay = rewardsWithFlags.reduce((maxDay, reward) => {
+        return reward.isClaimed ? Math.max(maxDay, reward.day) : maxDay;
+      }, 0);
     }
 
     const data = {
-      rewards: rewardsWithClaim, // This will be an empty array if no rewards are active
+      rewards: rewardsWithFlags, // This will be an empty array if no rewards are active
       bonusCoins: bonusCoins,
+      canClaimBtn,
+      claimedDay,
     };
 
     return success(res, "200", "Success", data);
@@ -259,7 +277,8 @@ const claimReward = async (req, res) => {
           runValidators: true,
         }
       );
-      return status200(res, "Day 1 reward claimed successfully");
+      // return status200(res, "Day 1 reward claimed successfully");
+      return status200(res, `Bonus of ${rewards.weeklyRewards[0].reward} Claimed`);
     } else {
       if (userSteak && userSteak.claimedDate) {
         const isNextDay = timeDiffChecker(userSteak.claimedDate);
@@ -291,9 +310,13 @@ const claimReward = async (req, res) => {
                 },
               }
             );
+            // return status200(
+            //   res,
+            //   `Day ${userSteak.claimedDay + 1} reward claimed successfully`
+            // );
             return status200(
               res,
-              `Day ${userSteak.claimedDay + 1} reward claimed successfully`
+              `Bonus of ${rewards.weeklyRewards[newClaimedDay - 1].reward} Claimed`
             );
           }
         } else {
@@ -306,7 +329,8 @@ const claimReward = async (req, res) => {
               claimedDate: new Date(),
             }
           );
-          return status200(res, "Day 1 Reward claimed successfully");
+          // return status200(res, "Day 1 Reward claimed successfully");
+          return status200(res, `Bonus of ${rewards.weeklyRewards[0].reward} Claimed`);
         }
       }
     }

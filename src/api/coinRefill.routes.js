@@ -47,7 +47,7 @@ router.delete(
   coinRefill.deleteCoinRefill
 );
 
-//[APP] Refill the coins using stripe charge API
+//[APP] Refill the coins using stripe payment intent API
 router.post(
   "/app/refill/:id",
   verifyToken,
