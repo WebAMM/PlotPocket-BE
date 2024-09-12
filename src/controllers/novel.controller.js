@@ -249,7 +249,7 @@ const getAllNovels = async (req, res) => {
 // Get All Chapters by Novel
 const getAllChaptersOfNovel = async (req, res) => {
   const { id } = req.params;
-  const { page = 1, pageSize = 10 } = req.query;
+  // const { page = 1, pageSize = 10 } = req.query;
   try {
     //Check if novel exists
     const novelExist = await Novel.findById(id);
@@ -258,11 +258,11 @@ const getAllChaptersOfNovel = async (req, res) => {
     }
 
     // Pagination calculations
-    const currentPage = parseInt(page, 10) || 1;
-    const size = parseInt(pageSize, 10) || 10;
-    const totalChaptersCount = await Chapter.countDocuments({ novel: id });
-    const skip = (currentPage - 1) * size;
-    const limit = size;
+    // const currentPage = parseInt(page, 10) || 1;
+    // const size = parseInt(pageSize, 10) || 10;
+    // const totalChaptersCount = await Chapter.countDocuments({ novel: id });
+    // const skip = (currentPage - 1) * size;
+    // const limit = size;
 
     // Get all chapters of the novel
     const allNovelChapters = await Chapter.find({
@@ -273,11 +273,11 @@ const getAllChaptersOfNovel = async (req, res) => {
       )
       .populate({
         path: "novel",
-        select: "thumbnail.publicUrl",
+        select: "thumbnail.publicUrl title type totalViews description",
       })
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: 1 });
+    // .skip(skip)
+    // .limit(limit);
 
     // Check if the user has an active subscription
     const userSubscription = await UserSubscription.findOne({
@@ -335,10 +335,10 @@ const getAllChaptersOfNovel = async (req, res) => {
     }
 
     // To handle infinite scroll on frontend
-    const hasMore = skip + limit < totalChaptersCount;
+    // const hasMore = skip + limit < totalChaptersCount;
     const data = {
       chapters,
-      hasMore,
+      // hasMore,
     };
 
     success(res, "200", "Success", data);
