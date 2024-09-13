@@ -28,7 +28,7 @@ const addEpisodeToList = async (req, res) => {
       const alreadyExist = await MyList.findOne({
         episode: id,
         user: req.user._id,
-      }).lean()
+      }).lean();
       if (alreadyExist) {
         await MyList.deleteOne({
           _id: alreadyExist._id,
@@ -47,7 +47,7 @@ const addEpisodeToList = async (req, res) => {
       const alreadyExist = await MyList.findOne({
         chapter: id,
         user: req.user._id,
-      }).lean()
+      }).lean();
       if (alreadyExist) {
         await MyList.deleteOne({
           _id: alreadyExist._id,
@@ -77,13 +77,11 @@ const allMyLists = async (req, res) => {
     // Pagination calculations
     const currentPage = parseInt(page, 10) || 1;
     const size = parseInt(pageSize, 10) || 10;
-    const totalListCount = await MyList.countDocuments();
+    const totalListCount = await MyList.countDocuments({ user: req.user._id });
     const skip = (currentPage - 1) * size;
     const limit = size;
 
-    const allMyLists = await MyList.find({
-      user: req.user._id,
-    })
+    const allMyLists = await MyList.find({ user: req.user._id })
       .select("episode chapter createdAt")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -106,7 +104,8 @@ const allMyLists = async (req, res) => {
         select: "name novel totalViews chapterNo coins createdAt",
         populate: {
           path: "novel",
-          select: "thumbnail.publicUrl title type averageRating createdAt",
+          select:
+            "thumbnail.publicUrl title type averageRating totalViews createdAt",
           populate: {
             path: "category",
             select: "title",
@@ -114,11 +113,61 @@ const allMyLists = async (req, res) => {
         },
       });
 
-    //To handle infinite scroll on frontend
+    const transformedData = allMyLists
+      .map((item) => {
+        if (item.episode) {
+          return {
+            _id: item.episode.series._id,
+            title: item.episode.series.title,
+            type: item.episode.series.type,
+            totalViews: item.episode.series.totalViews,
+            seriesRating: item?.episode?.series?.seriesRating,
+            thumbnail: {
+              publicUrl: item?.episode?.series?.thumbnail?.publicUrl,
+            },
+            episodes: {
+              _id: item.episode._id,
+              title: item.episode.title,
+              coins: item.episode.coins,
+              content: item.episode.content,
+              episodeVideo: {
+                publicUrl: item.episode.episodeVideo.publicUrl,
+              },
+            },
+            createdAt: item.createdAt,
+          };
+        } else if (item.chapter) {
+          return {
+            _id: item.chapter.novel._id,
+            title: item.chapter.novel.title,
+            type: item?.chapter?.novel?.type,
+            totalViews: item?.chapter?.novel?.totalViews,
+            averageRating: item?.chapter?.novel?.averageRating,
+            chapters: {
+              _id: item.chapter._id,
+              name: item.chapter.name,
+              coins: item.chapter.coins,
+              content: item.chapter.content,
+              chapterPdf: {
+                publicUrl: item.chapter.chapterPdf.publicUrl,
+              },
+            },
+            thumbnail: {
+              publicUrl: item.chapter.novel.thumbnail.publicUrl,
+            },
+            createdAt: item.createdAt,
+          };
+        } else {
+          return null;
+        }
+      })
+      .filter((item) => item !== null);
+
+    // To handle infinite scroll on frontend
     const hasMore = skip + limit < totalListCount;
 
     const data = {
-      myList: allMyLists,
+      myList: transformedData,
       hasMore,
     };
 

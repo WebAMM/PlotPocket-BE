@@ -72,8 +72,9 @@ const { status200, success } = require("../services/helpers/response");
 //Get All Histories of Logged in user
 const allHistory = async (req, res) => {
   const { page = 1, pageSize = 10 } = req.query;
+
   try {
-    //For Pagination
+    // Pagination calculations
     const currentPage = parseInt(page, 10) || 1;
     const size = parseInt(pageSize, 10) || 10;
     const totalHistoryCount = await History.countDocuments({
@@ -82,10 +83,8 @@ const allHistory = async (req, res) => {
     const skip = (currentPage - 1) * size;
     const limit = size;
 
-    const userHistory = await History.find({
-      user: req.user._id,
-    })
-      .select("_id createdAt")
+    const userHistory = await History.find({ user: req.user._id })
+      .select("_id createdAt series episode novel chapter")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -99,6 +98,10 @@ const allHistory = async (req, res) => {
           path: "episode",
           select:
             "episodeVideo.publicUrl title content totalViews createdAt coins",
+          populate: {
+            path: "series",
+            select: "thumbnail.publicUrl title type totalViews seriesRating",
+          },
         },
         {
           path: "novel",
@@ -109,15 +112,71 @@ const allHistory = async (req, res) => {
           path: "chapter",
           select:
             "chapterPdf.publicUrl name chapterNo content totalViews createdAt coins",
+          populate: {
+            path: "novel",
+            select: "thumbnail.publicUrl title type totalViews averageRating",
+          },
         },
       ])
-      .lean()
+      .lean();
 
-    //To handle infinite scroll on frontend
+    // Transform the data
+    const transformedData = userHistory
+      .map((item) => {
+        if (item.episode) {
+          return {
+            _id: item.episode.series?._id,
+            title: item.episode.series?.title,
+            type: item.episode.series?.type,
+            totalViews: item.episode.series?.totalViews,
+            seriesRating: item.episode.series?.seriesRating,
+            thumbnail: {
+              publicUrl: item.episode.series?.thumbnail?.publicUrl,
+            },
+            episodes: {
+              _id: item.episode._id,
+              title: item.episode.title,
+              coins: item.episode.coins,
+              content: item.episode.content,
+              episodeVideo: {
+                publicUrl: item.episode.episodeVideo?.publicUrl,
+              },
+            },
+            createdAt: item.createdAt,
+          };
+        } else if (item.chapter) {
+          return {
+            _id: item.chapter.novel?._id,
+            title: item.chapter.novel?.title,
+            type: item.chapter.novel?.type,
+            totalViews: item.chapter.novel?.totalViews,
+            averageRating: item.chapter.novel?.averageRating,
+            chapters: {
+              _id: item.chapter._id,
+              name: item.chapter.name,
+              coins: item.chapter.coins,
+              content: item.chapter.content,
+              chapterPdf: {
+                publicUrl: item.chapter.chapterPdf?.publicUrl,
+              },
+            },
+            thumbnail: {
+              publicUrl: item.chapter.novel?.thumbnail?.publicUrl,
+            },
+            createdAt: item.createdAt,
+          };
+        } else {
+          // If neither episode nor chapter, return null
+          return null;
+        }
+      })
+      .filter((item) => item !== null);
+
+    // To handle infinite scroll on frontend
     const hasMore = skip + limit < totalHistoryCount;
 
     const data = {
-      userHistory,
+      userHistory: transformedData,
       hasMore,
     };
 
