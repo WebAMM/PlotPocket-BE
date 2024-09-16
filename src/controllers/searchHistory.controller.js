@@ -18,6 +18,7 @@ const getAllSearchHistory = async (req, res) => {
       user: req.user._id,
     })
       .sort({ createdAt: -1 })
+      .limit(5)
       .populate([
         {
           path: "series",
