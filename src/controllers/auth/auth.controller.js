@@ -17,7 +17,6 @@ const {
   error409,
   error404,
   customError,
-  error400,
 } = require("../../services/helpers/errors");
 const { status200, success } = require("../../services/helpers/response");
 //helpers and functions
@@ -29,7 +28,6 @@ const jwt = require("jsonwebtoken");
 const config = require("../../config");
 const { v4: uuidv4 } = require("uuid");
 const appendGuestUserRec = require("../../services/helpers/appendGuestRec");
-const fs = require("fs");
 const extractFormat = require("../../services/helpers/extractFormat");
 const {
   uploadFileToS3,
@@ -39,41 +37,87 @@ const {
 //Register User
 const registerUser = async (req, res) => {
   try {
-    const { email, password, userName, guestId } = req.body;
-
-    const existUser = await User.findOne({ email });
-    if (existUser) {
-      return error409(res, "User already exist");
-    }
-    // Hash the password
-    const salt = await bcryptjs.genSalt(10);
-    const hashedPassword = await bcryptjs.hash(password, salt);
-
-    const userData = { userName, email, password: hashedPassword };
-    if (req.file) {
-      const file = req.file;
-      const fileFormat = extractFormat(file.mimetype);
-
-      const params = {
-        Bucket: process.env.S3_BUCKET_NAME,
-        Key: `user/${Date.now()}_${file.originalname}`,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      };
-
-      //Upload file to S3
-      const uploadResult = await uploadFileToS3(params);
-      uploadFileLocation = uploadResult.Location;
-
+    const { email, password, userName, guestId, isSocialLogin } = req.body;
+    let newUser;
+    //For social login
+    if (isSocialLogin) {
+      const existUser = await User.findOne({ email });
+      if (existUser) {
+        const secret = config.jwtPrivateKey;
+        const token = jwt.sign(
+          {
+            _id: existUser._id,
+            name: existUser.userName,
+            role: existUser.role,
+            createdAt: existUser.createdAt,
+            profileImage: existUser.profileImage,
+          },
+          secret,
+          {
+            expiresIn: "72h",
+          }
+        );
+        const responseUser = {
+          _id: existUser._id,
+          userName: existUser.userName,
+          role: existUser.role,
+          createdAt: existUser.createdAt,
+          profileImage: existUser.profileImage,
+        };
+        return success(res, "200", "Login success", {
+          token,
+          user: responseUser,
+        });
+      }
+      //If not already registered then create new user of social login
+      let userData = { userName, email };
       userData.profileImage = {
-        publicUrl: uploadResult.Location,
-        publicId: uploadResult.Key,
-        format: fileFormat,
+        publicUrl:
+          "https://plotpocket.s3.us-east-2.amazonaws.com/user/1722865699996_guest.png",
+        publicId: "user/1722865699996_guest.png",
+        format: "png",
       };
+      userData.role = "User";
+      newUser = new User(userData);
+      await newUser.save();
     }
-    userData.role = "User";
-    const newUser = new User(userData);
-    await newUser.save();
+    if (!isSocialLogin) {
+      //For normal register with platform
+      const existUser = await User.findOne({ email });
+      if (existUser) {
+        return error409(res, "User with this email already exist");
+      }
+      // Hash the password
+      const salt = await bcryptjs.genSalt(10);
+      const hashedPassword = await bcryptjs.hash(password, salt);
+
+      let userData = { userName, email, password: hashedPassword };
+      if (req.file) {
+        const file = req.file;
+        const fileFormat = extractFormat(file.mimetype);
+
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: `user/${Date.now()}_${file.originalname}`,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        };
+
+        //Upload file to S3
+        const uploadResult = await uploadFileToS3(params);
+        uploadFileLocation = uploadResult.Location;
+
+        userData.profileImage = {
+          publicUrl: uploadResult.Location,
+          publicId: uploadResult.Key,
+          format: fileFormat,
+        };
+      }
+      userData.role = "User";
+      newUser = new User(userData);
+      await newUser.save();
+    }
+
     if (guestId) {
       const guestUser = await User.findOne({ _id: guestId });
       if (guestUser) {
@@ -143,7 +187,32 @@ const registerUser = async (req, res) => {
         await User.deleteOne({ _id: guestUser._id });
       } else return error409(res, "No such guest exist");
     }
-    return status200(res, "User registered successfully");
+
+    const secret = config.jwtPrivateKey;
+    const token = jwt.sign(
+      {
+        _id: newUser._id,
+        name: newUser.userName,
+        role: newUser.role,
+        createdAt: newUser.createdAt,
+        profileImage: newUser.profileImage,
+      },
+      secret,
+      {
+        expiresIn: "72h",
+      }
+    );
+    const responseUser = {
+      _id: newUser._id,
+      userName: newUser.userName,
+      role: newUser.role,
+      createdAt: newUser.createdAt,
+      profileImage: newUser.profileImage,
+    };
+    return success(res, "200", "Register success", {
+      token,
+      user: responseUser,
+    });
   } catch (err) {
     return error500(res, err);
   }
@@ -196,6 +265,90 @@ const loginUser = async (req, res) => {
     return error500(res, err);
   }
 };
+
+// //Login User with Google
+// const loginUserWithGoogle = async (req, res) => {
+//   const { idToken } = req.body;
+//   try {
+//     //Verify the ID token
+//     const decodedToken = await admin.auth().verifyIdToken(idToken);
+//     const { uid, email, name, picture } = decodedToken;
+
+//     let user = await User.findOne({ email });
+//     if (!user) {
+//       user = new User({
+//         userName: name,
+//         email,
+//         profileImage: { publicUrl: picture },
+//         role: "User",
+//         status: "Active",
+//       });
+//       await user.save();
+//     }
+
+//     const secret = config.jwtPrivateKey;
+//     const token = jwt.sign(
+//       {
+//         _id: user._id,
+//         name: user.userName,
+//         email: user.email,
+//         role: user.role,
+//       },
+//       secret,
+//       {
+//         expiresIn: "72h",
+//       }
+//     );
+//     return success(res, "200", "Login success", {
+//       token,
+//       user: responseUser,
+//     });
+//   } catch (err) {
+//     return error500(res, err);
+//   }
+// };
+
+// //Login User with Apple
+// const loginUserWithApple = async (req, res) => {
+//   const { idToken } = req.body;
+//   try {
+//     //Verify the ID token
+//     const decodedToken = await admin.auth().verifyIdToken(idToken);
+//     const { uid, email, name } = decodedToken;
+
+//     let user = await User.findOne({ email });
+//     if (!user) {
+//       user = new User({
+//         userName: name || "Apple user",
+//         email,
+//         // profileImage: { publicUrl: picture },
+//         role: "User",
+//         status: "Active",
+//       });
+//       await user.save();
+//     }
+
+//     const secret = config.jwtPrivateKey;
+//     const token = jwt.sign(
+//       {
+//         _id: user._id,
+//         name: user.userName,
+//         email: user.email,
+//         role: user.role,
+//       },
+//       secret,
+//       {
+//         expiresIn: "72h",
+//       }
+//     );
+//     return success(res, "200", "Login success", {
+//       token,
+//       user: responseUser,
+//     });
+//   } catch (err) {
+//     return error500(res, err);
+//   }
+// };
 
 //Login User
 const loginAdmin = async (req, res) => {
@@ -564,6 +717,8 @@ const updateAdminProfilePic = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  // loginUserWithApple,
+  // loginUserWithGoogle,
   loginAdmin,
   guestLogin,
   guestLogout,

@@ -8,6 +8,7 @@ const History = require("../models/History.model");
 const { error500, error409, error400 } = require("../services/helpers/errors");
 const { status200, success } = require("../services/helpers/response");
 const moment = require("moment");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Admin dashboard insights
 const adminDashboardInsights = async (req, res) => {
@@ -42,10 +43,36 @@ const adminDashboardInsights = async (req, res) => {
     const totalSeries = await Series.countDocuments(query);
     const totalUsers = await User.countDocuments(query);
 
+    // Fetch total earnings from Stripe using the balanceTransactions API
+    const balanceTransactions = await stripe.balanceTransactions.list({
+      created: {
+        gte: Math.floor(startDate.getTime() / 1000), // Start date in Unix time (seconds)
+        lte: Math.floor(endDate.getTime() / 1000), // End date in Unix time (seconds)
+      },
+      limit: 200,
+    });
+
+    // Calculate total earnings from the filtered balance transactions
+    let totalEarnings = 0;
+    balanceTransactions.data.forEach((transaction) => {
+      if (transaction.type === "charge") {
+        totalEarnings += transaction.net;
+      }
+    });
+
+    totalEarnings = parseFloat((totalEarnings / 100).toFixed(2));
+
+    const currentBalance = await stripe.balance.retrieve();
+    const formattedCurrentBalance = parseFloat(
+      (currentBalance.available[0].amount / 100).toFixed(2)
+    );
+
     const dashboardData = {
       totalNovels,
       totalSeries,
       totalUsers,
+      totalEarnings,
+      currentBalance: formattedCurrentBalance,
     };
     success(res, "200", "Success", dashboardData);
   } catch (err) {
@@ -57,22 +84,55 @@ const adminDashboardInsights = async (req, res) => {
 const adminDashboardMetrics = async (req, res) => {
   try {
     let query = {};
-    if (req.query.year) {
-      const year = parseInt(req.query.year);
-      if (!moment(year, "YYYY", true).isValid()) {
-        return error400(res, "Invalid year provided");
-      }
 
-      const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
-      const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
-      query = {
-        createdAt: { $gte: startDate, $lte: endDate },
-      };
+    //Convert to current year if no year is provided
+    const currentYear = new Date().getFullYear();
+    let year = req.query.year ? parseInt(req.query.year) : currentYear;
+
+    if (!moment(year, "YYYY", true).isValid()) {
+      return error400(res, "Invalid year provided");
     }
+
+    const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+    const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+
+    // Set the query for total users based on the year
+    query = {
+      createdAt: { $gte: startDate, $lte: endDate },
+    };
+
+    // Initialize an array to hold total earnings by month
+    const monthlyEarnings = Array(12).fill(0);
+
+    // Fetch balance transactions from Stripe for the given year
+    const balanceTransactions = await stripe.balanceTransactions.list({
+      created: {
+        gte: Math.floor(startDate.getTime() / 1000), // Start of year (in seconds)
+        lte: Math.floor(endDate.getTime() / 1000), // End of year (in seconds)
+      },
+      limit: 100,
+    });
+
+    // Process each transaction and sum the net amounts by month
+    balanceTransactions.data.forEach((transaction) => {
+      if (transaction.type === "charge") {
+        const transactionDate = new Date(transaction.created * 1000); // Convert Unix timestamp to JS Date
+        const month = transactionDate.getMonth(); // Get the month (0 = Jan, 11 = Dec)
+        monthlyEarnings[month] += transaction.net / 100; // Sum net in dollars (Stripe returns in cents)
+      }
+    });
+
+    const roundedMonthlyEarnings = monthlyEarnings.map((earning) =>
+      parseFloat(earning.toFixed(2))
+    );
+
     const totalUsers = await User.find(query);
+
     const dashboardData = {
       totalUsers,
+      monthlyEarnings: roundedMonthlyEarnings,
     };
+
     success(res, "200", "Success", dashboardData);
   } catch (err) {
     error500(res, err);

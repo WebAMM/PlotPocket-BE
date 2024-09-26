@@ -141,7 +141,9 @@ const deleteSubscription = async (req, res) => {
     if (result.deletedCount === 0) {
       return error409(res, "Subscription not found");
     }
-    await stripe.prices.del(result.stripePriceId);
+    await stripe.prices.update(result.stripePriceId, {
+      active: false,
+    });
     await stripe.products.del(result.stripeProductId);
     return status200(res, "Subscriptions deleted successfully");
   } catch (err) {
