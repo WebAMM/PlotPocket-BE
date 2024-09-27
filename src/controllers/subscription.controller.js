@@ -101,6 +101,10 @@ const editSubscription = async (req, res) => {
       description: description,
     });
 
+    await stripe.prices.update(subscription.stripePriceId, {
+      active: false, // Deactivate the old price
+    });
+
     // Create a new price in Stripe (since prices are immutable)
     const newProductPrice = await stripe.prices.create({
       product: subscription.stripeProductId,
@@ -137,17 +141,26 @@ const editSubscription = async (req, res) => {
 const deleteSubscription = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await Subscription.deleteOne({ _id: id });
-    if (result.deletedCount === 0) {
+    const subscription = await Subscription.findById({ _id: id });
+    if (!subscription) {
       return error409(res, "Subscription not found");
     }
-    await stripe.prices.update(result.stripePriceId, {
+    await stripe.prices.update(subscription.stripePriceId, {
       active: false,
     });
-    await stripe.products.del(result.stripeProductId);
-    return status200(res, "Subscriptions deleted successfully");
+
+    await stripe.products.update(subscription.stripeProductId, {
+      active: false,
+    });
+
+    const result = await Subscription.deleteOne({ _id: id });
+    if (result.deletedCount === 0) {
+      return error409(res, "Failed to delete subscription from database");
+    }
+
+    return status200(res, "Subscription deleted successfully");
   } catch (err) {
-    error500(res, err);
+    return error500(res, err);
   }
 };
 

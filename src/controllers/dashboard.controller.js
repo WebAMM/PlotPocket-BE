@@ -80,8 +80,8 @@ const adminDashboardInsights = async (req, res) => {
   }
 };
 
-// Admin dashboard metrics
-const adminDashboardMetrics = async (req, res) => {
+// Admin dashboard user metrics
+const adminDashboardUserMetrics = async (req, res) => {
   try {
     let query = {};
 
@@ -100,6 +100,57 @@ const adminDashboardMetrics = async (req, res) => {
     query = {
       createdAt: { $gte: startDate, $lte: endDate },
     };
+
+    // // Initialize an array to hold total earnings by month
+    // const monthlyEarnings = Array(12).fill(0);
+
+    // // Fetch balance transactions from Stripe for the given year
+    // const balanceTransactions = await stripe.balanceTransactions.list({
+    //   created: {
+    //     gte: Math.floor(startDate.getTime() / 1000), // Start of year (in seconds)
+    //     lte: Math.floor(endDate.getTime() / 1000), // End of year (in seconds)
+    //   },
+    //   limit: 100,
+    // });
+
+    // // Process each transaction and sum the net amounts by month
+    // balanceTransactions.data.forEach((transaction) => {
+    //   if (transaction.type === "charge") {
+    //     const transactionDate = new Date(transaction.created * 1000); // Convert Unix timestamp to JS Date
+    //     const month = transactionDate.getMonth(); // Get the month (0 = Jan, 11 = Dec)
+    //     monthlyEarnings[month] += transaction.net / 100; // Sum net in dollars (Stripe returns in cents)
+    //   }
+    // });
+
+    // const roundedMonthlyEarnings = monthlyEarnings.map((earning) =>
+    //   parseFloat(earning.toFixed(2))
+    // );
+
+    const totalUsers = await User.find(query);
+
+    const dashboardData = {
+      totalUsers,
+      // monthlyEarnings: roundedMonthlyEarnings,
+    };
+
+    success(res, "200", "Success", dashboardData);
+  } catch (err) {
+    error500(res, err);
+  }
+};
+
+// Admin dashboard balance metrics
+const adminDashboardBalanceMetric = async (req, res) => {
+  try {
+    const currentYear = new Date().getFullYear();
+    let year = req.query.year ? parseInt(req.query.year) : currentYear;
+
+    if (!moment(year, "YYYY", true).isValid()) {
+      return error400(res, "Invalid year provided");
+    }
+
+    const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+    const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
 
     // Initialize an array to hold total earnings by month
     const monthlyEarnings = Array(12).fill(0);
@@ -122,18 +173,29 @@ const adminDashboardMetrics = async (req, res) => {
       }
     });
 
-    const roundedMonthlyEarnings = monthlyEarnings.map((earning) =>
-      parseFloat(earning.toFixed(2))
-    );
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
 
-    const totalUsers = await User.find(query);
+    // Create response array with month, year, and total earnings
+    const formattedEarnings = monthlyEarnings.map((earning, index) => ({
+      month: monthNames[index],
+      year: year,
+      totalEarnings: parseFloat(earning.toFixed(2)), // Round to 2 decimal places
+    }));
 
-    const dashboardData = {
-      totalUsers,
-      monthlyEarnings: roundedMonthlyEarnings,
-    };
-
-    success(res, "200", "Success", dashboardData);
+    success(res, "200", "Success", { monthlyEarnings: formattedEarnings });
   } catch (err) {
     error500(res, err);
   }
@@ -895,7 +957,8 @@ const dashboardTopRanked = async (req, res) => {
 
 module.exports = {
   adminDashboardInsights,
-  adminDashboardMetrics,
+  adminDashboardUserMetrics,
+  adminDashboardBalanceMetric,
   appDashboard,
   dashboardSeries,
   dashboardNovels,

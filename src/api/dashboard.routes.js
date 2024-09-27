@@ -12,12 +12,20 @@ router.get(
   dashboardController.adminDashboardInsights
 );
 
-//[ADMIN] Admin dashboard Metrics
+//[ADMIN] Admin dashboard User - Metrics
 router.get(
-  "/admin/metrics",
+  "/admin/user-metrics",
   verifyToken,
   verifyRole(["Admin"]),
-  dashboardController.adminDashboardMetrics
+  dashboardController.adminDashboardUserMetrics
+);
+
+//[ADMIN] Admin dashboard Earning Metrics
+router.get(
+  "/admin/earning-metrics",
+  verifyToken,
+  verifyRole(["Admin"]),
+  dashboardController.adminDashboardBalanceMetric
 );
 
 //[APP] 1st APP page in dashboard
