@@ -12,11 +12,12 @@ const validateRegister = [
     .withMessage("Username must be between 3 to 50"),
   body("email").trim().isEmail().withMessage("Please enter a valid email"),
   body("password")
-    .trim()
-    .notEmpty()
-    .withMessage("Please enter user name")
-    .isLength({ min: 6, max: 25 })
-    .withMessage("Password must be between 6 and 25 characters long"),
+  .if((value, { req }) => !req.body.isSocialLogin)
+  .trim()
+  .notEmpty()
+  .withMessage("Please enter a password")
+  .isLength({ min: 6, max: 25 })
+  .withMessage("Password must be between 6 and 25 characters long"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
