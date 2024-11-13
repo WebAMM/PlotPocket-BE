@@ -383,7 +383,7 @@ const updateChapter = async (req, res) => {
 
 const viewChapter = async (req, res) => {
   const { id } = req.params;
-  const { up, down, autoUnlock, unlockNow, fromSearch } = req.query;
+  const { up, down, autoUnlock, unlockNow, addWatched, fromSearch } = req.query;
 
   try {
     const currentChapter = await Chapter.findById(id)
@@ -443,6 +443,13 @@ const viewChapter = async (req, res) => {
       return error400(
         res,
         "UnlockNow should not be true when using up or down"
+      );
+    }
+    //Add watch
+    if ((down || up) && addWatched) {
+      return error400(
+        res,
+        "addWatched should not be true when using up or down"
       );
     }
 
@@ -701,6 +708,23 @@ const viewChapter = async (req, res) => {
           return handleResponse(currentChapter);
         } else {
           if (await checkUserPurchases(req.user._id, currentChapter._id)) {
+            return handleResponse(currentChapter);
+          }
+          //Add watch
+          if (addWatched) {
+            const userPurchases = await UserPurchases.findOne({
+              user: req.user._id,
+            });
+            if (!userPurchases) {
+              const newUserPurchases = new UserPurchases({
+                user: req.user._id,
+                chapters: [currentChapter._id],
+              });
+              await newUserPurchases.save();
+            } else {
+              userPurchases.chapters.push(currentChapter._id);
+              await userPurchases.save();
+            }
             return handleResponse(currentChapter);
           }
           if (unlockNow) {
