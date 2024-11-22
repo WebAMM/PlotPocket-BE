@@ -1,2 +1,2 @@
-cd /home/ec2-user/loyal_locker_BE
+cd /home/ec2-user/PlotPocket-BE
 sudo npm install 
