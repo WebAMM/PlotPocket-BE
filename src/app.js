@@ -27,6 +27,11 @@ app.get("/", (req, res) => {
   res.send("Initial route running...");
 });
 
+//AWS health check route
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
 app.use("/plotpocket/api/v1", AppRoutes);
 
 app.use((req, res) => {
