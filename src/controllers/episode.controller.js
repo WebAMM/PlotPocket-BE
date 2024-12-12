@@ -7,6 +7,7 @@ const myList = require("../models/MyList.model");
 const UserSubscription = require("../models/UserSubscription.model");
 const History = require("../models/History.model");
 const SearchHistory = require("../models/SearchHistory.model");
+const UserAdd = require("../models/UserAdd.model");
 //Responses and errors
 const {
   error500,
@@ -901,6 +902,12 @@ const viewEpisode = async (req, res) => {
         episode: episode._id,
       });
 
+      const userAdds = await UserAdd.findOne({
+        userId: req.user._id,
+        "watchedSeries.seriesId": episode.series._id.toString(),
+      }).select("watchedSeries");
+
+      const addsCount = userAdds?.watchedSeries[0]?.totalCount || 0;
       const episodeCopy = { ...episode };
       delete episodeCopy.ratings;
 
@@ -908,6 +915,7 @@ const viewEpisode = async (req, res) => {
         episode: episodeCopy,
         isBookmarked: isBookmarked ? true : false,
         isRated,
+        addsCount,
       };
 
       return success(res, "200", "Success", data);
@@ -1137,20 +1145,90 @@ const viewEpisode = async (req, res) => {
           }
           //Add watch
           if (addWatched) {
-            const userPurchases = await UserPurchases.findOne({
-              user: req.user._id,
+            const userAdds = await UserAdd.findOne({
+              userId: req.user._id,
             });
-            if (!userPurchases) {
-              const newUserPurchases = new UserPurchases({
-                user: req.user._id,
-                episodes: [currentEpisode._id],
+            if (!userAdds) {
+              const newUserAdd = new UserAdd({
+                userId: req.user._id,
+                watchedSeries: [
+                  {
+                    seriesId: currentEpisode.series,
+                    totalCount: 1,
+                    // episodeIds: currentEpisode._id,
+                  },
+                ],
               });
-              await newUserPurchases.save();
+              await newUserAdd.save();
+              //Now add in the user purchases
+              const userPurchases = await UserPurchases.findOne({
+                user: req.user._id,
+              });
+              if (!userPurchases) {
+                const newUserPurchases = new UserPurchases({
+                  user: req.user._id,
+                  episodes: [currentEpisode._id],
+                });
+                await newUserPurchases.save();
+              } else {
+                userPurchases.episodes.push(currentEpisode._id);
+                await userPurchases.save();
+              }
+              return handleResponse(currentEpisode);
             } else {
-              userPurchases.episodes.push(currentEpisode._id);
-              await userPurchases.save();
+              const series = userAdds.watchedSeries.find(
+                (item) =>
+                  item.seriesId.toString() ===
+                  currentEpisode.series._id.toString()
+              );
+              if (series && series.totalCount >= 2) {
+                return error400(
+                  res,
+                  "Already viewed 5 adds for this series episodes"
+                );
+              } else {
+                if (series) {
+                  await UserAdd.updateOne(
+                    {
+                      userId: req.user._id,
+                      "watchedSeries.seriesId": currentEpisode.series,
+                    },
+                    {
+                      $inc: { "watchedSeries.$.totalCount": 1 },
+                    }
+                  );
+                } else {
+                  await UserAdd.updateOne(
+                    {
+                      userId: req.user._id,
+                    },
+                    {
+                      $push: {
+                        watchedSeries: {
+                          seriesId: currentEpisode.series,
+                          totalCount: 1,
+                        },
+                      },
+                    }
+                  );
+                }
+                //Now add in the user purchases
+                const userPurchases = await UserPurchases.findOne({
+                  user: req.user._id,
+                });
+                if (!userPurchases) {
+                  const newUserPurchases = new UserPurchases({
+                    user: req.user._id,
+                    episodes: [currentEpisode._id],
+                  });
+                  await newUserPurchases.save();
+                } else {
+                  userPurchases.episodes.push(currentEpisode._id);
+                  await userPurchases.save();
+                }
+                return handleResponse(currentEpisode);
+              }
             }
-            return handleResponse(currentEpisode);
           }
           if (unlockNow) {
             const userCoins = await UserCoin.findOne({

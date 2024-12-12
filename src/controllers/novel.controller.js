@@ -22,6 +22,7 @@ const {
 } = require("../services/helpers/awsConfig");
 const extractFormat = require("../services/helpers/extractFormat");
 const fs = require("fs");
+// const UserAdd = require("../models/UserAdd.model");
 
 //Publish the novel
 const addNovel = async (req, res) => {
@@ -1232,6 +1233,23 @@ const getReviewsOfNovel = async (req, res) => {
   }
 };
 
+// const getChaptersWatchedInNovel = async (req, res) => {
+//   const { id } = req.params;
+//   try {
+//     const data = await UserAdd.findOne({
+//       userId: req.user._id,
+//       "watchedNovel.novelId": new mongoose.Types.ObjectId(id),
+//     }).select(`watchedNovel`);
+//     const totalCount = data?.watchedNovel[0]?.totalCount || 0;
+//     const response = {
+//       totalCount,
+//     };
+//     return success(res, "200", "Success", response);
+//   } catch (err) {
+//     return error500(res, err);
+//   }
+// };
+
 module.exports = {
   addNovel,
   addNovelToDraft,
@@ -1249,4 +1267,5 @@ module.exports = {
   getTopRatedNovels,
   getDetailNovelByType,
   getReviewsOfNovel,
+  // getChaptersWatchedInNovel,
 };

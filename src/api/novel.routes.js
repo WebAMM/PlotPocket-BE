@@ -140,4 +140,13 @@ router.get(
   verifyRole(["User", "Guest"]),
   novelController.getReviewsOfNovel
 );
+
+//[APP] Get the adds count for series
+// router.get(
+//   "/app/adds-count/:id",
+//   verifyToken,
+//   verifyRole(["User", "Guest"]),
+//   novelController.getChaptersWatchedInNovel
+// );
+
 module.exports = router;

@@ -6,6 +6,7 @@ const UserPurchases = require("../models/UserPurchases.model");
 const myList = require("../models/MyList.model");
 const UserSubscription = require("../models/UserSubscription.model");
 const SearchHistory = require("../models/SearchHistory.model");
+const UserAdd = require("../models/UserAdd.model");
 //Responses and errors
 const {
   error500,
@@ -494,9 +495,17 @@ const viewChapter = async (req, res) => {
         chapter: chapter._id,
       });
 
+      const userAdds = await UserAdd.findOne({
+        userId: req.user._id,
+        "watchedNovel.novelId": chapter.novel._id.toString(),
+      }).select("watchedNovel");
+
+      const addsCount = userAdds?.watchedNovel[0]?.totalCount || 0;
+
       const data = {
         chapter,
         isBookmarked: isBookmarked ? true : false,
+        addsCount,
       };
 
       return success(res, "200", "Success", data);
@@ -712,20 +721,90 @@ const viewChapter = async (req, res) => {
           }
           //Add watch
           if (addWatched) {
-            const userPurchases = await UserPurchases.findOne({
-              user: req.user._id,
+            const userAdds = await UserAdd.findOne({
+              userId: req.user._id,
             });
-            if (!userPurchases) {
-              const newUserPurchases = new UserPurchases({
-                user: req.user._id,
-                chapters: [currentChapter._id],
+            if (!userAdds) {
+              const newUserAdd = new UserAdd({
+                userId: req.user._id,
+                watchedNovel: [
+                  {
+                    novelId: currentChapter.novel,
+                    totalCount: 1,
+                    // chapterIds: currentChapter._id
+                  },
+                ],
               });
-              await newUserPurchases.save();
+              await newUserAdd.save();
+              //Now add in the user purchases
+              const userPurchases = await UserPurchases.findOne({
+                user: req.user._id,
+              });
+              if (!userPurchases) {
+                const newUserPurchases = new UserPurchases({
+                  user: req.user._id,
+                  chapters: [currentChapter._id],
+                });
+                await newUserPurchases.save();
+              } else {
+                userPurchases.chapters.push(currentChapter._id);
+                await userPurchases.save();
+              }
+              return handleResponse(currentChapter);
             } else {
-              userPurchases.chapters.push(currentChapter._id);
-              await userPurchases.save();
+              const novel = userAdds.watchedNovel.find(
+                (item) =>
+                  item.novelId.toString() ===
+                  currentChapter.novel._id.toString()
+              );
+              if (novel && novel.totalCount >= 2) {
+                return error400(
+                  res,
+                  "Already viewed 2 adds for this novel chapters"
+                );
+              } else {
+                if (novel) {
+                  await UserAdd.updateOne(
+                    {
+                      userId: req.user._id,
+                      "watchedNovel.novelId": currentChapter.novel,
+                    },
+                    {
+                      $inc: { "watchedNovel.$.totalCount": 1 },
+                    }
+                  );
+                } else {
+                  await UserAdd.updateOne(
+                    {
+                      userId: req.user._id,
+                    },
+                    {
+                      $push: {
+                        watchedNovel: {
+                          novelId: currentChapter.novel,
+                          totalCount: 1,
+                        },
+                      },
+                    }
+                  );
+                }
+                //Now add in the user purchases
+                const userPurchases = await UserPurchases.findOne({
+                  user: req.user._id,
+                });
+                if (!userPurchases) {
+                  const newUserPurchases = new UserPurchases({
+                    user: req.user._id,
+                    chapters: [currentChapter._id],
+                  });
+                  await newUserPurchases.save();
+                } else {
+                  userPurchases.chapters.push(currentChapter._id);
+                  await userPurchases.save();
+                }
+                return handleResponse(currentChapter);
+              }
             }
-            return handleResponse(currentChapter);
           }
           if (unlockNow) {
             const userCoins = await UserCoin.findOne({ user: req.user._id });

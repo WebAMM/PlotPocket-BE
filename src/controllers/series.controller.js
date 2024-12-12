@@ -21,6 +21,7 @@ const {
   deleteFileFromBucket,
 } = require("../services/helpers/awsConfig");
 const fs = require("fs");
+// const UserAdd = require("../models/UserAdd.model");
 
 //Publish the series
 const addSeries = async (req, res) => {
@@ -1034,6 +1035,23 @@ const getDetailSeriesByType = async (req, res) => {
   }
 };
 
+// const getEpisodeWatchedInSeries = async (req, res) => {
+//   const { id } = req.params;
+//   try {
+//     const data = await UserAdd.findOne({
+//       userId: req.user._id,
+//       "watchedSeries.seriesId": new mongoose.Types.ObjectId(id),
+//     }).select(`watchedSeries`);
+//     const totalCount = data?.watchedSeries[0]?.totalCount || 0;
+//     const response = {
+//       totalCount,
+//     };
+//     return success(res, "200", "Success", response);
+//   } catch (err) {
+//     return error500(res, err);
+//   }
+// };
+
 module.exports = {
   addSeries,
   addSeriesToDraft,
@@ -1046,4 +1064,5 @@ module.exports = {
   getTopRatedSeries,
   getAllEpisodeOfSeries,
   getDetailSeriesByType,
+  // getEpisodeWatchedInSeries,
 };
