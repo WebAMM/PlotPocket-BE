@@ -9,8 +9,8 @@ const payloadValidator = require("../middlewares/payloadValidator");
 //[ADMIN] Add episodes in series
 router.post(
   "/admin/add/:id",
-  verifyToken,
-  verifyRole(["Admin"]),
+  // verifyToken,
+  // verifyRole(["Admin"]),
   upload.single("episode"),
   payloadValidator.validateAddEpisode,
   episodeController.addEpisode
