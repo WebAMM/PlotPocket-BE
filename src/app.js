@@ -24,7 +24,7 @@ require("express-async-errors");
 
 //initial route
 app.get("/", (req, res) => {
-  res.send("Initial route running...");
+  res.send("Initial route running!");
 });
 
 //AWS health check route
