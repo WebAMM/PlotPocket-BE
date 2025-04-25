@@ -45,7 +45,6 @@ const addEpisode = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Check if series exists and is published with public visibility
     const seriesExist = await Series.findOne({
       _id: id,
       status: "Published",
@@ -56,37 +55,43 @@ const addEpisode = async (req, res) => {
       return error404(res, "Series not found");
     }
 
-    // Check if the episode with the given title already exists
     const existEpisode = await Episode.findOne({
       title,
       series: seriesExist._id,
     });
 
     if (existEpisode) {
-      return error409(res, "Episode with this name already exists in this series");
+      return error409(
+        res,
+        "Episode with this name already exists in this series"
+      );
     }
 
     if (req.file) {
       const file = req.file;
       const fileFormat = extractFormat(file.mimetype);
 
-      // Temporary directory for storing the video file
+      // Save buffer to a temporary file for compression
       const tempInputFilePath = path.join(__dirname, "temp_video.mp4");
       const tempOutputFilePath = path.join(__dirname, "compressed_video.mp4");
-
-      // Save the uploaded file buffer to the temporary input file path
+      //Temporary input video file saved
       fs.writeFileSync(tempInputFilePath, file.buffer);
-      console.log("Temporary input video file saved:", tempInputFilePath);
+      console.log(
+        "Temporary input video file saved for debugging:",
+        tempInputFilePath
+      );
 
-      // Compress the video using FFmpeg
+      //Compress video using FFmpeg with file output
       await new Promise((resolve, reject) => {
-        ffmpeg(tempInputFilePath) 
-          .output(tempOutputFilePath) // Output to a temporary file
-          .outputOptions("-c:v libx264") // H.264 codec
-          .outputOptions("-crf 28") // Compression ratio (lower quality)
-          .outputOptions("-preset slow") // Slow preset for better compression
-          .format("mp4") // Output format
-          .on("stderr", (stderrLine) => console.log("FFmpeg stderr:", stderrLine)) // Log errors
+          ffmpeg(tempInputFilePath) // Use the temporary file path as input
+           .output(tempOutputFilePath) // Write output to a temporary file
+           .outputOptions("-c:v libx264") // Use H.264 codec
+           .outputOptions("-crf 28") // Set CRF value for more compression (lower quality)
+           .outputOptions("-preset slow") // Use a slower preset for better compression
+           .format("mp4") // Output format
+           .on("stderr", (stderrLine) =>
+             console.log("FFmpeg stderr:", stderrLine)
+           ) // Log FFmpeg errors
           .on("end", () => {
             console.log("Compression finished.");
             resolve();
@@ -95,31 +100,27 @@ const addEpisode = async (req, res) => {
             console.error("Error during compression:", err);
             reject(err);
           })
-          .run();
+          .run(); // Run FFmpeg command
       });
 
-      // Read the compressed file into a buffer
+      //Read compressed file into a buffer
       const compressedBuffer = fs.readFileSync(tempOutputFilePath);
 
-      // Upload the compressed video to S3
+      //Upload compressed file to S3
       const s3Params = {
         Bucket: process.env.S3_BUCKET_NAME,
-        Key: `episode/${Date.now()}_${file.originalname}`, // Use unique names for S3 keys
+        Key: `episode/${Date.now()}_${file.originalname}`,
         Body: compressedBuffer,
         ContentType: "video/mp4",
       };
 
-      // Upload the file and handle the result
       const uploadResult = await uploadFileToS3(s3Params);
-      if (!uploadResult.Location) {
-        throw new Error("Failed to upload the video to S3.");
-      }
 
-      // Clean up temporary files after upload
+      //Clean up temporary files made for compression
       fs.unlinkSync(tempInputFilePath);
       fs.unlinkSync(tempOutputFilePath);
 
-      // Save the episode details in the database
+      // Save episode details in the database
       const newEpisode = await Episode.create({
         ...req.body,
         series: seriesExist._id,
@@ -130,7 +131,6 @@ const addEpisode = async (req, res) => {
         },
       });
 
-      // Add the new episode to the series
       await Series.updateOne(
         { _id: id },
         { $push: { episodes: newEpisode._id } },
@@ -138,17 +138,13 @@ const addEpisode = async (req, res) => {
       );
 
       return status200(res, "Episode added to series");
-
     } else {
       return error400(res, "Episode video is required");
     }
-
   } catch (err) {
-    console.error("Error adding episode:", err);
-    return error500(res, err);
+    error500(res, err);
   }
 };
-
 
 //Rate Episode
 const rateTheEpisode = async (req, res) => {
