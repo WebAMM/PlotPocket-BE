@@ -31,13 +31,13 @@ const {
   updateCategoryViews,
 } = require("../services/helpers/incViews");
 //For compression of episodes and bucket upload
+const os = require("os");
 const fs = require("fs");
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
-const os = require("os");
-// Set the path for FFmpeg
-ffmpeg.setFfmpegPath(ffmpegPath);
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path; // <-- Updated here
+
+ffmpeg.setFfmpegPath(ffmpegPath); // Set ffmpeg path correctly
 
 //Add Episode
 const addEpisode = async (req, res) => {
