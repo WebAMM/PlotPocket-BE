@@ -88,13 +88,15 @@ const addEpisode = async (req, res) => {
 
       // Proceed with FFmpeg compression...
       await new Promise((resolve, reject) => {
-        ffmpeg(tempInputFilePath)
-          .output(tempOutputFilePath)
-          .outputOptions("-c:v libx264")
-          .outputOptions("-crf 28")
-          .outputOptions("-preset slow")
-          .format("mp4")
-          .on("stderr", (stderrLine) => console.log("FFmpeg stderr:", stderrLine))
+        ffmpeg(tempInputFilePath) // Input temporary file
+          .output(tempOutputFilePath) // Output to a temporary compressed file
+          .outputOptions("-c:v libx264") // Use H.264 codec for broad compatibility
+          .outputOptions("-crf 23") // Set a better quality/size balance (lower CRF for better quality)
+          .outputOptions("-preset fast") // Use a fast preset for quick processing
+          .outputOptions("-movflags +faststart") // Enable quick start for web video playback
+          .outputOptions("-profile:v baseline") // Ensure compatibility with older iOS devices
+          .format("mp4") // Output format as MP4
+          .on("stderr", (stderrLine) => console.log("FFmpeg stderr:", stderrLine)) // Log errors
           .on("end", () => {
             console.log("Compression finished.");
             resolve();
