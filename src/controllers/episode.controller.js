@@ -35,7 +35,7 @@ const fs = require("fs");
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
-
+const os = require("os");
 // Set the path for FFmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -72,26 +72,29 @@ const addEpisode = async (req, res) => {
       const fileFormat = extractFormat(file.mimetype);
 
       // Save buffer to a temporary file for compression
-      const tempInputFilePath = path.join(__dirname, "temp_video.mp4");
-      const tempOutputFilePath = path.join(__dirname, "compressed_video.mp4");
-      //Temporary input video file saved
-      fs.writeFileSync(tempInputFilePath, file.buffer);
-      console.log(
-        "Temporary input video file saved for debugging:",
-        tempInputFilePath
-      );
+      // const tempInputFilePath = path.join(__dirname, "temp_video.mp4");
+      // const tempOutputFilePath = path.join(__dirname, "compressed_video.mp4");
+      const tempDir = os.tmpdir();
+      const tempInputFilePath = path.join(tempDir, "temp_video.mp4");
+      const tempOutputFilePath = path.join(tempDir, "compressed_video.mp4");
 
-      //Compress video using FFmpeg with file output
+      // Ensure temp directory exists
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      // Write file safely
+      fs.writeFileSync(tempInputFilePath, file.buffer);
+
+      // Proceed with FFmpeg compression...
       await new Promise((resolve, reject) => {
-          ffmpeg(tempInputFilePath) // Use the temporary file path as input
-           .output(tempOutputFilePath) // Write output to a temporary file
-           .outputOptions("-c:v libx264") // Use H.264 codec
-           .outputOptions("-crf 28") // Set CRF value for more compression (lower quality)
-           .outputOptions("-preset slow") // Use a slower preset for better compression
-           .format("mp4") // Output format
-           .on("stderr", (stderrLine) =>
-             console.log("FFmpeg stderr:", stderrLine)
-           ) // Log FFmpeg errors
+        ffmpeg(tempInputFilePath)
+          .output(tempOutputFilePath)
+          .outputOptions("-c:v libx264")
+          .outputOptions("-crf 28")
+          .outputOptions("-preset slow")
+          .format("mp4")
+          .on("stderr", (stderrLine) => console.log("FFmpeg stderr:", stderrLine))
           .on("end", () => {
             console.log("Compression finished.");
             resolve();
@@ -100,9 +103,8 @@ const addEpisode = async (req, res) => {
             console.error("Error during compression:", err);
             reject(err);
           })
-          .run(); // Run FFmpeg command
+          .run();
       });
-
       //Read compressed file into a buffer
       const compressedBuffer = fs.readFileSync(tempOutputFilePath);
 
